@@ -1,5 +1,7 @@
 import pygame
 import sys
+from scripts.entities import PhysicsEntity
+from scripts.utils import load_image
 
 
 class Game:
@@ -12,35 +14,51 @@ class Game:
 
         self.clock = pygame.time.Clock()
 
-        self.img = pygame.image.load('data/images/clouds/cloud_1.png')
-        self.img.set_colorkey((0, 0, 0))
-
-        self.img_pos = [160, 260]
         self.movement = [False, False]
+
+        self.assets = {
+            'player': load_image('entities/player.png')
+        }
+
+        self.player = PhysicsEntity(self, 'player', (50, 50), (8, 15))
 
 
     def run(self):
         while True:
             self.screen.fill((14, 219, 248))
 
-            self.img_pos[1] += (self.movement[1] - self.movement[0]) * 5
-            self.screen.blit(self.img, self.img_pos)
+            self.player.update((self.movement[1] - self.movement[0], 0))
+            self.player.render(self.screen)
+
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 
+                # movement keys
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
+                    if event.key == pygame.K_LEFT:
                         self.movement[0] = True
-                    if event.key == pygame.K_DOWN:
+                    if event.key == pygame.K_RIGHT:
                         self.movement[1] = True
                 
                 if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_UP:
+                    if event.key == pygame.K_LEFT:
                         self.movement[0] = False
-                    if event.key == pygame.K_DOWN:
+                    if event.key == pygame.K_RIGHT:
+                        self.movement[1] = False
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_a:
+                        self.movement[0] = True
+                    if event.key == pygame.K_d:
+                        self.movement[1] = True
+                
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_a:
+                        self.movement[0] = False
+                    if event.key == pygame.K_d:
                         self.movement[1] = False
 
             pygame.display.update()
