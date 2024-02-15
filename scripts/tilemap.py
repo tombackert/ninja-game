@@ -1,8 +1,21 @@
 import pygame
 import json
 
+AUTOTILE_MAP = {
+    tuple(sorted([(1, 0), (0, 1)]))                     : 0,
+    tuple(sorted([(1, 0), (0, 1), (-1, 0)]))            : 1,
+    tuple(sorted([(-1, 0), (0, 1)]))                    : 2,
+    tuple(sorted([(-1, 0), (0, -1), (0, 1)]))           : 3,
+    tuple(sorted([(-1, 0), (0, -1)]))                   : 4,
+    tuple(sorted([(-1, 0), (0, -1), (1, 0)]))           : 5,
+    tuple(sorted([(1, 0), (0, -1)]))                    : 6,
+    tuple(sorted([(1, 0), (0, -1), (0, 1)]))            : 7,
+    tuple(sorted([(1, 0), (-1, 0), (0, 1), (0, -1)]))   : 8,
+}
+
 NEIGHBOR_OFFSET = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)]
-PHYSICS_TILES = {'grass', 'stone'} # set for optimization
+PHYSICS_TILES = {'grass', 'stone'}
+AUTOTILE_TILES = {'grass', 'stone'}
 
 
 class Tilemap:
@@ -46,6 +59,18 @@ class Tilemap:
                                          self.tile_size))
         return rects
 
+    def autotile(self):
+        for loc in self.tilemap:
+            tile = self.tilemap[loc]
+            neighbors = set()
+            for shift in [(1, 0), (-1, 0), (0, -1), (0, 1)]:
+                check_loc = str(tile['pos'][0] + shift[0]) + ';' + str(tile['pos'][1] + shift[1])
+                if check_loc in self.tilemap:
+                    if self.tilemap[check_loc]['type'] == tile['type']:
+                        neighbors.add(shift)
+            neighbors = tuple(sorted(neighbors))
+            if tile['type'] in AUTOTILE_TILES and neighbors in AUTOTILE_MAP:
+                tile['variant'] = AUTOTILE_MAP[neighbors]
 
     def render(self, surf, offset=(0, 0)):
         for tile in self.offgrid_tiles:
