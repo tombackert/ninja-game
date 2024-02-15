@@ -23,8 +23,9 @@ class Editor:
             'grass': load_images('tiles/grass'),
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
-            'background': load_image('background.png')
         }
+
+        self.background = load_image('background.png')
 
         self.movement = [False, False, False, False]
 
@@ -32,10 +33,22 @@ class Editor:
 
         self.scroll = [0, 0]
 
+        self.tile_list = list(self.assets)
+        self.tile_group = 0
+        self.tile_variant = 0
+
+        self.clicking = False
+        self.right_clicking = False
+        self.shift = False
 
     def run(self):
         while True:
-            self.display.blit(self.assets['background'], (0, 0))
+            self.display.blit(self.background, (0, 0))
+
+            current_tile_img = self.assets[self.tile_list[self.tile_group]][self.tile_variant].copy()
+            current_tile_img.set_alpha(180)
+
+            self.display.blit(current_tile_img, (5, 5))
 
 
 
@@ -43,6 +56,27 @@ class Editor:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        self.clicking = True
+                    if event.button == 3:
+                        self.right_clicking = True
+                    if self.shift:
+                        if event.button == 4:
+                            self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
+                        if event.button == 5:
+                            self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
+                    else:
+                        if event.button == 4:
+                            self.tile_group = (self.tile_group - 1) % len(self.tile_list)
+                            self.tile_variant = 0
+                        if event.button == 5:
+                            self.tile_group = (self.tile_group + 1) % len(self.tile_list)
+                            self.tile_variant = 0
+
+                
+
                 
                 # movement keys
                 if event.type == pygame.KEYDOWN:
@@ -65,6 +99,9 @@ class Editor:
                         self.movement[2] = True
                     if event.key == pygame.K_DOWN:
                         self.movement[3] = True
+
+                    if event.key == pygame.K_LSHIFT:
+                        self.shift = True
                     
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
@@ -85,6 +122,9 @@ class Editor:
                         self.movement[2] = False
                     if event.key == pygame.K_DOWN:
                         self.movement[3] = False
+
+                    if event.key == pygame.K_LSHIFT:
+                        self.shift = False
                     
                     
 
