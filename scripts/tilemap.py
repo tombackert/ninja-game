@@ -1,5 +1,5 @@
 import pygame
-
+import json
 
 NEIGHBOR_OFFSET = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)]
 PHYSICS_TILES = {'grass', 'stone'} # set for optimization
@@ -11,7 +11,7 @@ class Tilemap:
         self.tile_size = tile_size
         self.tilemap = {}
         self.offgrid_tiles = []
-        
+
 
     def tiles_around(self, pos):
         tiles = []
@@ -22,6 +22,10 @@ class Tilemap:
                 tiles.append(self.tilemap[check_loc])
         return tiles
     
+    def save(self, path):
+        f = open(path, 'w')
+        json.dump({'tilemap': self.tilemap, 'tile_size': self.tile_size, 'offgrid': self.offgrid_tiles}, f)
+        f.close()
 
     def physics_rects_around(self, pos):
         rects = []
