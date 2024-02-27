@@ -48,11 +48,8 @@ class Game:
         self.leaf_spwaners = []
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spwaners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
-        print(self.leaf_spwaners)
-
 
         self.particles = []
-
 
         self.scroll = [0, 0]
 
@@ -111,7 +108,7 @@ class Game:
                     if event.key == pygame.K_d:
                         self.movement[1] = True
                     if event.key == pygame.K_w:
-                        self.player.velocity[1] = -3
+                        self.player.jump()
 
                     # arrow keys
                     if event.key == pygame.K_LEFT:
@@ -119,7 +116,7 @@ class Game:
                     if event.key == pygame.K_RIGHT:
                         self.movement[1] = True
                     if event.key == pygame.K_UP:
-                        self.player.velocity[1] = -3
+                        self.player.jump()
                     
                 
                 if event.type == pygame.KEYUP:
