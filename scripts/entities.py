@@ -78,6 +78,35 @@ class PhysicsEntity:
                   (self.pos[0] - offset[0] + self.anim_offset[0], 
                    self.pos[1] - offset[1] + self.anim_offset[1]))
 
+# Enemy AI
+class Enemy(PhysicsEntity):
+    def __init__(self, game, pos, size):
+        super().__init__(game, 'enemy', pos, size)
+
+        self.walking = 0
+
+    def update(self, tilemap, movement=(0, 0)):
+        if self.walking:
+            if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
+                if self.collisions['right'] or self.collisions['left']:
+                    self.flip = not self.flip
+                else:
+                    movement = (movement[0] - 0.5 if self.flip else 0.5, movement[1])
+            else:
+                self.flip = not self.flip
+            self.walking = max(0, self.walking - 1)
+        elif random.random() < 0.01:
+            self.walking = random.randint(30, 120) # 0.5sec < walking < 2sec
+
+
+        super().update(tilemap, movement=movement)
+
+        if movement[0] != 0:
+            self.set_action('run')
+        else:
+            self.set_action('idle') 
+
+
 
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size):
@@ -168,13 +197,13 @@ class Player(PhysicsEntity):
                 self.velocity[0] = 3.5
                 self.velocity[1] = -2.5
                 self.air_time = 5
-                self.jumps = max(1, self.jumps - 1)
+                self.jumps = max(0, self.jumps - 1)
                 return True
             elif not self.flip and self.last_movement[0] > 0:
                 self.velocity[0] = -3.5
                 self.velocity[1] = -2.5
                 self.air_time = 5
-                self.jumps = max(1, self.jumps - 1)
+                self.jumps = max(0, self.jumps - 1)
                 return True
             
         elif self.jumps:
