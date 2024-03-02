@@ -4,6 +4,7 @@ from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 
 RENDER_SCALE = 2.0
+current_map = 'data/maps/3.json'
 
 class Editor:
     def __init__(self):
@@ -32,7 +33,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
 
         try:
-            self.tilemap.load('data/maps/map.json')
+            self.tilemap.load(current_map)
         except FileNotFoundError:
             pass
 
@@ -157,7 +158,7 @@ class Editor:
                     if event.key == pygame.K_LSHIFT:
                         self.shift = True
                     if event.key == pygame.K_o:
-                        self.tilemap.save('data/maps/map.json')
+                        self.tilemap.save(current_map)
                     if event.key == pygame.K_t:
                         self.tilemap.autotile()
                     
