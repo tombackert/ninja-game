@@ -4,7 +4,7 @@ from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 
 RENDER_SCALE = 2.0
-current_map = 'data/maps/3.json'
+current_map = 'data/maps/4.json'
 
 class Editor:
     def __init__(self):
