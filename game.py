@@ -75,6 +75,7 @@ class Game:
 
         self.screenshake = 0
 
+        self.saves = 1
 
         
 
@@ -86,32 +87,40 @@ class Game:
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
-        self.enemies = []
-        for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
-            if spawner['variant'] == 0:
-                if not respawn:
-                    self.player.pos = spawner['pos']
-                    self.player.air_time = 0
-            else:
-                self.enemies.append(Enemy(self, spawner['pos'], (8, 15)))
-
-        if respawn:
-            self.player.pos = self.respawn_pos 
+        if respawn: 
+            self.enemies = []
+            enemy_id = 0
+            self.player.pos = self.respawn_pos
             self.player.air_time = 0
+            for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
+                if spawner['variant'] == 1:
+                    self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
+                    if enemy_id in self.killed_enemies:
+                        self.enemies.remove(self.enemies[-1])
+                    enemy_id += 1
         else:
-            self.respawn_pos = self.player.pos
+            self.enemies = []
+            enemy_id = 0
+            for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
+                if spawner['variant'] == 0:
+                    self.player.pos = spawner['pos']
+                    self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
+                    self.player.air_time = 0
+                else:
+                    self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
+                    enemy_id += 1
+            self.saves = 1
+            
 
         self.projectiles = []
         self.particles = []
         self.sparks = []
-        
+        self.killed_enemies = []
 
         self.scroll = [0, 0]
         self.dead = 0
         self.lifes = lifes
         self.transition = -30
-        print('spawned at pos: ', self.respawn_pos, 'lifes: ', self.lifes)
-    
 
     def run(self):
 
@@ -145,9 +154,10 @@ class Game:
                 if self.dead >= 10:
                     self.transition = min(30, self.transition + 1)
                 if self.dead > 40 and self.lifes >= 1:
-                    self.load_level(self.level, self.lifes, respawn=True)
-                if self.dead > 40 and self.lifes < 1:
+                    self.load_level(self.level, self.lifes, respawn=True)        
+                if self.dead > 40 and self.lifes < 1:   
                     self.load_level(self.level)
+                    
 
             self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
@@ -164,11 +174,14 @@ class Game:
 
             self.tilemap.render(self.display, offset=render_scroll)
 
+            
+
             for enemy in self.enemies.copy():
                 kill = enemy.update(self.tilemap, (0, 0))
                 enemy.render(self.display, offset=render_scroll)
                 if kill:
                     self.enemies.remove(enemy)
+                    self.killed_enemies.append(enemy.id)
 
 
             if not self.dead:
@@ -268,8 +281,10 @@ class Game:
 
                     # safe position
                     if event.key == pygame.K_p:
-                        self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
-                        print('saved respawn pos: ', self.respawn_pos)
+                        if self.saves > 0:
+                            self.saves -= 1
+                            self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
+                            print('saved respawn pos: ', self.respawn_pos)
                         
                 
                 if event.type == pygame.KEYUP:
@@ -300,10 +315,20 @@ class Game:
             position_surface = self.font.render(position, True, (0, 0, 0))
             self.display_2.blit(position_surface, (self.display.get_width() - position_surface.get_width(), 0))
 
+            # display respawn position
+            # position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
+            # respawn_surface = self.font.render(position, True, (0, 0, 0))
+            # self.display_2.blit(respawn_surface, (self.display.get_width() - respawn_surface.get_width(), 20))
+
             # display lifes
             lifes = 'Lifes: ' + str(self.lifes)
             lifes_surface = self.font.render(lifes, True, (0, 0, 0))
             self.display_2.blit(lifes_surface, (0, 0))
+
+            # display saves
+            saves = 'Saves: ' + str(self.saves)
+            saves_surface = self.font.render(saves, True, (0, 0, 0))
+            self.display_2.blit(saves_surface, (0, 20))
 
             # display level
             lifes = 'level: ' + str(self.level)

@@ -82,10 +82,11 @@ class PhysicsEntity:
              self.pos[1] - offset[1] + self.anim_offset[1]))
         
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size):
+    def __init__(self, game, pos, size, id):
         super().__init__(game, 'enemy', pos, size)
         
         self.walking = 0
+        self.id = id
         
     def update(self, tilemap, movement=(0, 0)):
         if self.walking:
