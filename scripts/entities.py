@@ -2,6 +2,7 @@ import math
 import random
 
 import pygame
+import pygame.font
 
 from scripts.particle import Particle
 from scripts.spark import Spark
@@ -101,6 +102,7 @@ class Enemy(PhysicsEntity):
                        self.game.player.pos[1] - self.pos[1])
                 if (abs(dis[1]) < 16):
                     if (self.flip and dis[0] < 0):
+                        self.game.sfx['shoot'].play()
                         self.game.projectiles.append([[self.rect().centerx - 7, 
                                                        self.rect().centery], -1.5, 0])
                         for i in range(4):
@@ -129,6 +131,7 @@ class Enemy(PhysicsEntity):
         if abs(self.game.player.dashing) >= 50:
             if self.rect().colliderect(self.game.player.rect()):
                 self.game.screenshake = max(16, self.game.screenshake)
+                self.game.sfx['hit'].play()
                 for i in range(30):
                     angle = random.random() * math.pi * 2
                     speed = random.random() * 5
@@ -224,6 +227,7 @@ class Player(PhysicsEntity):
     def render(self, surf, offset=(0, 0)):
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
+
             
     def jump(self):
         if self.wall_slide:
@@ -248,6 +252,7 @@ class Player(PhysicsEntity):
     
     def dash(self):
         if not self.dashing:
+            self.game.sfx['dash'].play()
             if self.flip:
                 self.dashing = -60
             else:
