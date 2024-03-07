@@ -1,10 +1,13 @@
 import pygame
+import pygame.font
 import sys
 from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 
 RENDER_SCALE = 2.0
-current_map = 'data/maps/5.json'
+map_num = 7
+current_map = 'data/maps/' + str(map_num) + '.json'
+
 
 class Editor:
     def __init__(self):
@@ -47,6 +50,8 @@ class Editor:
         self.right_clicking = False
         self.shift = False
         self.ongrid = True
+
+        self.font = pygame.font.Font(None, 10)
 
     def run(self):
         while True:
@@ -185,7 +190,10 @@ class Editor:
                     if event.key == pygame.K_LSHIFT:
                         self.shift = False
                     
-                    
+             # display player position
+            position = str(int(self.scroll[0])) + ', ' + str(int(self.scroll[1]))
+            position_surface = self.font.render(position, True, (0, 0, 0))
+            self.display.blit(position_surface, (self.display.get_width() - position_surface.get_width() - 10, 10))    
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()
