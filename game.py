@@ -69,13 +69,13 @@ class Game:
 
         self.tilemap = Tilemap(self, tile_size=16)
         
-        self.level = 6
+        self.level = 0
         
         self.load_level(self.level)
 
         self.screenshake = 0
 
-        self.font = pygame.font.Font(None, 10)
+        
 
         
     def load_level(self, map_id):
@@ -100,6 +100,7 @@ class Game:
 
         self.scroll = [0, 0]
         self.dead = 0
+        self.lifes = 3
         self.transition = -30
     
 
@@ -125,6 +126,10 @@ class Game:
                     self.load_level(self.level)
             if self.transition < 0:
                 self.transition += 1
+
+            if self.lifes < 1:
+                self.dead += 1
+
 
             if self.dead:
                 self.dead += 1
@@ -180,7 +185,7 @@ class Game:
                 elif abs(self.player.dashing) < 50:
                     if self.player.rect().collidepoint(projectile[0]):
                         self.projectiles.remove(projectile)
-                        self.dead += 1
+                        self.lifes -= 1
                         self.sfx['hit'].play()
                         self.screenshake = max(16, self.screenshake)
                         for i in range(30):
@@ -271,9 +276,20 @@ class Game:
             self.display_2.blit(self.display, (0, 0))
 
             # display player position
+            self.font = pygame.font.SysFont('arial', 16)
             position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
             position_surface = self.font.render(position, True, (0, 0, 0))
-            self.display_2.blit(position_surface, (self.display.get_width() - position_surface.get_width() - 10, 10))
+            self.display_2.blit(position_surface, (self.display.get_width() - position_surface.get_width(), 0))
+
+            # display lifes
+            lifes = 'Lifes: ' + str(self.lifes)
+            lifes_surface = self.font.render(lifes, True, (0, 0, 0))
+            self.display_2.blit(lifes_surface, (0, 0))
+
+            # display level
+            lifes = 'level: ' + str(self.level)
+            lifes_surface = self.font.render(lifes, True, (0, 0, 0))
+            self.display_2.blit(lifes_surface, (self.display.get_width() // 2 - 10, 0))
                     
             screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, 
                                   random.random() * self.screenshake - self.screenshake / 2)
