@@ -71,12 +71,7 @@ class Game:
         
         self.level = 0
         
-
         self.load_level(self.level)
-        self.respawn_pos = self.player.pos
-        print(self.player.pos)
-
-        print(self.respawn_pos)
 
         self.screenshake = 0
 
@@ -84,7 +79,7 @@ class Game:
         
 
         
-    def load_level(self, map_id, respawn=False):
+    def load_level(self, map_id, lifes=2, respawn=False):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
 
         self.leaf_spawners = []
@@ -103,6 +98,8 @@ class Game:
         if respawn:
             self.player.pos = self.respawn_pos 
             self.player.air_time = 0
+        else:
+            self.respawn_pos = self.player.pos
 
         self.projectiles = []
         self.particles = []
@@ -111,8 +108,9 @@ class Game:
 
         self.scroll = [0, 0]
         self.dead = 0
-        self.lifes = 3
+        self.lifes = lifes
         self.transition = -30
+        print('spawned at pos: ', self.respawn_pos, 'lifes: ', self.lifes)
     
 
     def run(self):
@@ -146,8 +144,10 @@ class Game:
                 self.dead += 1
                 if self.dead >= 10:
                     self.transition = min(30, self.transition + 1)
-                if self.dead > 40:
-                    self.load_level(self.level, respawn=True)
+                if self.dead > 40 and self.lifes >= 1:
+                    self.load_level(self.level, self.lifes, respawn=True)
+                if self.dead > 40 and self.lifes < 1:
+                    self.load_level(self.level)
 
             self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
@@ -263,15 +263,13 @@ class Game:
                     # respwan
                     if event.key == pygame.K_r:
                         self.dead += 1
-                        print('player pos:  ', self.player.pos)
-                        print('respawn pos: ', self.respawn_pos)
+                        self.lifes -= 1
 
 
                     # safe position
                     if event.key == pygame.K_p:
                         self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
-                        print('player pos:  ', self.player.pos)
-                        print('respawn pos: ', self.respawn_pos)
+                        print('saved respawn pos: ', self.respawn_pos)
                         
                 
                 if event.type == pygame.KEYUP:
