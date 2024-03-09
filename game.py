@@ -130,7 +130,8 @@ class Game:
 
         self.sfx['ambience'].play(-1)
 
-        while True:
+        running = True
+        while running:
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets['background'], (0, 0)) # for outline effect
 
@@ -171,10 +172,8 @@ class Game:
 
             self.clouds.update()
             self.clouds.render(self.display_2, offset=render_scroll)
-
             self.tilemap.render(self.display, offset=render_scroll)
 
-            
 
             for enemy in self.enemies.copy():
                 kill = enemy.update(self.tilemap, (0, 0))
@@ -183,18 +182,12 @@ class Game:
                     self.enemies.remove(enemy)
                     self.killed_enemies.append(enemy.id)
 
-
             if not self.dead:
                 self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 self.player.render(self.display, offset=render_scroll)
-                
-
-            
 
 
-
-            # handling projectiles
-            # [[x, y], direction, timer]
+            # handling projectiles [[x, y], direction, timer]
             for projectile in self.projectiles.copy():
                 projectile[0][0] += projectile[1]
                 projectile[2] += 1
@@ -250,6 +243,9 @@ class Game:
                 
                 # movement keys
                 if event.type == pygame.KEYDOWN:
+
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
                     
                     # w, a, s, d
                     if event.key == pygame.K_a:
@@ -340,5 +336,3 @@ class Game:
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
             pygame.display.update()
             self.clock.tick(60) # 60fps
-
-Game().run()
