@@ -74,6 +74,9 @@ class Game:
         self.screenshake = 0
         self.saves = 0
 
+        self.reaspawn_pos = []
+
+
     def load_level(self, map_id, lifes=3, respawn=False):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
 
@@ -85,6 +88,7 @@ class Game:
             self.enemies = []
             enemy_id = 0
             self.player.pos = self.respawn_pos
+            respawn_pos = [self.respawn_pos[0], self.respawn_pos[1]]
             self.player.air_time = 0
             for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
                 if spawner['variant'] == 1:
@@ -92,6 +96,9 @@ class Game:
                     if enemy_id in self.killed_enemies:
                         self.enemies.remove(self.enemies[-1])
                     enemy_id += 1
+                if spawner['variant'] == 0:
+                    self.player.pos = spawner['pos']
+                    self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
         else:
             self.enemies = []
             enemy_id = 0
@@ -105,7 +112,6 @@ class Game:
                     enemy_id += 1
             self.saves = 1
             
-
         self.projectiles = []
         self.particles = []
         self.sparks = []
@@ -115,6 +121,10 @@ class Game:
         self.dead = 0
         self.lifes = lifes
         self.transition = -30
+
+
+        print('loaded level:', map_id)
+        print('respawn pos:', self.respawn_pos)
 
     def run(self):
 
@@ -129,7 +139,6 @@ class Game:
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets['background'], (0, 0)) # for outline effect
 
-
             self.screenshake = max(0, self.screenshake - 1)
 
             if not len(self.enemies):
@@ -143,7 +152,6 @@ class Game:
             if self.lifes < 1:
                 self.dead += 1
 
-
             if self.dead:
                 self.dead += 1
                 if self.dead >= 10:
@@ -152,7 +160,6 @@ class Game:
                     self.load_level(self.level, self.lifes, respawn=True)        
                 if self.dead > 40 and self.lifes < 1:   
                     self.load_level(self.level)
-                    
 
             self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
@@ -267,6 +274,7 @@ class Game:
                     if event.key == pygame.K_r:
                         self.dead += 1
                         self.lifes -= 1
+                        print(self.dead)
 
 
                     # safe position
@@ -305,10 +313,12 @@ class Game:
             # position_surface = self.font.render(position, True, (0, 0, 0))
             # self.display_2.blit(position_surface, (self.display.get_width() - # position_surface.get_width(), 0))
 
+
             # display respawn position
-            # position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
-            # respawn_surface = self.font.render(position, True, (0, 0, 0))
-            # self.display_2.blit(respawn_surface, (self.display.get_width() - respawn_surface.get_width(), 20))
+            #self.font = pygame.font.SysFont('arial', 16)
+            #position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
+            #respawn_surface = self.font.render(position, True, (0, 0, 0))
+            #self.display_2.blit(respawn_surface, (self.display.get_width() - respawn_surface.get_width(), 20))
 
             # info display
             def get_font(size): 
@@ -333,3 +343,6 @@ class Game:
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
             pygame.display.update()
             self.clock.tick(60) # 60fps
+
+
+Game().run()
