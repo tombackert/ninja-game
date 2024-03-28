@@ -5,12 +5,16 @@ from game import Game
 pygame.init()
 
 SCREEN = pygame.display.set_mode((640, 480))
-pygame.display.set_caption("Menu")
+pygame.display.set_caption("Ninja Game")
 
 BG = pygame.image.load("data/menu/Background.png")
 
 def get_font(size): # Returns Press-Start-2P in the desired size
     return pygame.font.Font("data/menu/font.ttf", size)
+
+pygame.mixer.music.load('data/music.wav')
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
 
 def play():
     Game().run()

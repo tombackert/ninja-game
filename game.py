@@ -10,7 +10,8 @@ from scripts.utils import load_image, load_images, Animation
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.particle import Particle
-from scripts.spark import Spark
+from scripts.spark import Spark 
+from scripts.button import Button
 
 
 class Game:
@@ -18,7 +19,7 @@ class Game:
         
         pygame.init()
 
-        pygame.display.set_caption('ninja game')
+        pygame.display.set_caption('Ninja Game')
         self.screen = pygame.display.set_mode((640, 480))
         self.display = pygame.Surface((320, 240), pygame.SRCALPHA)
         self.display_2 = pygame.Surface((320, 240))
@@ -27,6 +28,7 @@ class Game:
 
         self.movement = [False, False]
 
+        # assets
         self.assets = {
             'decor': load_images('tiles/decor'),
             'grass': load_images('tiles/grass'),
@@ -64,23 +66,15 @@ class Game:
         self.sfx['jump'].set_volume(0.7)
 
         self.clouds = Clouds(self.assets['clouds'], count=16)
-
         self.player = Player(self, (100, 100), (8, 15))
-
         self.tilemap = Tilemap(self, tile_size=16)
         
         self.level = 0
-        
         self.load_level(self.level)
-
         self.screenshake = 0
+        self.saves = 0
 
-        self.saves = 1
-
-        
-
-        
-    def load_level(self, map_id, lifes=2, respawn=False):
+    def load_level(self, map_id, lifes=3, respawn=False):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
 
         self.leaf_spawners = []
@@ -306,31 +300,34 @@ class Game:
             self.display_2.blit(self.display, (0, 0))
 
             # display player position
-            self.font = pygame.font.SysFont('arial', 16)
-            position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
-            position_surface = self.font.render(position, True, (0, 0, 0))
-            self.display_2.blit(position_surface, (self.display.get_width() - position_surface.get_width(), 0))
+            # self.font = pygame.font.SysFont('arial', 16)
+            # position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
+            # position_surface = self.font.render(position, True, (0, 0, 0))
+            # self.display_2.blit(position_surface, (self.display.get_width() - # position_surface.get_width(), 0))
 
             # display respawn position
             # position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
             # respawn_surface = self.font.render(position, True, (0, 0, 0))
             # self.display_2.blit(respawn_surface, (self.display.get_width() - respawn_surface.get_width(), 20))
 
+            # info display
+            def get_font(size): 
+                return pygame.font.Font("data/menu/font.ttf", size)
+            
             # display lifes
-            lifes = 'Lifes: ' + str(self.lifes)
-            lifes_surface = self.font.render(lifes, True, (0, 0, 0))
-            self.display_2.blit(lifes_surface, (0, 0))
-
-            # display saves
-            saves = 'Saves: ' + str(self.saves)
-            saves_surface = self.font.render(saves, True, (0, 0, 0))
-            self.display_2.blit(saves_surface, (0, 20))
+            lifes = 'LIFES:' + str(self.lifes)
+            LIFE_TEXT = get_font(10).render(lifes, True, "black")
+            LIFE_RECT = LIFE_TEXT.get_rect(center=(45, 10))
+            self.display_2.blit(LIFE_TEXT, LIFE_RECT)
 
             # display level
-            lifes = 'level: ' + str(self.level)
-            lifes_surface = self.font.render(lifes, True, (0, 0, 0))
-            self.display_2.blit(lifes_surface, (self.display.get_width() // 2 - 10, 0))
-                    
+            level = 'LEVEL:' + str(self.level)
+            LEVEL_TEXT = get_font(10).render(level, True, "black")
+            LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
+            self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
+            
+                
+
             screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, 
                                   random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
