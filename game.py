@@ -14,7 +14,6 @@ from scripts.spark import Spark
 from scripts.button import Button
 from scripts.timer import Timer
 
-
 class Game:
     def __init__(self):
         
@@ -159,6 +158,7 @@ class Game:
                     self.timer.update_best_time_for_level()
                     self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
                     self.load_level(self.level)
+            
             if self.transition < 0:
                 self.transition += 1
 
@@ -183,7 +183,7 @@ class Game:
                     pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
                     self.particles.append(Particle(self, 'leaf', pos, velocity=[-0.1, 0.3], frame=random.randint(0, 20)))
 
-
+            # rendering
             self.clouds.update()
             self.clouds.render(self.display_2, offset=render_scroll)
             self.tilemap.render(self.display, offset=render_scroll)
@@ -293,6 +293,7 @@ class Game:
                             self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
                             print('saved respawn pos: ', self.respawn_pos)
                 
+                # stop movement
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
                         self.movement[0] = False
@@ -307,9 +308,7 @@ class Game:
             # level transition
             if self.transition:
                 transition_surf = pygame.Surface(self.display.get_size())
-                pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, 
-                                                                      self.display.get_height() // 2), 
-                                                                      (30 - abs(self.transition)) * 8)
+                pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, self.display.get_height() // 2), (30 - abs(self.transition)) * 8)
                 transition_surf.set_colorkey((255, 255, 255))
                 self.display.blit(transition_surf, (0, 0))
             self.display_2.blit(self.display, (0, 0))
@@ -356,10 +355,11 @@ class Game:
             self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
             
                 
-
-            screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, 
-                                  random.random() * self.screenshake - self.screenshake / 2)
+            # screen shake
+            screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
+
+
             pygame.display.update()
             self.clock.tick(60) # 60fps
 
