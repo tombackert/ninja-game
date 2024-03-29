@@ -41,7 +41,7 @@ class Timer():
         current_time = pygame.time.get_ticks() - self.start_time
         if current_time < self.best_time:
             self.best_time = current_time
-            self.save_best_time(self.current_level)
+            self.save_best_time()
 
     def save_best_time(self):
         best_times = {}

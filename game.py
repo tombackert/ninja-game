@@ -20,13 +20,16 @@ class Game:
         
         pygame.init()
 
+        # screen
         pygame.display.set_caption('Ninja Game')
         self.screen = pygame.display.set_mode((640, 480))
         self.display = pygame.Surface((320, 240), pygame.SRCALPHA)
         self.display_2 = pygame.Surface((320, 240))
-
+        
+        # clock
         self.clock = pygame.time.Clock()
-
+        
+        # movement
         self.movement = [False, False]
 
         # assets
@@ -66,14 +69,19 @@ class Game:
         self.sfx['dash'].set_volume(0.1)
         self.sfx['jump'].set_volume(0.7)
 
+        # entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
         self.player = Player(self, (100, 100), (8, 15))
         self.tilemap = Tilemap(self, tile_size=16)
+        
+        # global variables
         self.level = 0
         self.screenshake = 0
         self.saves = 0
         self.reaspawn_pos = []
         self.timer = Timer(self.level)
+
+        # load first level
         self.load_level(self.level)
 
     def load_level(self, map_id, lifes=3, respawn=False):
@@ -127,14 +135,14 @@ class Game:
         print('respawn pos:', self.respawn_pos)
 
     def run(self):
-        
 
+        # music
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
-
         self.sfx['ambience'].play(-1)
 
+        # main loop
         running = True
         while running:
 
@@ -215,10 +223,7 @@ class Game:
                             angle = random.random() * math.pi * 2
                             speed = random.random() * 5
                             self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
-                            self.particles.append(Particle(self, 'particle', self.player.rect().center, 
-                                                           velocity=[math.cos(angle + math.pi) * speed * 0.5, 
-                                                                     math.sin(angle + math.pi) * speed * 0.5], 
-                                                            frame=random.randint(0, 7)))
+                            self.particles.append(Particle(self, 'particle', self.player.rect().center, velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], frame=random.randint(0, 7)))
 
             # handling sparks
             for spark in self.sparks.copy():
@@ -281,14 +286,12 @@ class Game:
                         self.lifes -= 1
                         print(self.dead)
 
-
                     # safe position
                     if event.key == pygame.K_p:
                         if self.saves > 0:
                             self.saves -= 1
                             self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
                             print('saved respawn pos: ', self.respawn_pos)
-                        
                 
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
@@ -309,28 +312,27 @@ class Game:
                                                                       (30 - abs(self.transition)) * 8)
                 transition_surf.set_colorkey((255, 255, 255))
                 self.display.blit(transition_surf, (0, 0))
-
             self.display_2.blit(self.display, (0, 0))
-
-            # display player position
-            # self.font = pygame.font.SysFont('arial', 16)
-            # position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
-            # position_surface = self.font.render(position, True, (0, 0, 0))
-            # self.display_2.blit(position_surface, (self.display.get_width() - # position_surface.get_width(), 0))
-
-
-            # display respawn position
-            #self.font = pygame.font.SysFont('arial', 16)
-            #position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
-            #respawn_surface = self.font.render(position, True, (0, 0, 0))
-            #self.display_2.blit(respawn_surface, (self.display.get_width() - respawn_surface.get_width(), 20))
 
             # info display
             def get_font(size): 
                 return pygame.font.Font("data/menu/font.ttf", size)
 
+            # display player position
+            position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
+            POSITION_TEXT = get_font(10).render(position, True, "black")
+            POSITION_RECT = POSITION_TEXT.get_rect(center=(270, 10))
+            #self.display_2.blit(POSITION_TEXT, POSITION_RECT)
+
+            # display respawn position
+            position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
+            RESPAWN_TEXT = get_font(10).render(position, True, "black")
+            RESPAWN_RECT = RESPAWN_TEXT.get_rect(center=(270, 25))
+            #self.display_2.blit(RESPAWN_TEXT, RESPAWN_RECT)
+
             # display timer
-            TIMER_TEXT = get_font(10).render(self.timer.text, True, "black")
+            timer = self.timer.text
+            TIMER_TEXT = get_font(10).render(timer, True, "black")
             TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
             self.display_2.blit(TIMER_TEXT, TIMER_RECT)
 
