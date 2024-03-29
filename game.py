@@ -12,6 +12,7 @@ from scripts.clouds import Clouds
 from scripts.particle import Particle
 from scripts.spark import Spark 
 from scripts.button import Button
+from scripts.timer import Timer
 
 
 class Game:
@@ -68,16 +69,15 @@ class Game:
         self.clouds = Clouds(self.assets['clouds'], count=16)
         self.player = Player(self, (100, 100), (8, 15))
         self.tilemap = Tilemap(self, tile_size=16)
-        
         self.level = 0
-        self.load_level(self.level)
         self.screenshake = 0
         self.saves = 0
-
         self.reaspawn_pos = []
-
+        self.timer = Timer(self.level)
+        self.load_level(self.level)
 
     def load_level(self, map_id, lifes=3, respawn=False):
+        self.timer.reset()
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
 
         self.leaf_spawners = []
@@ -127,6 +127,7 @@ class Game:
         print('respawn pos:', self.respawn_pos)
 
     def run(self):
+        
 
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(0.5)
@@ -136,6 +137,9 @@ class Game:
 
         running = True
         while running:
+
+            self.timer.update(self.level)
+            
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets['background'], (0, 0)) # for outline effect
 
@@ -144,6 +148,7 @@ class Game:
             if not len(self.enemies):
                 self.transition += 1
                 if self.transition > 30:
+                    self.timer.update_best_time_for_level()
                     self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
                     self.load_level(self.level)
             if self.transition < 0:
@@ -323,6 +328,18 @@ class Game:
             # info display
             def get_font(size): 
                 return pygame.font.Font("data/menu/font.ttf", size)
+
+            # display timer
+            TIMER_TEXT = get_font(10).render(self.timer.text, True, "black")
+            TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
+            self.display_2.blit(TIMER_TEXT, TIMER_RECT)
+
+            # display best time
+            best_time = self.timer.load_best_time_for_level()
+            best_time = self.timer.format_time(best_time)
+            BEST_TIME_TEXT = get_font(10).render(best_time, True, "black")
+            BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
+            self.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
             
             # display lifes
             lifes = 'LIFES:' + str(self.lifes)
