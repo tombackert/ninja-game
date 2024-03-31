@@ -148,17 +148,18 @@ class Game:
             self.timer.update(self.level)
             
             self.display.fill((0, 0, 0, 0))
-            self.display_2.blit(self.assets['background'], (0, 0)) # for outline effect
+
+            self.display_2.blit(self.assets['background'], (0, 0))
 
             self.screenshake = max(0, self.screenshake - 1)
 
             if not len(self.enemies):
                 self.transition += 1
                 if self.transition > 30:
-                    self.timer.update_best_time_for_level()
+                    #self.timer.update_best_time_for_level()
                     self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
-                    self.load_level(self.level)
-            
+                    self.load_level(self.level)                    
+
             if self.transition < 0:
                 self.transition += 1
 
@@ -178,6 +179,7 @@ class Game:
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
+            # leaf particles
             for rect in self.leaf_spawners:
                 if random.random() * 49999 < rect.width * rect.height:
                     pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
@@ -188,7 +190,7 @@ class Game:
             self.clouds.render(self.display_2, offset=render_scroll)
             self.tilemap.render(self.display, offset=render_scroll)
 
-
+            # handling enemies
             for enemy in self.enemies.copy():
                 kill = enemy.update(self.tilemap, (0, 0))
                 enemy.render(self.display, offset=render_scroll)
@@ -354,14 +356,12 @@ class Game:
             LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
             self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
             
-                
             # screen shake
             screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
 
-
+            # clock
             pygame.display.update()
             self.clock.tick(60) # 60fps
-
 
 Game().run()
