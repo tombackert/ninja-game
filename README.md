@@ -12,17 +12,18 @@
 
 
 This is a fun and challenging 2D Platformer game where you must use your skills to navigate through difficult levels, defeat enemies and reach new goals. 
+This project is intended for anyone who is looking to dive into game dev, learn how basic game mechanics work, or stengthen their coding skills in a learning by doing approach.  
 
 ## The game features:
 
 - Beautiful pixel art graphics
-- Challenging gameplay
+- Challenging Plattformer gameplay
+- Enemy AI
+- Very realistic game physics 
 - Great music
 - Stunning sound and visual effects
 
-<img src="https://github.com/tombackert/ninja-game/blob/main/data/thumbnails/level8-thumbnail.png" width="300"/> <img src="https://github.com/tombackert/ninja-game/blob/main/data/thumbnails/level1-thumbnail.png" width="300"/> <img src="https://github.com/tombackert/ninja-game/blob/main/data/thumbnails/level7-thumbnail.png" width="300"/>
-
-This game is intended to be a learning resource for anybody who wants to know how basic game dev works. It is intended for people with very low to none programming background.
+![Thumbnail](https://github.com/tombackert/ninja-game/blob/main/data/thumbnails/ninja-game-thumbnail1.png)
 
 
 ## Getting Started:
@@ -40,10 +41,11 @@ I encourage contributions to this project. Feel free to submit pull requests for
 
 Here are some ways you can help:
 
+- Create new levels with the level editor (very easy)
 - Report bugs
 - Document the game
+- Code restructuring to make it more accessible
 - Provide valuable tips on how to create state-of-the-art pixel art games
-- Create new levels with the level editor (very easy)
 - Add new features
 - I hope you enjoy playing Ninja Game!
 
