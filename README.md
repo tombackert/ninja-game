@@ -1,6 +1,6 @@
 # Ninja Game
 
-![Pygame](https://raw.githubusercontent.com/pygame-community/pygame-ce/main/docs/reST/_static/pygame_logo.svg)
+![Pygame](https://raw.githubusercontent.com/pygame/pygame/main/docs/reST/_static/pygame_logo.svg)
 
 [![Python](https://img.shields.io/badge/python-3.10.8-blue.svg?style=flat-square)](https://www.python.org/)
 [![PyPiVersion](https://img.shields.io/pypi/v/pygame-ce.svg?v=1)](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
