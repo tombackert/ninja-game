@@ -317,7 +317,7 @@ class Game:
 
             # info display
             def get_font(size): 
-                return pygame.font.Font("data/menu/font.ttf", size)
+                return pygame.font.Font("data/font.ttf", size)
 
             # display player position
             position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
@@ -364,4 +364,5 @@ class Game:
             pygame.display.update()
             self.clock.tick(60) # 60fps
 
-Game().run()
+if __name__ == "__main__":
+    Game().run()
