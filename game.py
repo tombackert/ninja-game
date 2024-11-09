@@ -13,9 +13,10 @@ from scripts.particle import Particle
 from scripts.spark import Spark 
 from scripts.button import Button
 from scripts.timer import Timer
+import settings
 
 class Game:
-    def __init__(self, level=0):
+    def __init__(self):
         
         pygame.init()
 
@@ -62,11 +63,8 @@ class Game:
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
         }
 
-        self.sfx['ambience'].set_volume(0.2)
-        self.sfx['shoot'].set_volume(0.4)
-        self.sfx['hit'].set_volume(0.8)
-        self.sfx['dash'].set_volume(0.1)
-        self.sfx['jump'].set_volume(0.7)
+        # Set initial volumes based on settings
+        self.update_sound_volumes()
 
         # entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
@@ -74,7 +72,7 @@ class Game:
         self.tilemap = Tilemap(self, tile_size=16)
         
         # global variables
-        self.level = level
+        self.level = settings.selected_level
         self.screenshake = 0
         self.saves = 0
         self.reaspawn_pos = []
@@ -82,6 +80,14 @@ class Game:
 
         # load first level
         self.load_level(self.level)
+
+    # Update sound volumes based on settings
+    def update_sound_volumes(self):
+        self.sfx['ambience'].set_volume(settings.sound_volume * 0.2)
+        self.sfx['shoot'].set_volume(settings.sound_volume * 0.4)
+        self.sfx['hit'].set_volume(settings.sound_volume * 0.8)
+        self.sfx['dash'].set_volume(settings.sound_volume * 0.1)
+        self.sfx['jump'].set_volume(settings.sound_volume * 0.7)    
 
     def load_level(self, map_id, lifes=3, respawn=False):
         self.timer.reset()
@@ -137,7 +143,7 @@ class Game:
 
         # music
         pygame.mixer.music.load('data/music.wav')
-        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
 

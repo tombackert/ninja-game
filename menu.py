@@ -1,5 +1,6 @@
 import pygame, sys
 from scripts.button import Button
+import settings
 from game import Game
 import os
 
@@ -15,10 +16,10 @@ class Menu:
 
         # Load music
         pygame.mixer.music.load('data/music.wav')
-        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
 
-        self.selected_level = 0
+        self.selected_level = settings.selected_level
 
         # Start the main menu
         self.menu()
@@ -27,7 +28,7 @@ class Menu:
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
-        Game(self.selected_level).run()
+        Game().run()
         # After the game ends, return to the main menu
         self.menu()
 
@@ -42,9 +43,9 @@ class Menu:
         levels.sort()
 
         # Index of the currently highlighted level
-        level_index = 0  # Start with the first level highlighted
+        level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
         start_index = 0  # Index of the first level displayed
-        levels_per_page = 9  # Number of levels displayed at once
+        levels_per_page = 8  # Number of levels displayed at once
 
         while True:
             # Event handling
@@ -53,7 +54,7 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE): 
                         self.menu()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         level_index = (level_index - 1) % len(levels)
@@ -71,6 +72,7 @@ class Menu:
                             start_index = level_index
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                         self.selected_level = levels[level_index]
+                        settings.selected_level = self.selected_level
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
                         mouse_pos = pygame.mouse.get_pos()
@@ -144,6 +146,156 @@ class Menu:
             pygame.display.update()
             self.clock.tick(60)
 
+    def store(self):
+        options = ["Back"]
+        selected_option = 0
+
+        while True:
+            # Event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                        self.menu()
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        selected_option = (selected_option - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        selected_option = (selected_option + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        if options[selected_option] == "Back":
+                            self.menu()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        mouse_pos = pygame.mouse.get_pos()
+                        for i, rect in enumerate(option_rects):
+                            if rect.collidepoint(mouse_pos):
+                                selected_option = i
+                                if options[selected_option] == "Back":
+                                    self.menu()
+
+            # Get mouse position for highlighting
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Render the background
+            self.display.blit(self.bg, (0, 0))
+            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
+            self.screen.blit(scaled_display, (0, 0))
+
+            # Draw the store menu
+            title_text = self.get_font(40).render("Store", True, "Black")
+            title_rect = title_text.get_rect(center=(320, 50))
+            self.screen.blit(title_text, title_rect)
+
+            # Position settings
+            start_y = 200
+
+            option_rects = []
+
+            for i, option in enumerate(options):
+                if i == selected_option:
+                    base_color = "Red"
+                else:
+                    base_color = "Black"
+
+                option_text = self.get_font(30).render(option, True, base_color)
+                option_rect = option_text.get_rect(center=(320, start_y))
+                self.screen.blit(option_text, option_rect)
+                option_rects.append(option_rect)
+
+                # Highlighting with mouse hover
+                if option_rect.collidepoint(mouse_pos):
+                    selected_option = i
+
+            pygame.display.update()
+            self.clock.tick(60)
+
+    def options(self):
+        options = ["Music Volume", "Sound Volume", "Back"]
+        selected_option = 0
+
+        while True:
+            # Event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                        self.menu()
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        selected_option = (selected_option - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        selected_option = (selected_option + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        if options[selected_option] == "Back":
+                            self.menu()
+                    elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                        if options[selected_option] == "Music Volume":
+                            settings.music_volume = max(0.0, settings.music_volume - 0.1)
+                            pygame.mixer.music.set_volume(settings.music_volume)
+                        elif options[selected_option] == "Sound Volume":
+                            settings.sound_volume = max(0.0, settings.sound_volume - 0.1)
+                    elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                        if options[selected_option] == "Music Volume":
+                            settings.music_volume = min(1.0, settings.music_volume + 0.1)
+                            pygame.mixer.music.set_volume(settings.music_volume)
+                        elif options[selected_option] == "Sound Volume":
+                            settings.sound_volume = min(1.0, settings.sound_volume + 0.1)
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        mouse_pos = pygame.mouse.get_pos()
+                        for i, rect in enumerate(option_rects):
+                            if rect.collidepoint(mouse_pos):
+                                selected_option = i
+                                if options[selected_option] == "Back":
+                                    self.menu()
+
+            # Get mouse position for highlighting
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Render the background
+            self.display.blit(self.bg, (0, 0))
+            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
+            self.screen.blit(scaled_display, (0, 0))
+
+            # Draw the options menu
+            title_text = self.get_font(40).render("Options", True, "Black")
+            title_rect = title_text.get_rect(center=(320, 50))
+            self.screen.blit(title_text, title_rect)
+
+            # Position settings
+            start_y = 150
+            spacing = 50
+
+            option_rects = []
+
+            for i, option in enumerate(options):
+                if i == selected_option:
+                    base_color = "Red"
+                else:
+                    base_color = "Black"
+
+                if option == "Music Volume":
+                    text = f"Music Volume: {int(settings.music_volume * 100)}%"
+                elif option == "Sound Volume":
+                    text = f"Sound Volume: {int(settings.sound_volume * 100)}%"
+                else:
+                    text = option
+
+                option_text = self.get_font(30).render(text, True, base_color)
+                option_rect = option_text.get_rect(center=(320, start_y + i * spacing))
+                self.screen.blit(option_text, option_rect)
+                option_rects.append(option_rect)
+
+                # Highlighting with mouse hover
+                if option_rect.collidepoint(mouse_pos):
+                    selected_option = i
+
+            pygame.display.update()
+            self.clock.tick(60)
+
     def menu(self):
         # List of menu options
         menu_options = ["PLAY", "LEVELS", "STORE", "OPTIONS", "QUIT"]
@@ -171,6 +323,9 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
+                        pygame.quit()
+                        sys.exit()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         self.selected_option = (self.selected_option - 1) % len(menu_options)
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
