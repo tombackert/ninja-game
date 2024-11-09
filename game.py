@@ -15,7 +15,7 @@ from scripts.button import Button
 from scripts.timer import Timer
 
 class Game:
-    def __init__(self):
+    def __init__(self, level=0):
         
         pygame.init()
 
@@ -74,7 +74,7 @@ class Game:
         self.tilemap = Tilemap(self, tile_size=16)
         
         # global variables
-        self.level = 0
+        self.level = level
         self.screenshake = 0
         self.saves = 0
         self.reaspawn_pos = []
