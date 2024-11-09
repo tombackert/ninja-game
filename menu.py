@@ -1,8 +1,8 @@
-import pygame, sys
+import pygame
+import sys
+import os
 from scripts.button import Button
 from settings import settings
-from game import Game
-import os
 
 class Menu:
     def __init__(self):
@@ -28,6 +28,7 @@ class Menu:
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
+        from game import Game 
         Game().run()
         # After the game ends, return to the main menu
         self.menu()
@@ -388,6 +389,105 @@ class Menu:
                                 text_input=option, font=self.get_font(25),
                                 base_color=base_color, hovering_color="#b68f40")
                 button.update(self.screen)
+
+            pygame.display.update()
+            self.clock.tick(60)
+
+    def pause_menu(self, game_display, level, current_time, best_time):
+        options = ["Continue", "Save Game", "Menu"]
+        selected_option = 0
+
+        while True:
+            # Event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE, pygame.K_LEFT):
+                        pass  # Do not exit the pause menu
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        selected_option = (selected_option - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        selected_option = (selected_option + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        if options[selected_option] == "Continue":
+                            return "continue"
+                        elif options[selected_option] == "Save Game":
+                            print("Save Game feature not implemented yet.")
+                        elif options[selected_option] == "Menu":
+                            return "menu"
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        mouse_pos = pygame.mouse.get_pos()
+                        for i, rect in enumerate(option_rects):
+                            if rect.collidepoint(mouse_pos):
+                                if options[i] == "Continue":
+                                    return "continue"
+                                elif options[i] == "Save Game":
+                                    print("Save Game feature not implemented yet.")
+                                elif options[i] == "Menu":
+                                    return "menu"
+
+            # Get mouse position for highlighting
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Render the blurred game display
+            blurred_display = pygame.transform.smoothscale(game_display, (80, 60))
+            blurred_display = pygame.transform.scale(blurred_display, (320, 240))
+            self.screen.blit(blurred_display, (0, 0))
+
+            # Overlay semi-transparent layer for better visibility
+            overlay = pygame.Surface((640, 480), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 100))  # Black with alpha=100
+            self.screen.blit(overlay, (0, 0))
+
+            # Draw pause menu box
+            pause_box = pygame.Surface((300, 200), pygame.SRCALPHA)
+            pause_box.fill((50, 50, 50, 200))  # Dark gray with some transparency
+            pause_rect = pause_box.get_rect(center=(320, 240))
+            self.screen.blit(pause_box, pause_rect)
+
+            # Draw Pause Title
+            title_text = self.get_font(40).render("Paused", True, "White")
+            title_rect = title_text.get_rect(center=(320, 170))
+            self.screen.blit(title_text, title_rect)
+
+            # Display current level, current time, and best time
+            info_text = f"Level: {level}"
+            info_surface = self.get_font(25).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, 200))
+            self.screen.blit(info_surface, info_rect)
+
+            info_text = f"Current Time: {current_time}"
+            info_surface = self.get_font(25).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, 230))
+            self.screen.blit(info_surface, info_rect)
+
+            info_text = f"Best Time: {best_time}"
+            info_surface = self.get_font(25).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, 260))
+            self.screen.blit(info_surface, info_rect)
+
+            # Menu options
+            option_rects = []
+            start_y = 300
+            spacing = 40
+
+            for i, option in enumerate(options):
+                if i == selected_option:
+                    base_color = "Yellow"
+                else:
+                    base_color = "White"
+
+                option_surface = self.get_font(30).render(option, True, base_color)
+                option_rect = option_surface.get_rect(center=(320, start_y + i * spacing))
+                self.screen.blit(option_surface, option_rect)
+                option_rects.append(option_rect)
+
+                # Highlighting with mouse hover
+                if option_rect.collidepoint(mouse_pos):
+                    selected_option = i
 
             pygame.display.update()
             self.clock.tick(60)
