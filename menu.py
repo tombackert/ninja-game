@@ -1,6 +1,7 @@
 import pygame, sys
 from scripts.button import Button
 from game import Game
+import os
 
 class Menu:
     def __init__(self):
@@ -17,6 +18,8 @@ class Menu:
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
 
+        self.selected_level = 0
+
         # Start the main menu
         self.menu()
 
@@ -24,23 +27,68 @@ class Menu:
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
-        Game().run()
+        Game(self.selected_level).run()
         # After the game ends, return to the main menu
         self.menu()
 
     def levels(self):
+
+        # Get a list of all level files in the 'data/maps' directory
+        level_files = [f for f in os.listdir('data/maps') if f.endswith('.json')]
+        level_files.sort()  # Ensure levels are in order
+
+        # Extract level numbers from filenames
+        levels = [int(f.split('.')[0]) for f in level_files]
+
+        # Index of the currently selected level in the levels list
+        level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
+
         while True:
+            # Event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        # Go back to the main menu
+                        self.menu()
+                    if event.key == pygame.K_UP or event.key == pygame.K_w:
+                        level_index = (level_index - 1) % len(levels)
+                    if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                        level_index = (level_index + 1) % len(levels)
+                    if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                        # Set the selected level and return to main menu
+                        self.selected_level = levels[level_index]
+                        self.menu()
+
             # Render the background on the scaled display
             self.display.blit(self.bg, (0, 0))
-
-            # Scale up the display and blit onto the screen
             scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
             self.screen.blit(scaled_display, (0, 0))
 
-            # Draw the text and buttons directly on the main screen
-            LEVELS_TEXT = self.get_font(25).render("This is the LEVELS screen.", True, "Black")
-            LEVELS_RECT = LEVELS_TEXT.get_rect(center=(320, 160))
-            self.screen.blit(LEVELS_TEXT, LEVELS_RECT)
+            # Draw the levels list on the main screen
+            title_text = self.get_font(40).render("Select Level", True, "Black")
+            title_rect = title_text.get_rect(center=(320, 50))
+            self.screen.blit(title_text, title_rect)
+
+            # Position settings
+            start_y = 120
+            spacing = 40
+
+            for i, level in enumerate(levels):
+                if i == level_index:
+                    base_color = "Red"
+                    suffix = " *"  # Add star to selected level
+                else:
+                    base_color = "Black"
+                    suffix = ""
+                level_text = self.get_font(30).render(f"Level {level}{suffix}", True, base_color)
+                level_rect = level_text.get_rect(center=(320, start_y + i * spacing))
+                self.screen.blit(level_text, level_rect)
+
+            pygame.display.update()
+            self.clock.tick(60)
 
     def menu(self):
         # List of menu options
