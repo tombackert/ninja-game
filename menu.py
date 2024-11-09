@@ -33,15 +33,15 @@ class Menu:
 
     def levels(self):
 
-        # Get a list of all level files in the 'data/maps' directory
+            # Get a list of all level files in the 'data/maps' directory
         level_files = [f for f in os.listdir('data/maps') if f.endswith('.json')]
         level_files.sort()  # Ensure levels are in order
 
         # Extract level numbers from filenames
         levels = [int(f.split('.')[0]) for f in level_files]
 
-        # Index of the currently selected level in the levels list
-        level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
+        # Index of the currently highlighted level in the levels list
+        level_index = 0  # Start with first level highlighted
 
         while True:
             # Event handling
@@ -50,7 +50,7 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
                         # Go back to the main menu
                         self.menu()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
@@ -58,9 +58,21 @@ class Menu:
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         level_index = (level_index + 1) % len(levels)
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        # Set the selected level and return to main menu
+                        # Set the selected level to the currently highlighted level
                         self.selected_level = levels[level_index]
-                        self.menu()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left click
+                        # Check if click is on a level
+                        mouse_pos = pygame.mouse.get_pos()
+                        start_y = 120
+                        spacing = 40
+                        for i, level in enumerate(levels):
+                            level_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
+                            if level_rect.collidepoint(mouse_pos):
+                                self.selected_level = level
+
+            # Get mouse position for highlighting
+            mouse_pos = pygame.mouse.get_pos()
 
             # Render the background on the scaled display
             self.display.blit(self.bg, (0, 0))
@@ -77,12 +89,16 @@ class Menu:
             spacing = 40
 
             for i, level in enumerate(levels):
-                if i == level_index:
+                # Check if this level is the selected level
+                suffix = " *" if level == self.selected_level else ""
+
+                # Check if this level is highlighted (by keyboard or mouse)
+                level_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
+                if i == level_index or level_rect.collidepoint(mouse_pos):
                     base_color = "Red"
-                    suffix = " *"  # Add star to selected level
                 else:
                     base_color = "Black"
-                    suffix = ""
+
                 level_text = self.get_font(30).render(f"Level {level}{suffix}", True, base_color)
                 level_rect = level_text.get_rect(center=(320, start_y + i * spacing))
                 self.screen.blit(level_text, level_rect)
