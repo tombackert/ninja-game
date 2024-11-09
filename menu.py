@@ -33,15 +33,18 @@ class Menu:
 
     def levels(self):
 
-            # Get a list of all level files in the 'data/maps' directory
+        # Get a list of all level files in the 'data/maps' directory
         level_files = [f for f in os.listdir('data/maps') if f.endswith('.json')]
         level_files.sort()  # Ensure levels are in order
 
         # Extract level numbers from filenames
         levels = [int(f.split('.')[0]) for f in level_files]
+        levels.sort()
 
-        # Index of the currently highlighted level in the levels list
-        level_index = 0  # Start with first level highlighted
+        # Index of the currently highlighted level
+        level_index = 0  # Start with the first level highlighted
+        start_index = 0  # Index of the first level displayed
+        levels_per_page = 9  # Number of levels displayed at once
 
         while True:
             # Event handling
@@ -51,25 +54,30 @@ class Menu:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
-                        # Go back to the main menu
                         self.menu()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         level_index = (level_index - 1) % len(levels)
+                        # Adjust start_index if necessary
+                        if level_index < start_index:
+                            start_index = level_index
+                        elif level_index >= start_index + levels_per_page:
+                            start_index = level_index - levels_per_page + 1
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         level_index = (level_index + 1) % len(levels)
+                        # Adjust start_index if necessary
+                        if level_index >= start_index + levels_per_page:
+                            start_index = level_index - levels_per_page + 1
+                        elif level_index < start_index:
+                            start_index = level_index
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        # Set the selected level to the currently highlighted level
                         self.selected_level = levels[level_index]
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
-                        # Check if click is on a level
                         mouse_pos = pygame.mouse.get_pos()
-                        start_y = 120
-                        spacing = 40
-                        for i, level in enumerate(levels):
-                            level_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
+                        for level_rect, idx in level_rects:
                             if level_rect.collidepoint(mouse_pos):
-                                self.selected_level = level
+                                level_index = idx
+                                self.selected_level = levels[level_index]
 
             # Get mouse position for highlighting
             mouse_pos = pygame.mouse.get_pos()
@@ -88,20 +96,50 @@ class Menu:
             start_y = 120
             spacing = 40
 
-            for i, level in enumerate(levels):
-                # Check if this level is the selected level
-                suffix = " *" if level == self.selected_level else ""
+            level_rects = []
 
-                # Check if this level is highlighted (by keyboard or mouse)
-                level_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
-                if i == level_index or level_rect.collidepoint(mouse_pos):
+            # Only render levels from start_index to end_index
+            end_index = min(start_index + levels_per_page, len(levels))
+
+            for i in range(start_index, end_index):
+                level = levels[i]
+                idx = i  # Absolute index in levels list
+                is_selected = level == self.selected_level
+
+                # Determine if this level is highlighted (by keyboard or mouse)
+                temp_rect = pygame.Rect(320 - 100, start_y + (i - start_index) * spacing - 15, 200, 30)
+                if idx == level_index or temp_rect.collidepoint(mouse_pos):
                     base_color = "Red"
                 else:
                     base_color = "Black"
 
-                level_text = self.get_font(30).render(f"Level {level}{suffix}", True, base_color)
-                level_rect = level_text.get_rect(center=(320, start_y + i * spacing))
-                self.screen.blit(level_text, level_rect)
+                # Fixed x position for all level texts
+                level_text_x = 200  # Adjust as needed
+                level_text_y = start_y + (i - start_index) * spacing
+
+                # Shift selected level to the left
+                shift_amount = -20 if is_selected else 0
+                text_pos_x = level_text_x + shift_amount
+
+                # Render the level text
+                level_text_surface = self.get_font(30).render(f"Level {level}", True, base_color)
+                level_text_rect = level_text_surface.get_rect(topleft=(text_pos_x, level_text_y))
+                self.screen.blit(level_text_surface, level_text_rect)
+
+                # Render the star if this is the selected level
+                if is_selected:
+                    star_text_surface = self.get_font(30).render("*", True, base_color)
+                    star_text_rect = star_text_surface.get_rect()
+                    # Position the star to the right of the level text
+                    star_text_rect.midleft = (level_text_rect.right + 10, level_text_rect.centery)
+                    self.screen.blit(star_text_surface, star_text_rect)
+                    # Update the level_rect to include the star
+                    level_rect = level_text_rect.union(star_text_rect)
+                else:
+                    level_rect = level_text_rect
+
+                # Store the level_rect and index for interaction
+                level_rects.append((level_rect, idx))
 
             pygame.display.update()
             self.clock.tick(60)
