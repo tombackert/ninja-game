@@ -364,4 +364,5 @@ class Game:
             pygame.display.update()
             self.clock.tick(60) # 60fps
 
-Game().run()
+if __name__ == "__main__":
+    Game().run()
