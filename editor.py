@@ -5,10 +5,10 @@ from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 
 RENDER_SCALE = 2.0
-map_num = '0'
+map_num = '7'
 current_map = 'data/maps/' + str(map_num) + '.json'
 
-current_map = 'data/menu.json'
+# current_map = 'data/.json'
 
 class Editor:
     def __init__(self):
