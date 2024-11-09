@@ -1,6 +1,6 @@
 import pygame, sys
 from scripts.button import Button
-import settings
+from settings import settings
 from game import Game
 import os
 
@@ -80,6 +80,7 @@ class Menu:
                             if level_rect.collidepoint(mouse_pos):
                                 level_index = idx
                                 self.selected_level = levels[level_index]
+                                settings.selected_level = self.selected_level
 
             # Get mouse position for highlighting
             mouse_pos = pygame.mouse.get_pos()

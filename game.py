@@ -13,7 +13,7 @@ from scripts.particle import Particle
 from scripts.spark import Spark 
 from scripts.button import Button
 from scripts.timer import Timer
-import settings
+from settings import settings
 
 class Game:
     def __init__(self):
