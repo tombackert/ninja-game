@@ -19,7 +19,7 @@ class Menu:
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
 
-        self.selected_level = 0
+        self.selected_level = settings.selected_level
 
         # Start the main menu
         self.menu()
@@ -28,7 +28,7 @@ class Menu:
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
-        Game(self.selected_level).run()
+        Game().run()
         # After the game ends, return to the main menu
         self.menu()
 
@@ -43,9 +43,9 @@ class Menu:
         levels.sort()
 
         # Index of the currently highlighted level
-        level_index = 0  # Start with the first level highlighted
+        level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
         start_index = 0  # Index of the first level displayed
-        levels_per_page = 9  # Number of levels displayed at once
+        levels_per_page = 8  # Number of levels displayed at once
 
         while True:
             # Event handling
@@ -54,7 +54,7 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE): 
                         self.menu()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         level_index = (level_index - 1) % len(levels)
@@ -72,6 +72,7 @@ class Menu:
                             start_index = level_index
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                         self.selected_level = levels[level_index]
+                        settings.selected_level = self.selected_level
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
                         mouse_pos = pygame.mouse.get_pos()
@@ -230,13 +231,13 @@ class Menu:
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                         if options[selected_option] == "Back":
                             self.menu()
-                    elif event.key == pygame.K_LEFT:
+                    elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
                         if options[selected_option] == "Music Volume":
                             settings.music_volume = max(0.0, settings.music_volume - 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
                         elif options[selected_option] == "Sound Volume":
                             settings.sound_volume = max(0.0, settings.sound_volume - 0.1)
-                    elif event.key == pygame.K_RIGHT:
+                    elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                         if options[selected_option] == "Music Volume":
                             settings.music_volume = min(1.0, settings.music_volume + 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
@@ -322,6 +323,9 @@ class Menu:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
+                        pygame.quit()
+                        sys.exit()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         self.selected_option = (self.selected_option - 1) % len(menu_options)
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
