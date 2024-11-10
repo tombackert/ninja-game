@@ -50,7 +50,7 @@ class Settings:
                     self._music_volume = data.get("music_volume", self._music_volume)
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
                     self._selected_level = data.get("selected_level", self._selected_level)
-                print("Settings loaded successfully.")
+                # print("Settings loaded successfully.")
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading settings: {e}")
                 self.save_settings()  # Save default settings if loading fails
@@ -68,7 +68,7 @@ class Settings:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
             with open(self.SETTINGS_FILE, "w") as f:
                 json.dump(data, f, indent=4)
-            print("Settings saved successfully.")
+            # print("Settings saved successfully.")
         except IOError as e:
             print(f"Error saving settings: {e}")
 

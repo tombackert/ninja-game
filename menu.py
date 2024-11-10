@@ -1,8 +1,8 @@
-import pygame, sys
+import pygame
+import sys
+import os
 from scripts.button import Button
 from settings import settings
-from game import Game
-import os
 
 class Menu:
     def __init__(self):
@@ -21,16 +21,21 @@ class Menu:
 
         self.selected_level = settings.selected_level
 
-        # Start the main menu
+        self.paused = False
+
+        #if self.paused:
+        #    self.pause(settings.selected_level, current_time=0, best_time=0)
+        
+
         self.menu()
 
     def get_font(self, size):
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
+        from game import Game
         Game().run()
-        # After the game ends, return to the main menu
-        self.menu()
+        self.pause(settings.selected_level, current_time=0, best_time=0)
 
     def levels(self):
 
@@ -316,7 +321,8 @@ class Menu:
             self.screen.blit(MENU_TEXT, MENU_RECT)
 
             # Position of the buttons
-            button_positions = [180, 245, 310, 375, 440]
+            spacing = 50
+            button_positions = [x for x in range(180, 480, spacing)]
 
             # Event-Handling
             for event in pygame.event.get():
@@ -385,9 +391,110 @@ class Menu:
                             sys.exit()
 
                 button = Button(image=None, pos=(320, button_positions[i]),
-                                text_input=option, font=self.get_font(25),
+                                text_input=option, font=self.get_font(30),
                                 base_color=base_color, hovering_color="#b68f40")
                 button.update(self.screen)
+
+            pygame.display.update()
+            self.clock.tick(60)
+
+    def pause(self, level, current_time, best_time):
+        options = ["Continue", "Save Game", "Menu"]
+        selected_option = 0
+
+        print("Pause Menu")
+
+        while True:
+            # Event handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE, pygame.K_LEFT):
+                        self.menu()
+                    elif event.key in (pygame.K_UP, pygame.K_w):
+                        selected_option = (selected_option - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        selected_option = (selected_option + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        if options[selected_option] == "Continue":
+                            self.play()
+                        elif options[selected_option] == "Save Game":
+                            print("Save Game feature not implemented yet.")
+                        elif options[selected_option] == "Menu":
+                            self.menu()
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        mouse_pos = pygame.mouse.get_pos()
+                        for i, rect in enumerate(option_rects):
+                            if rect.collidepoint(mouse_pos):
+                                selected_option = i
+                                if options[selected_option] == "Continue":
+                                    self.play()
+                                elif options[selected_option] == "Menu":
+                                    self.menu()
+
+
+            # Get mouse position for highlighting
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Render the background
+            self.display.blit(self.bg, (0, 0))
+            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
+            self.screen.blit(scaled_display, (0, 0))
+
+            # Draw the pause menu
+            title_text = self.get_font(40).render("Paused", True, "Black")
+            title_rect = title_text.get_rect(center=(320, 50))
+            self.screen.blit(title_text, title_rect)
+
+
+            # Position settings
+            start_y = 100
+            spacing = 20
+
+
+            # Display current level, current time, and best time
+            info_text = f"Level: {level}"
+            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, start_y + 1 * spacing))
+            self.screen.blit(info_surface, info_rect)
+
+            info_text = f"Current Time: {current_time}"
+            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, start_y + 2 * spacing))
+            self.screen.blit(info_surface, info_rect)
+
+            info_text = f"Best Time: {best_time}"
+            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_rect = info_surface.get_rect(center=(320, start_y + 3 * spacing))
+            self.screen.blit(info_surface, info_rect)
+
+
+            # Position settings
+            start_y = 250
+            spacing = 40
+
+            option_rects = []
+
+            for i, option in enumerate(options):
+                # Determine if this level is highlighted (by keyboard or mouse)
+                temp_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
+                if i == selected_option or temp_rect.collidepoint(mouse_pos):
+                    base_color = "Red"
+                else:
+                    base_color = "Black"
+                
+
+                option_text = self.get_font(30).render(option, True, base_color)
+                option_rect = option_text.get_rect(center=(320, start_y + i * spacing))
+                self.screen.blit(option_text, option_rect)
+                option_rects.append(option_rect)
+
+
+                
 
             pygame.display.update()
             self.clock.tick(60)

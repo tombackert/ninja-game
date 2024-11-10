@@ -14,25 +14,26 @@ from scripts.spark import Spark
 from scripts.button import Button
 from scripts.timer import Timer
 from settings import settings
+from menu import Menu
 
 class Game:
     def __init__(self):
         
         pygame.init()
 
-        # screen
+        # Screen setup
         pygame.display.set_caption('Ninja Game')
         self.screen = pygame.display.set_mode((640, 480))
         self.display = pygame.Surface((320, 240), pygame.SRCALPHA)
         self.display_2 = pygame.Surface((320, 240))
-        
-        # clock
+
+        # Clock
         self.clock = pygame.time.Clock()
         
-        # movement
+        # Movement flags
         self.movement = [False, False]
 
-        # assets
+        # Load assets
         self.assets = {
             'decor': load_images('tiles/decor'),
             'grass': load_images('tiles/grass'),
@@ -54,7 +55,7 @@ class Game:
             'projectile': load_image('projectile.png'),
         }
 
-        # sound effects
+        # Load sound effects and set volume based on settings
         self.sfx = {
             'jump': pygame.mixer.Sound('data/sfx/jump.wav'),
             'dash': pygame.mixer.Sound('data/sfx/dash.wav'),
@@ -63,22 +64,22 @@ class Game:
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
         }
 
-        # Set initial volumes based on settings
+        # Set sound volumes based on settings
         self.update_sound_volumes()
 
-        # entities
+        # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
         self.player = Player(self, (100, 100), (8, 15))
         self.tilemap = Tilemap(self, tile_size=16)
         
-        # global variables
+        # Global variables
         self.level = settings.selected_level
         self.screenshake = 0
         self.saves = 0
         self.reaspawn_pos = []
         self.timer = Timer(self.level)
 
-        # load first level
+        # Load the selected level
         self.load_level(self.level)
 
     # Update sound volumes based on settings
@@ -140,14 +141,13 @@ class Game:
         print('respawn pos:', self.respawn_pos)
 
     def run(self):
-
-        # music
+        # Music setup
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
 
-        # main loop
+        # Flags for game state
         running = True
         while running:
 
@@ -185,18 +185,18 @@ class Game:
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
-            # leaf particles
+            # Leaf particles
             for rect in self.leaf_spawners:
                 if random.random() * 49999 < rect.width * rect.height:
                     pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
                     self.particles.append(Particle(self, 'leaf', pos, velocity=[-0.1, 0.3], frame=random.randint(0, 20)))
 
-            # rendering
+            # Rendering
             self.clouds.update()
             self.clouds.render(self.display_2, offset=render_scroll)
             self.tilemap.render(self.display, offset=render_scroll)
 
-            # handling enemies
+            # Handling enemies
             for enemy in self.enemies.copy():
                 kill = enemy.update(self.tilemap, (0, 0))
                 enemy.render(self.display, offset=render_scroll)
@@ -208,8 +208,7 @@ class Game:
                 self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 self.player.render(self.display, offset=render_scroll)
 
-
-            # handling projectiles [[x, y], direction, timer]
+            # Handling projectiles [[x, y], direction, timer]
             for projectile in self.projectiles.copy():
                 projectile[0][0] += projectile[1]
                 projectile[2] += 1
@@ -231,9 +230,13 @@ class Game:
                             angle = random.random() * math.pi * 2
                             speed = random.random() * 5
                             self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
-                            self.particles.append(Particle(self, 'particle', self.player.rect().center, velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], frame=random.randint(0, 7)))
+                            self.particles.append(Particle(
+                                self, 'particle', self.player.rect().center, 
+                                velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
+                                frame=random.randint(0, 7)
+                            ))
 
-            # handling sparks
+            # Handling sparks
             for spark in self.sparks.copy():
                 kill = spark.update()
                 spark.render(self.display, offset=render_scroll)
@@ -245,7 +248,7 @@ class Game:
             for offset in [(-1,0), (1,0), (0,-1), (0,1)]:
                 self.display_2.blit(display_sillhouette, offset)
             
-            # handling particles
+            # Handling particles
             for particle in self.particles.copy():
                 kill = particle.update()
                 particle.render(self.display, offset=render_scroll)
@@ -254,19 +257,20 @@ class Game:
                 if kill:
                     self.particles.remove(particle)
 
-            # handling player movement
+            # Handling player movement
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 
-                # movement keys
+                # Movement keys
                 if event.type == pygame.KEYDOWN:
 
                     if event.key == pygame.K_ESCAPE:
+                        Menu.paused = True
                         running = False
                     
-                    # w, a, s, d
+                    # W, A, S, D
                     if event.key == pygame.K_a:
                         self.movement[0] = True
                     if event.key == pygame.K_d:
@@ -275,7 +279,7 @@ class Game:
                         if self.player.jump():
                             self.sfx['jump'].play()
 
-                    # arrow keys
+                    # Arrow keys
                     if event.key == pygame.K_LEFT:
                         self.movement[0] = True
                     if event.key == pygame.K_RIGHT:
@@ -284,24 +288,24 @@ class Game:
                         if self.player.jump():
                             self.sfx['jump'].play()
                     
-                    # space
+                    # Space
                     if event.key == pygame.K_SPACE:
                         self.player.dash()
 
-                    # respwan
+                    # Respawn
                     if event.key == pygame.K_r:
                         self.dead += 1
                         self.lifes -= 1
                         print(self.dead)
 
-                    # safe position
+                    # Save position
                     if event.key == pygame.K_p:
                         if self.saves > 0:
                             self.saves -= 1
                             self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
                             print('saved respawn pos: ', self.respawn_pos)
                 
-                # stop movement
+                # Stop movement
                 if event.type == pygame.KEYUP:
                     if event.key == pygame.K_a:
                         self.movement[0] = False
@@ -313,7 +317,7 @@ class Game:
                     if event.key == pygame.K_RIGHT:
                         self.movement[1] = False
 
-            # level transition
+            # Level transition
             if self.transition:
                 transition_surf = pygame.Surface(self.display.get_size())
                 pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, self.display.get_height() // 2), (30 - abs(self.transition)) * 8)
@@ -321,52 +325,52 @@ class Game:
                 self.display.blit(transition_surf, (0, 0))
             self.display_2.blit(self.display, (0, 0))
 
-            # info display
+            # Info display
             def get_font(size): 
                 return pygame.font.Font("data/font.ttf", size)
 
-            # display player position
+            # Display player position
             position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
             POSITION_TEXT = get_font(10).render(position, True, "black")
             POSITION_RECT = POSITION_TEXT.get_rect(center=(270, 10))
             #self.display_2.blit(POSITION_TEXT, POSITION_RECT)
 
-            # display respawn position
+            # Display respawn position
             position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
             RESPAWN_TEXT = get_font(10).render(position, True, "black")
             RESPAWN_RECT = RESPAWN_TEXT.get_rect(center=(270, 25))
             #self.display_2.blit(RESPAWN_TEXT, RESPAWN_RECT)
 
-            # display timer
+            # Display timer
             timer = self.timer.text
             TIMER_TEXT = get_font(10).render(timer, True, "black")
             TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
             self.display_2.blit(TIMER_TEXT, TIMER_RECT)
 
-            # display best time
+            # Display best time
             best_time = self.timer.load_best_time_for_level()
             best_time = self.timer.format_time(best_time)
             BEST_TIME_TEXT = get_font(10).render(best_time, True, "black")
             BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
             self.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
             
-            # display lifes
+            # Display lifes
             lifes = 'LIFES:' + str(self.lifes)
             LIFE_TEXT = get_font(10).render(lifes, True, "black")
             LIFE_RECT = LIFE_TEXT.get_rect(center=(45, 10))
             self.display_2.blit(LIFE_TEXT, LIFE_RECT)
 
-            # display level
+            # Display level
             level = 'LEVEL:' + str(self.level)
             LEVEL_TEXT = get_font(10).render(level, True, "black")
             LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
             self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
             
-            # screen shake
+            # Screen shake
             screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
 
-            # clock
+            # Clock
             pygame.display.update()
             self.clock.tick(60) # 60fps
 
