@@ -276,9 +276,10 @@ class Game:
                 if not len(self.enemies):
                     self.transition += 1
                     if self.transition > 30:
-                        #self.timer.update_best_time_for_level()
+                        # Update best time before loading next level
+                        self.timer.update_best_time()
                         self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
-                        self.load_level(self.level)                    
+                        self.load_level(self.level)                   
 
                 if self.transition < 0:
                     self.transition += 1
@@ -454,16 +455,15 @@ class Game:
                 RESPAWN_RECT = RESPAWN_TEXT.get_rect(center=(270, 25))
                 #self.display_2.blit(RESPAWN_TEXT, RESPAWN_RECT)
 
-                # Display timer
+                # Current time
                 timer = self.timer.text
-                TIMER_TEXT = get_font(10).render(timer, True, "black")
+                TIMER_TEXT = self.get_font(10).render(f"{timer}", True, "black")
                 TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
                 self.display_2.blit(TIMER_TEXT, TIMER_RECT)
 
-                # Display best time
-                best_time = self.timer.load_best_time_for_level()
-                best_time = self.timer.format_time(best_time)
-                BEST_TIME_TEXT = get_font(10).render(best_time, True, "black")
+                # Best time
+                best_time = self.timer.best_time_text
+                BEST_TIME_TEXT = self.get_font(10).render(f"{best_time}", True, "black")
                 BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
                 self.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
                 
