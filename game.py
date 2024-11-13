@@ -148,13 +148,15 @@ class Game:
         return pygame.font.Font("data/font.ttf", size)
 
     def pause(self, level, current_time, best_time):
-        
         options = ["Continue", "Save Game", "Menu"]
         selected_option = 0
         pause = True
 
+        # Get the current time when paused
+        current_time = self.timer.text  # Current formatted time
+        best_time = self.timer.best_time_text  # Best time for current level
+
         while pause:
-            
             # Event-Handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -206,7 +208,6 @@ class Game:
             self.display_3.blit(self.assets['background'], (0, 0))
             scaled_display = pygame.transform.scale(self.display_3, self.screen.get_size())
             self.screen.blit(scaled_display, (0, 0))
-            #self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), (0, 0))
 
             # Title draw
             title_text = self.get_font(40).render("Paused", True, "white")
@@ -217,17 +218,19 @@ class Game:
             start_y = 100
             spacing = 20
 
-            # Display current level, current time, and best time
-            info_text = f"Level: {level}"
+            # Level info
+            info_text = f"Level: {self.level}"
             info_surface = self.get_font(15).render(info_text, True, "White")
             info_rect = info_surface.get_rect(center=(320, start_y + 1 * spacing))
             self.screen.blit(info_surface, info_rect)
 
+            # Current time info
             info_text = f"Current Time: {current_time}"
             info_surface = self.get_font(15).render(info_text, True, "White")
             info_rect = info_surface.get_rect(center=(320, start_y + 2 * spacing))
             self.screen.blit(info_surface, info_rect)
 
+            # Best time info
             info_text = f"Best Time: {best_time}"
             info_surface = self.get_font(15).render(info_text, True, "White")
             info_rect = info_surface.get_rect(center=(320, start_y + 3 * spacing))
@@ -487,7 +490,7 @@ class Game:
                 pygame.display.update()
                 self.clock.tick(60) # 60fps
 
-            self.pause(settings.selected_level, current_time=0, best_time=0)
+            self.pause(settings.selected_level, current_time=self.timer.text, best_time=self.timer.best_time_text)
 
         print("Game Over")
 
