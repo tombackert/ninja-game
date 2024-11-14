@@ -4,6 +4,8 @@ import random
 import math
 import os
 import pygame.font
+import json
+from datetime import datetime
 
 from scripts.entities import PhysicsEntity, Player, Enemy
 from scripts.utils import load_image, load_images, Animation
@@ -87,6 +89,61 @@ class Game:
         self.running = True
         self.paused = False
 
+        # Save game directory
+        self.save_dir = 'data/saves'
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+
+    def save_game(self):
+        """Save the current game state to a JSON file."""
+        # Create timestamp for filename
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        filename = f"round-{self.level}-{timestamp}.json"
+        save_path = os.path.join(self.save_dir, filename)
+        
+        # Collect game state
+        game_state = {
+            'level': self.level,
+            'player': {
+                'pos': self.player.pos,
+                'velocity': self.player.velocity,
+                'air_time': self.player.air_time,
+                'action': self.player.action,
+                'flip': self.player.flip
+            },
+            'enemies': [{
+                'pos': enemy.pos,
+                'velocity': enemy.velocity,
+                'id': enemy.id
+            } for enemy in self.enemies],
+            'killed_enemies': self.killed_enemies,
+            'lifes': self.lifes,
+            'saves': self.saves,
+            'respawn_pos': self.respawn_pos,
+            'timer': {
+                'current_time': self.timer.current_time,
+                'start_time': self.timer.start_time
+            }
+        }
+        
+        # Save tilemap state
+        tilemap_state = {
+            'tilemap': self.tilemap.tilemap,
+            'tile_size': self.tilemap.tile_size,
+            'offgrid': self.tilemap.offgrid_tiles
+        }
+        
+        game_state['tilemap'] = tilemap_state
+        
+        # Save to file
+        try:
+            with open(save_path, 'w') as f:
+                json.dump(game_state, f, indent=4)
+            return True, filename
+        except Exception as e:
+            print(f"Error saving game: {e}")
+            return False, None
+
     # Update sound volumes based on settings
     def update_sound_volumes(self):
         self.sfx['ambience'].set_volume(settings.sound_volume * 0.2)
@@ -151,6 +208,8 @@ class Game:
         options = ["Continue", "Save Game", "Menu"]
         selected_option = 0
         pause = True
+        message = ""
+        message_timer = 0
 
         # Get the current time when paused
         current_time = self.timer.text  # Current formatted time
@@ -176,7 +235,12 @@ class Game:
                             self.paused = False
                             pause = False
                         elif options[selected_option] == "Save Game":
-                            print("Save Game feature not implemented yet.")
+                            success, filename = self.save_game()
+                            if success:
+                                message = f"Game saved as {filename}"
+                            else:
+                                message = "Failed to save game"
+                            message_timer = 180
                         elif options[selected_option] == "Menu":
                             print("Menu")
                             self.running = False
@@ -209,10 +273,17 @@ class Game:
             scaled_display = pygame.transform.scale(self.display_3, self.screen.get_size())
             self.screen.blit(scaled_display, (0, 0))
 
-            # Title draw
+            # Title
             title_text = self.get_font(40).render("Paused", True, "white")
             title_rect = title_text.get_rect(center=(320, 50))
             self.screen.blit(title_text, title_rect)
+
+            # Display message if timer is active
+            if message_timer > 0:
+                message_text = self.get_font(15).render(message, True, "white")
+                message_rect = message_text.get_rect(center=(320, 400))
+                self.screen.blit(message_text, message_rect)
+                message_timer -= 1
 
             # Position settings
             start_y = 100
