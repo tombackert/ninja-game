@@ -72,14 +72,13 @@ class Game:
 
         # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
-        self.player = Player(self, (100, 100), (8, 15))
+        self.players = [Player(self, (100, 100), (8, 15), 0)]
+        self.player = self.players[0]
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Global variables
         self.level = settings.selected_level
         self.screenshake = 0
-        self.saves = 0
-        self.reaspawn_pos = []
         self.timer = Timer(self.level)
 
         # Load the selected level
@@ -96,44 +95,53 @@ class Game:
 
     def save_game(self):
         """Save the current game state to a JSON file."""
-        # Create timestamp for filename
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
         filename = f"round-{self.level}-{timestamp}.json"
         save_path = os.path.join(self.save_dir, filename)
-        
-        # Collect game state
-        game_state = {
-            'level': self.level,
-            'player': {
-                'pos': self.player.pos,
-                'velocity': self.player.velocity,
-                'air_time': self.player.air_time,
-                'action': self.player.action,
-                'flip': self.player.flip
-            },
+    
+        game_state = {}
+
+        # Entity state
+        entity_state = {
+            'players': [{
+                'id': player.id,
+                'pos': player.pos,
+                'velocity': player.velocity,
+                'air_time': player.air_time,
+                'action': player.action,
+                'flip': player.flip,
+                'alive': player.alive,
+                'lifes': player.lifes,
+                'respawn_pos': player.respawn_pos,
+            } for player in self.players],
             'enemies': [{
+                'id': enemy.id,
                 'pos': enemy.pos,
                 'velocity': enemy.velocity,
-                'id': enemy.id
-            } for enemy in self.enemies],
-            'killed_enemies': self.killed_enemies,
-            'lifes': self.lifes,
-            'saves': self.saves,
-            'respawn_pos': self.respawn_pos,
+                'alive': enemy.alive 
+            } for enemy in self.enemies]
+        }
+        
+        # Meta data
+        meta_data_state = {
+            'map': self.level,
             'timer': {
                 'current_time': self.timer.current_time,
                 'start_time': self.timer.start_time
             }
         }
         
-        # Save tilemap state
+        # Tilemap state
         tilemap_state = {
             'tilemap': self.tilemap.tilemap,
             'tile_size': self.tilemap.tile_size,
             'offgrid': self.tilemap.offgrid_tiles
         }
         
-        game_state['tilemap'] = tilemap_state
+        # Game state
+        game_state['entities_data'] = entity_state
+        game_state['meta_data'] = meta_data_state
+        game_state['map_data'] = tilemap_state
         
         # Save to file
         try:
@@ -143,6 +151,37 @@ class Game:
         except Exception as e:
             print(f"Error saving game: {e}")
             return False, None
+
+    def load_game(self, game_state):
+        self.level = game_state['meta_data']['map']
+        self.timer.current_time = game_state['meta_data']['timer']['current_time']
+        self.timer.start_time = game_state['meta_data']['timer']['start_time']
+
+        # Load tilemap state
+        self.tilemap.tilemap = game_state['map_data']['tilemap']
+        self.tilemap.tile_size = game_state['map_data']['tile_size']
+        self.tilemap.offgrid_tiles = game_state['map_data']['offgrid']
+
+        # Load players
+        self.players = []
+        for player_data in game_state['entities']['players']:
+            player = Player(self, player_data['pos'], (8, 15), id=player_data['id'])
+            player.velocity = player_data['velocity']
+            player.air_time = player_data['air_time']
+            player.action = player_data['action']
+            player.flip = player_data['flip']
+            player.alive = player_data['alive']
+            player.lifes = player_data['lifes']
+            player.respawn_pos = player_data['respawn_pos']
+            self.players.append(player)
+
+        # Load enemies
+        self.enemies = []
+        for enemy_data in game_state['entities']['enemies']:
+            enemy = Enemy(self, enemy_data['pos'], (8, 15), id=enemy_data['id'])
+            enemy.velocity = enemy_data['velocity']
+            enemy.alive = enemy_data['alive']
+            self.enemies.append(enemy)
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -160,42 +199,35 @@ class Game:
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
-        if respawn: 
+        if respawn:
             self.enemies = []
             enemy_id = 0
-            self.player.pos = self.respawn_pos
-            respawn_pos = [self.respawn_pos[0], self.respawn_pos[1]]
+            self.player.pos = self.player.respawn_pos
             self.player.air_time = 0
-            for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
+            for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
                 if spawner['variant'] == 1:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
-                    if enemy_id in self.killed_enemies:
-                        self.enemies.remove(self.enemies[-1])
                     enemy_id += 1
-                if spawner['variant'] == 0:
-                    self.player.pos = spawner['pos']
-                    self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
         else:
             self.enemies = []
             enemy_id = 0
-            for spawner in self.tilemap.extract([('spawners', 0),('spawners', 1)]):
+            for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
                 if spawner['variant'] == 0:
                     self.player.pos = spawner['pos']
-                    self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
+                    self.player.respawn_pos = list(self.player.pos)
                     self.player.air_time = 0
                 else:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
             self.saves = 1
-            
+
         self.projectiles = []
         self.particles = []
         self.sparks = []
-        self.killed_enemies = []
 
         self.scroll = [0, 0]
         self.dead = 0
-        self.lifes = lifes
+        self.player.lifes = lifes
         self.transition = -30
 
         #print('loaded level:', map_id)
@@ -340,7 +372,7 @@ class Game:
             while not self.paused:
 
                 self.timer.update(self.level)
-                
+
                 self.display.fill((0, 0, 0, 0))
 
                 self.display_2.blit(self.assets['background'], (0, 0))
@@ -353,21 +385,21 @@ class Game:
                         # Update best time before loading next level
                         self.timer.update_best_time()
                         self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
-                        self.load_level(self.level)                   
+                        self.load_level(self.level)
 
                 if self.transition < 0:
                     self.transition += 1
 
-                if self.lifes < 1:
+                if self.player.lifes < 1:
                     self.dead += 1
 
                 if self.dead:
                     self.dead += 1
                     if self.dead >= 10:
                         self.transition = min(30, self.transition + 1)
-                    if self.dead > 40 and self.lifes >= 1:
-                        self.load_level(self.level, self.lifes, respawn=True)        
-                    if self.dead > 40 and self.lifes < 1:   
+                    if self.dead > 40 and self.player.lifes >= 1:
+                        self.load_level(self.level, self.player.lifes, respawn=True)
+                    if self.dead > 40 and self.player.lifes < 1:
                         self.load_level(self.level)
 
                 self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
@@ -391,11 +423,11 @@ class Game:
                     enemy.render(self.display, offset=render_scroll)
                     if kill:
                         self.enemies.remove(enemy)
-                        self.killed_enemies.append(enemy.id)
 
                 if not self.dead:
-                    self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
-                    self.player.render(self.display, offset=render_scroll)
+                    for player in self.players:
+                        player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+                        player.render(self.display, offset=render_scroll)
 
                 # Handling projectiles [[x, y], direction, timer]
                 for projectile in self.projectiles.copy():
@@ -412,7 +444,7 @@ class Game:
                     elif abs(self.player.dashing) < 50:
                         if self.player.rect().collidepoint(projectile[0]):
                             self.projectiles.remove(projectile)
-                            self.lifes -= 1
+                            self.player.lifes -= 1
                             self.sfx['hit'].play()
                             self.screenshake = max(16, self.screenshake)
                             for i in range(30):
@@ -420,7 +452,7 @@ class Game:
                                 speed = random.random() * 5
                                 self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
                                 self.particles.append(Particle(
-                                    self, 'particle', self.player.rect().center, 
+                                    self, 'particle', self.player.rect().center,
                                     velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
                                     frame=random.randint(0, 7)
                                 ))
@@ -434,9 +466,9 @@ class Game:
 
                 display_mask = pygame.mask.from_surface(self.display)
                 display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
-                for offset in [(-1,0), (1,0), (0,-1), (0,1)]:
+                for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     self.display_2.blit(display_sillhouette, offset)
-                
+
                 # Handling particles
                 for particle in self.particles.copy():
                     kill = particle.update()
@@ -451,13 +483,13 @@ class Game:
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
-                    
+
                     # Movement keys
                     if event.type == pygame.KEYDOWN:
 
                         if event.key == pygame.K_ESCAPE:
                             self.paused = True
-                        
+
                         # W, A, S, D
                         if event.key == pygame.K_a:
                             self.movement[0] = True
@@ -475,7 +507,7 @@ class Game:
                         if event.key == pygame.K_UP:
                             if self.player.jump():
                                 self.sfx['jump'].play()
-                        
+
                         # Space
                         if event.key == pygame.K_SPACE:
                             self.player.dash()
@@ -483,16 +515,16 @@ class Game:
                         # Respawn
                         if event.key == pygame.K_r:
                             self.dead += 1
-                            self.lifes -= 1
+                            self.player.lifes -= 1
                             print(self.dead)
 
                         # Save position
                         if event.key == pygame.K_p:
                             if self.saves > 0:
                                 self.saves -= 1
-                                self.respawn_pos = [self.player.pos[0], self.player.pos[1]]
-                                print('saved respawn pos: ', self.respawn_pos)
-                    
+                                self.player.respawn_pos = list(self.player.pos)
+                                print('saved respawn pos: ', self.player.respawn_pos)
+
                     # Stop movement
                     if event.type == pygame.KEYUP:
                         if event.key == pygame.K_a:
@@ -514,20 +546,8 @@ class Game:
                 self.display_2.blit(self.display, (0, 0))
 
                 # Info display
-                def get_font(size): 
+                def get_font(size):
                     return pygame.font.Font("data/font.ttf", size)
-
-                # Display player position
-                position = str(int(self.player.pos[0])) + ', ' + str(int(self.player.pos[1]))
-                POSITION_TEXT = get_font(10).render(position, True, "black")
-                POSITION_RECT = POSITION_TEXT.get_rect(center=(270, 10))
-                #self.display_2.blit(POSITION_TEXT, POSITION_RECT)
-
-                # Display respawn position
-                position = str(int(self.respawn_pos[0])) + ', ' + str(int(self.respawn_pos[1]))
-                RESPAWN_TEXT = get_font(10).render(position, True, "black")
-                RESPAWN_RECT = RESPAWN_TEXT.get_rect(center=(270, 25))
-                #self.display_2.blit(RESPAWN_TEXT, RESPAWN_RECT)
 
                 # Current time
                 timer = self.timer.text
@@ -540,9 +560,9 @@ class Game:
                 BEST_TIME_TEXT = self.get_font(10).render(f"{best_time}", True, "black")
                 BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
                 self.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
-                
+
                 # Display lifes
-                lifes = 'LIFES:' + str(self.lifes)
+                lifes = 'LIFES:' + str(self.player.lifes)
                 LIFE_TEXT = get_font(10).render(lifes, True, "black")
                 LIFE_RECT = LIFE_TEXT.get_rect(center=(45, 10))
                 self.display_2.blit(LIFE_TEXT, LIFE_RECT)
@@ -552,14 +572,14 @@ class Game:
                 LEVEL_TEXT = get_font(10).render(level, True, "black")
                 LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
                 self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
-                
+
                 # Screen shake
                 screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
                 self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
 
                 # Clock
                 pygame.display.update()
-                self.clock.tick(60) # 60fps
+                self.clock.tick(60)  # 60fps
 
             self.pause(settings.selected_level, current_time=self.timer.text, best_time=self.timer.best_time_text)
 
