@@ -1,24 +1,31 @@
 {
+    "meta_data": {
+        "map": "3",
+        "timer": {
+            "current_time": "00:00:00",
+            "start_time": "00:00:00"
+        }
+    },
     "entities_data": {
         "players": [
             {
                 "id": 0,
                 "pos": [
-                    64,
-                    81.6
+                    160,
+                    112
                 ],
                 "velocity": [
                     0,
-                    0.4
+                    0
                 ],
-                "air_time": 4,
+                "air_time": 0,
                 "action": "idle",
                 "flip": false,
                 "alive": true,
                 "lifes": 3,
                 "respawn_pos": [
-                    64,
-                    80
+                    160,
+                    112
                 ]
             }
         ],
@@ -26,263 +33,184 @@
             {
                 "id": 0,
                 "pos": [
-                    197.5,
-                    33.6
+                    64,
+                    80
                 ],
                 "velocity": [
                     0,
-                    0.4
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 1,
                 "pos": [
-                    175.0,
-                    113.6
+                    64,
+                    224
                 ],
                 "velocity": [
                     0,
-                    0.4
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 2,
                 "pos": [
-                    -176.0,
-                    81.6
+                    112,
+                    224
                 ],
                 "velocity": [
                     0,
-                    0.4
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 3,
                 "pos": [
-                    293.0,
-                    -111
+                    192,
+                    224
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 4,
                 "pos": [
-                    118.0,
-                    -399
+                    416,
+                    -32
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 5,
                 "pos": [
-                    433.0,
-                    -223
+                    208,
+                    -112
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 6,
                 "pos": [
-                    46.0,
-                    -1087
+                    192,
+                    -112
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 7,
                 "pos": [
-                    106.0,
-                    -1103
+                    432,
+                    -224
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 8,
                 "pos": [
-                    254.0,
-                    -1135
+                    320,
+                    -384
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 9,
                 "pos": [
-                    244.0,
-                    -1135
+                    64,
+                    -384
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 10,
                 "pos": [
-                    -90.0,
-                    -1135
+                    -112,
+                    -432
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 11,
                 "pos": [
-                    -190.0,
-                    -959
+                    -224,
+                    -432
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 12,
                 "pos": [
-                    93.0,
-                    -383
+                    -208,
+                    -960
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 13,
                 "pos": [
-                    -37.5,
-                    -431
+                    224,
+                    -1136
                 ],
                 "velocity": [
                     0,
-                    0.1
+                    0
                 ],
                 "alive": true
             },
             {
                 "id": 14,
                 "pos": [
-                    138.5,
-                    -255
+                    96,
+                    -1104
                 ],
                 "velocity": [
                     0,
-                    0.1
-                ],
-                "alive": true
-            },
-            {
-                "id": 15,
-                "pos": [
-                    413.5,
-                    -31
-                ],
-                "velocity": [
-                    0,
-                    0.1
-                ],
-                "alive": true
-            },
-            {
-                "id": 16,
-                "pos": [
-                    185.5,
-                    225.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 17,
-                "pos": [
-                    210.5,
-                    225.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 18,
-                "pos": [
-                    132.0,
-                    225.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 19,
-                "pos": [
-                    -126.0,
-                    81.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 20,
-                "pos": [
-                    279.0,
-                    225.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
+                    0
                 ],
                 "alive": true
             }
         ]
-    },
-    "meta_data": {
-        "map": 3,
-        "timer": {
-            "current_time": 36353,
-            "start_time": 30149
-        }
     },
     "map_data": {
         "tilemap": {
@@ -15159,8 +15087,8 @@
                 ]
             },
             "-7;-27": {
-                "type": "decor",
-                "variant": 0,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     -7,
                     -27
@@ -15207,8 +15135,8 @@
                 ]
             },
             "-14;-27": {
-                "type": "decor",
-                "variant": 0,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     -14,
                     -27
@@ -17300,6 +17228,118 @@
                 "pos": [
                     9,
                     -47
+                ]
+            },
+            "10;7": {
+                "type": "spawners",
+                "variant": 0,
+                "pos": [
+                    10,
+                    7
+                ]
+            },
+            "4;5": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    4,
+                    5
+                ]
+            },
+            "4;14": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    4,
+                    14
+                ]
+            },
+            "7;14": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    7,
+                    14
+                ]
+            },
+            "12;14": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    12,
+                    14
+                ]
+            },
+            "26;-2": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    26,
+                    -2
+                ]
+            },
+            "13;-7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    13,
+                    -7
+                ]
+            },
+            "12;-7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    12,
+                    -7
+                ]
+            },
+            "27;-14": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    27,
+                    -14
+                ]
+            },
+            "20;-24": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    20,
+                    -24
+                ]
+            },
+            "4;-24": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    4,
+                    -24
+                ]
+            },
+            "-13;-60": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -13,
+                    -60
+                ]
+            },
+            "14;-71": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    14,
+                    -71
+                ]
+            },
+            "6;-69": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    6,
+                    -69
                 ]
             }
         },

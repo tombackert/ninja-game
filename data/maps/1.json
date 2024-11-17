@@ -1,180 +1,14 @@
 {
-    "entities_data": {
-        "players": [
-            {
-                "id": 0,
-                "pos": [
-                    332.5,
-                    145.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "air_time": 4,
-                "action": "idle",
-                "flip": false,
-                "alive": true,
-                "lifes": 3,
-                "respawn_pos": [
-                    332.5,
-                    142.5
-                ]
-            }
-        ],
-        "enemies": [
-            {
-                "id": 0,
-                "pos": [
-                    490.0,
-                    113
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 1,
-                "pos": [
-                    360.0,
-                    -15
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 2,
-                "pos": [
-                    419.0,
-                    -15
-                ],
-                "velocity": [
-                    0,
-                    0.1
-                ],
-                "alive": true
-            },
-            {
-                "id": 3,
-                "pos": [
-                    413.0,
-                    -15
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 4,
-                "pos": [
-                    241.0,
-                    -63
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 5,
-                "pos": [
-                    191.5,
-                    -63
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 6,
-                "pos": [
-                    91.5,
-                    -15
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 7,
-                "pos": [
-                    4.0,
-                    33.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 8,
-                "pos": [
-                    -114.0,
-                    49
-                ],
-                "velocity": [
-                    0,
-                    0.1
-                ],
-                "alive": true
-            },
-            {
-                "id": 9,
-                "pos": [
-                    -58.5,
-                    49.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 10,
-                "pos": [
-                    -34.0,
-                    49.6
-                ],
-                "velocity": [
-                    0,
-                    0.4
-                ],
-                "alive": true
-            },
-            {
-                "id": 11,
-                "pos": [
-                    171.5,
-                    97.3
-                ],
-                "velocity": [
-                    0,
-                    0.30000000000000004
-                ],
-                "alive": true
-            }
-        ]
-    },
     "meta_data": {
         "map": 1,
         "timer": {
-            "current_time": 18723,
-            "start_time": 16744
+            "current_time": "00:00:00",
+            "start_time": "00:00:00"
         }
+    },
+    "entities_data": {
+        "players": [],
+        "enemies": []
     },
     "map_data": {
         "tilemap": {
@@ -2082,14 +1916,6 @@
                     4
                 ]
             },
-            "10;6": {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    10,
-                    6
-                ]
-            },
             "17;9": {
                 "type": "decor",
                 "variant": 0,
@@ -2099,7 +1925,7 @@
                 ]
             },
             "21;9": {
-                "type": "decor",
+                "type": "spawners",
                 "variant": 0,
                 "pos": [
                     21,
@@ -2155,7 +1981,7 @@
                 ]
             },
             "-5;3": {
-                "type": "decor",
+                "type": "spawners",
                 "variant": 1,
                 "pos": [
                     -5,
@@ -2179,7 +2005,7 @@
                 ]
             },
             "11;6": {
-                "type": "decor",
+                "type": "spawners",
                 "variant": 1,
                 "pos": [
                     11,
@@ -2243,8 +2069,8 @@
                 ]
             },
             "13;-4": {
-                "type": "decor",
-                "variant": 2,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     13,
                     -4
@@ -2267,8 +2093,8 @@
                 ]
             },
             "-4;3": {
-                "type": "decor",
-                "variant": 2,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     -4,
                     3
@@ -2307,8 +2133,8 @@
                 ]
             },
             "26;-1": {
-                "type": "decor",
-                "variant": 3,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     26,
                     -1
@@ -2328,6 +2154,22 @@
                 "pos": [
                     4,
                     2
+                ]
+            },
+            "31;7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    31,
+                    7
+                ]
+            },
+            "23;-1": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    23,
+                    -1
                 ]
             }
         },
