@@ -10,6 +10,7 @@ class Settings:
         self._music_volume = 0.5
         self._sound_volume = 0.5
         self._selected_level = 0
+        self.selected_editor_level = 0
 
         # Load settings from the JSON file if it exists
         self.load_settings()
@@ -41,6 +42,12 @@ class Settings:
         self._selected_level = max(0, value)
         self.save_settings()
 
+    def set_editor_level(self, value):
+        self.selected_editor_level = max(0, value)
+    
+    def get_selected_editor_level(self):
+        return self.selected_editor_level
+
     def load_settings(self):
         """Load settings from the JSON file."""
         if os.path.exists(self.SETTINGS_FILE):
@@ -50,19 +57,21 @@ class Settings:
                     self._music_volume = data.get("music_volume", self._music_volume)
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
                     self._selected_level = data.get("selected_level", self._selected_level)
+                    self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
                 # print("Settings loaded successfully.")
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading settings: {e}")
-                self.save_settings()  # Save default settings if loading fails
+                self.save_settings()
         else:
-            self.save_settings()  # Create the settings file with default values
+            self.save_settings()
 
     def save_settings(self):
         """Save current settings to the JSON file."""
         data = {
             "music_volume": self._music_volume,
             "sound_volume": self._sound_volume,
-            "selected_level": self._selected_level
+            "selected_level": self._selected_level,
+            "selected_editor_level": self.selected_editor_level
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)

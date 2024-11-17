@@ -1,14 +1,612 @@
 {
-    "meta_data": {
-        "map": 0,
-        "timer": {
-            "current_time": "00:00:00",
-            "start_time": "00:00:00"
-        }
-    },
     "entities_data": {
-        "players": [],
-        "enemies": []
+        "players": [
+            {
+                "id": 0,
+                "pos": [
+                    192,
+                    289.3
+                ],
+                "velocity": [
+                    0,
+                    0.30000000000000004
+                ],
+                "air_time": 3,
+                "action": "idle",
+                "flip": false,
+                "alive": true,
+                "lifes": 3,
+                "respawn_pos": [
+                    192,
+                    288
+                ]
+            }
+        ],
+        "enemies": [
+            {
+                "id": 0,
+                "pos": [
+                    59.5,
+                    161.1
+                ],
+                "velocity": [
+                    0,
+                    0.2
+                ],
+                "alive": true
+            },
+            {
+                "id": 1,
+                "pos": [
+                    321.5,
+                    145
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 2,
+                "pos": [
+                    131.5,
+                    65
+                ],
+                "velocity": [
+                    0,
+                    0.1
+                ],
+                "alive": true
+            },
+            {
+                "id": 3,
+                "pos": [
+                    762.5,
+                    -431
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 4,
+                "pos": [
+                    792.5,
+                    -431
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 5,
+                "pos": [
+                    912.5,
+                    -495
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 6,
+                "pos": [
+                    908.0,
+                    -559
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 7,
+                "pos": [
+                    921.0,
+                    -623
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 8,
+                "pos": [
+                    672,
+                    -495
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 9,
+                "pos": [
+                    692.5,
+                    -559
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 10,
+                "pos": [
+                    608,
+                    -623
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 11,
+                "pos": [
+                    746.0,
+                    -623
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 12,
+                "pos": [
+                    848,
+                    -703
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 13,
+                "pos": [
+                    844.5,
+                    -767
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 14,
+                "pos": [
+                    776.5,
+                    -959
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 15,
+                "pos": [
+                    608,
+                    -959
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 16,
+                "pos": [
+                    437.0,
+                    -895
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 17,
+                "pos": [
+                    272.0,
+                    -799
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 18,
+                "pos": [
+                    -206.5,
+                    -959
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 19,
+                "pos": [
+                    -566.5,
+                    -1103
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 20,
+                "pos": [
+                    -587.0,
+                    -1103
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 21,
+                "pos": [
+                    -628.5,
+                    -1039
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 22,
+                "pos": [
+                    -559.0,
+                    -975
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 23,
+                "pos": [
+                    -656,
+                    -911
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 24,
+                "pos": [
+                    -619.5,
+                    -815
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 25,
+                "pos": [
+                    -640,
+                    -543
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 26,
+                "pos": [
+                    -660.0,
+                    -543
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 27,
+                "pos": [
+                    -656,
+                    -623
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 28,
+                "pos": [
+                    -656,
+                    -719
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 29,
+                "pos": [
+                    -560,
+                    -751
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 30,
+                "pos": [
+                    -728.0,
+                    -847
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 31,
+                "pos": [
+                    -60.5,
+                    -959
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 32,
+                "pos": [
+                    -144,
+                    -959
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 33,
+                "pos": [
+                    96,
+                    -911
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 34,
+                "pos": [
+                    208,
+                    -911
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 35,
+                "pos": [
+                    153.0,
+                    -639
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 36,
+                "pos": [
+                    324.5,
+                    -303
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 37,
+                "pos": [
+                    208,
+                    -287
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 38,
+                "pos": [
+                    -140.5,
+                    -303
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 39,
+                "pos": [
+                    -299.5,
+                    -319
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 40,
+                "pos": [
+                    -383.5,
+                    -319
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 41,
+                "pos": [
+                    -432,
+                    -319
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 42,
+                "pos": [
+                    -340.0,
+                    -319
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 43,
+                "pos": [
+                    707.5,
+                    -367
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 44,
+                "pos": [
+                    831.0,
+                    -367
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 45,
+                "pos": [
+                    910.5,
+                    -431
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 46,
+                "pos": [
+                    1056,
+                    -431
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 47,
+                "pos": [
+                    1152.0,
+                    -431
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            }
+        ]
+    },
+    "meta_data": {
+        "map": 13,
+        "timer": {
+            "current_time": 145623,
+            "start_time": 143948
+        }
     },
     "map_data": {
         "tilemap": {
@@ -16690,6 +17288,38 @@
                 "pos": [
                     72,
                     -26
+                ]
+            },
+            "0;0": {
+                "type": "stone",
+                "variant": 0,
+                "pos": [
+                    0,
+                    0
+                ]
+            },
+            "0;1": {
+                "type": "stone",
+                "variant": 6,
+                "pos": [
+                    0,
+                    1
+                ]
+            },
+            "1;0": {
+                "type": "stone",
+                "variant": 2,
+                "pos": [
+                    1,
+                    0
+                ]
+            },
+            "1;1": {
+                "type": "stone",
+                "variant": 4,
+                "pos": [
+                    1,
+                    1
                 ]
             }
         },

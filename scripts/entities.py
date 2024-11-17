@@ -8,11 +8,12 @@ from scripts.particle import Particle
 from scripts.spark import Spark
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size):
+    def __init__(self, game, e_type, pos, size, id):
         self.game = game
         self.type = e_type
         self.pos = list(pos)
         self.size = size
+        self.id = id
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         
@@ -83,10 +84,9 @@ class PhysicsEntity:
         
 class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size, id):
-        super().__init__(game, 'enemy', pos, size)
-        
+        super().__init__(game, 'enemy', pos, size, id)
         self.walking = 0
-        self.id = id
+        self.alive = True
         
     def update(self, tilemap, movement=(0, 0)):
         if self.walking:
@@ -160,12 +160,15 @@ class Enemy(PhysicsEntity):
                        self.rect().centery - offset[1]))
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size):
-        super().__init__(game, 'player', pos, size)
+    def __init__(self, game, pos, size, id):
+        super().__init__(game, 'player', pos, size, id)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
+        self.alive = True
+        self.lifes = 3
+        self.respawn_pos = []
     
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)
