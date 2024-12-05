@@ -53,6 +53,42 @@
                     0
                 ],
                 "alive": true
+            },
+            {
+                "id": 2,
+                "pos": [
+                    320,
+                    144
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 3,
+                "pos": [
+                    448,
+                    112
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 4,
+                "pos": [
+                    288,
+                    48
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
             }
         ]
     },
@@ -1275,8 +1311,8 @@
                 ]
             },
             "20;9": {
-                "type": "decor",
-                "variant": 0,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     20,
                     9
@@ -1323,8 +1359,8 @@
                 ]
             },
             "18;3": {
-                "type": "decor",
-                "variant": 0,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     18,
                     3
@@ -1464,6 +1500,14 @@
                 "pos": [
                     14,
                     12
+                ]
+            },
+            "28;7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    28,
+                    7
                 ]
             }
         },

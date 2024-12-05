@@ -72,7 +72,7 @@ class Game:
 
         # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
-        self.players = [Player(self, (100, 100), (8, 15), 0)]
+        self.players = [Player(self, (100, 100), (8, 15), 0, lifes=3, respawn_pos=(100, 100))]
         self.player = self.players[0]
         self.tilemap = Tilemap(self, tile_size=16)
         
@@ -94,94 +94,30 @@ class Game:
             os.makedirs(self.save_dir)
 
     def save_game(self):
-        """Save the current game state to a JSON file."""
         timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
         filename = f"round-{self.level}-{timestamp}.json"
         save_path = os.path.join(self.save_dir, filename)
-    
-        game_state = {}
 
-        # Entity state
-        entity_state = {
-            'players': [{
-                'id': player.id,
-                'pos': player.pos,
-                'velocity': player.velocity,
-                'air_time': player.air_time,
-                'action': player.action,
-                'flip': player.flip,
-                'alive': player.alive,
-                'lifes': player.lifes,
-                'respawn_pos': player.respawn_pos,
-            } for player in self.players],
-            'enemies': [{
-                'id': enemy.id,
-                'pos': enemy.pos,
-                'velocity': enemy.velocity,
-                'alive': enemy.alive 
-            } for enemy in self.enemies]
-        }
-        
-        # Meta data
-        meta_data_state = {
+        self.tilemap.meta_data = {
             'map': self.level,
             'timer': {
-                'current_time': self.timer.current_time,
+                'current_time': self.timer.text,
                 'start_time': self.timer.start_time
             }
         }
-        
-        # Tilemap state
-        tilemap_state = {
-            'tilemap': self.tilemap.tilemap,
-            'tile_size': self.tilemap.tile_size,
-            'offgrid': self.tilemap.offgrid_tiles
-        }
-        
-        # Game state
-        game_state['entities_data'] = entity_state
-        game_state['meta_data'] = meta_data_state
-        game_state['map_data'] = tilemap_state
-        
-        # Save to file
-        try:
-            with open(save_path, 'w') as f:
-                json.dump(game_state, f, indent=4)
+
+        self.tilemap.players = self.players
+        self.tilemap.enemies = self.enemies
+
+        success = self.tilemap.save(save_path)
+        if success:
             return True, filename
-        except Exception as e:
-            print(f"Error saving game: {e}")
-            return False, None
+        else:
+            return False, ''
+        
 
     def load_game(self, game_state):
-        self.level = game_state['meta_data']['map']
-        self.timer.current_time = game_state['meta_data']['timer']['current_time']
-        self.timer.start_time = game_state['meta_data']['timer']['start_time']
-
-        # Load tilemap state
-        self.tilemap.tilemap = game_state['map_data']['tilemap']
-        self.tilemap.tile_size = game_state['map_data']['tile_size']
-        self.tilemap.offgrid_tiles = game_state['map_data']['offgrid']
-
-        # Load players
-        self.players = []
-        for player_data in game_state['entities']['players']:
-            player = Player(self, player_data['pos'], (8, 15), id=player_data['id'])
-            player.velocity = player_data['velocity']
-            player.air_time = player_data['air_time']
-            player.action = player_data['action']
-            player.flip = player_data['flip']
-            player.alive = player_data['alive']
-            player.lifes = player_data['lifes']
-            player.respawn_pos = player_data['respawn_pos']
-            self.players.append(player)
-
-        # Load enemies
-        self.enemies = []
-        for enemy_data in game_state['entities']['enemies']:
-            enemy = Enemy(self, enemy_data['pos'], (8, 15), id=enemy_data['id'])
-            enemy.velocity = enemy_data['velocity']
-            enemy.alive = enemy_data['alive']
-            self.enemies.append(enemy)
+        pass
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -194,7 +130,7 @@ class Game:
     def load_level(self, map_id, lifes=3, respawn=False):
         self.timer.reset()
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
-
+        
         self.leaf_spawners = []
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
@@ -299,6 +235,7 @@ class Game:
             mouse_pos = pygame.mouse.get_pos()
 
             #### CHANGE HERE FOR FUTURE PAUSE MENU VIEW ####
+            base_color = "Black"
 
             # Render the background
             self.display_3.blit(self.assets['background'], (0, 0))
@@ -306,13 +243,13 @@ class Game:
             self.screen.blit(scaled_display, (0, 0))
 
             # Title
-            title_text = self.get_font(40).render("Paused", True, "white")
+            title_text = self.get_font(40).render("Paused", True, base_color)
             title_rect = title_text.get_rect(center=(320, 50))
             self.screen.blit(title_text, title_rect)
 
             # Display message if timer is active
             if message_timer > 0:
-                message_text = self.get_font(15).render(message, True, "white")
+                message_text = self.get_font(15).render(message, True, base_color)
                 message_rect = message_text.get_rect(center=(320, 400))
                 self.screen.blit(message_text, message_rect)
                 message_timer -= 1
@@ -323,19 +260,19 @@ class Game:
 
             # Level info
             info_text = f"Level: {self.level}"
-            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_surface = self.get_font(15).render(info_text, True, base_color)
             info_rect = info_surface.get_rect(center=(320, start_y + 1 * spacing))
             self.screen.blit(info_surface, info_rect)
 
             # Current time info
             info_text = f"Current Time: {current_time}"
-            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_surface = self.get_font(15).render(info_text, True, base_color)
             info_rect = info_surface.get_rect(center=(320, start_y + 2 * spacing))
             self.screen.blit(info_surface, info_rect)
 
             # Best time info
             info_text = f"Best Time: {best_time}"
-            info_surface = self.get_font(15).render(info_text, True, "White")
+            info_surface = self.get_font(15).render(info_text, True, base_color)
             info_rect = info_surface.get_rect(center=(320, start_y + 3 * spacing))
             self.screen.blit(info_surface, info_rect)
 
@@ -347,12 +284,12 @@ class Game:
             for i, option in enumerate(options):
                 temp_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
                 if i == selected_option or temp_rect.collidepoint(mouse_pos):
-                    base_color = "Red"
+                    button_color = "Red"
                 else:
-                    base_color = "white"
+                    button_color = base_color
 
                 # Render menu elements
-                option_text_surface = self.get_font(30).render(option, True, base_color)
+                option_text_surface = self.get_font(30).render(option, True, button_color)
                 option_rect = option_text_surface.get_rect(center=(320, start_y + i * spacing))
                 self.screen.blit(option_text_surface, option_rect)
                 option_rects.append(option_rect)
