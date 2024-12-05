@@ -6,7 +6,6 @@ from scripts.tilemap import Tilemap
 from scripts.entities import Player
 from scripts.entities import Enemy
 from settings import settings
-import json  # Importieren von json für das Speichern der Map-Daten
 
 RENDER_SCALE = 2.0
 MAP_NAME = '1'
@@ -28,6 +27,8 @@ class Editor:
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'spawners': load_images('tiles/spawners'),
+            'player/idle': load_images('tiles/large_decor'),
+            'enemy/idle': load_images('tiles/large_decor'),
         }
 
         self.background = load_image('background.png')
@@ -95,27 +96,35 @@ class Editor:
                 
                 # Entities
                 if tile_type == 'spawners':
+                    # Player
                     if variant == 0:
-                        if not any([p['pos'] == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for p in self.tilemap.players]):
-                            self.tilemap.players.append({
-                                'id': len(self.tilemap.players),
-                                'pos': [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size],
-                                'velocity': [0, 0],
-                                'air_time': 0,
-                                'action': 'idle',
-                                'flip': False,
-                                'alive': True,
-                                'lifes': 3,
-                                'respawn_pos': [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size],
-                            })
+                        if not any([p.pos == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for p in self.tilemap.players]):
+                            self.tilemap.players.append(
+                                Player(
+                                    game=self, 
+                                    pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size], 
+                                    size=(8, 15), 
+                                    e_id=len(self.tilemap.players),
+                                    lifes=3,
+                                    respawn_pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size]
+                                )
+                            )
+                            print('Player added')
+                            print(self.tilemap.players)
+                    # Enemy
                     elif variant == 1:
-                        if not any([e['pos'] == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for e in self.tilemap.enemies]):
-                            self.tilemap.enemies.append({
-                                'id': len(self.tilemap.enemies),
-                                'pos': [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size],
-                                'velocity': [0, 0],
-                                'alive': True
-                            })
+                        if not any([e.pos == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for e in self.tilemap.enemies]):
+                            self.tilemap.enemies.append(
+                                Enemy(
+                                    game=self, 
+                                    pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size], 
+                                    size=(8, 15), 
+                                    e_id=len(self.tilemap.enemies),
+                                )
+                            )
+                            print('Enemy added')
+                            print(self.tilemap.enemies)
+            # Offgrid tiles
             elif self.clicking and not self.ongrid:
                 self.tilemap.offgrid_tiles.append({
                     'type': self.tile_list[self.tile_group], 
@@ -123,19 +132,18 @@ class Editor:
                     'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
                 })
 
-            # Entfernen von Tiles und Entitäten
+            # Tile removal
             if self.right_clicking:
                 tile_loc = str(tile_pos[0]) + ';' + str(tile_pos[1])
                 if tile_loc in self.tilemap.tilemap:
                     tile = self.tilemap.tilemap[tile_loc]
                     if tile['type'] == 'spawners':
-                        # Entfernen der entsprechenden Entität
                         if tile['variant'] == 0:
-                            # Spieler entfernen
-                            self.tilemap.players = [p for p in self.tilemap.players if p['pos'] != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
+                            # Player removal
+                            self.tilemap.players = [p for p in self.tilemap.players if p.pos != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
                         elif tile['variant'] == 1:
-                            # Feind entfernen
-                            self.tilemap.enemies = [e for e in self.tilemap.enemies if e['pos'] != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
+                            # Enemy removal
+                            self.tilemap.enemies = [e for e in self.tilemap.enemies if e.pos != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
                     del self.tilemap.tilemap[tile_loc]
                 for tile in self.tilemap.offgrid_tiles.copy():
                     tile_img = self.assets[tile['type']][tile['variant']]
@@ -231,7 +239,6 @@ class Editor:
                     if event.key == pygame.K_LSHIFT:
                         self.shift = False
 
-            # Anzeigen der Position
             position = str(int(self.scroll[0])) + ', ' + str(int(self.scroll[1]))
             position_surface = self.font.render(position, True, (0, 0, 0))
             self.display.blit(position_surface, (self.display.get_width() - position_surface.get_width() - 10, 10))

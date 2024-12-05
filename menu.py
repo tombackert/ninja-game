@@ -313,7 +313,7 @@ class Menu:
             self.screen.blit(scaled_display, (0, 0))
 
             # Draw the menu text directly on the main screen
-            MENU_TEXT = self.get_font(50).render("MENU", True, "#b68f40")
+            MENU_TEXT = self.get_font(50).render("MENU", True, "Black")
             MENU_RECT = MENU_TEXT.get_rect(center=(320, 50))
             self.screen.blit(MENU_TEXT, MENU_RECT)
 
@@ -366,9 +366,9 @@ class Menu:
 
             for i, option in enumerate(menu_options):
                 if i == self.selected_option:
-                    base_color = "#b68f40"
+                    base_color = "Red"
                 else:
-                    base_color = "#d7fcd4"
+                    base_color = "Black"
 
                 # Check if the mouse is hovering over the button
                 button_rect = pygame.Rect(320 - 100, button_positions[i] - 25, 200, 50)

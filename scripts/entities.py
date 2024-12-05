@@ -7,16 +7,18 @@ import pygame.font
 from scripts.particle import Particle
 from scripts.spark import Spark
 
+
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size, id):
+    def __init__(self, game, e_type, pos, size, e_id):
         self.game = game
         self.type = e_type
         self.pos = list(pos)
         self.size = size
-        self.id = id
+        self.id = e_id
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         
+        self.alive = True
         self.action = ''
         self.anim_offset = (-3, -3)
         self.flip = False
@@ -83,10 +85,9 @@ class PhysicsEntity:
              self.pos[1] - offset[1] + self.anim_offset[1]))
         
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size, id):
-        super().__init__(game, 'enemy', pos, size, id)
+    def __init__(self, game, pos, size, e_id):
+        super().__init__(game, 'enemy', pos, size, e_id)
         self.walking = 0
-        self.alive = True
         
     def update(self, tilemap, movement=(0, 0)):
         if self.walking:
@@ -160,15 +161,14 @@ class Enemy(PhysicsEntity):
                        self.rect().centery - offset[1]))
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size, id):
-        super().__init__(game, 'player', pos, size, id)
+    def __init__(self, game, pos, size, e_id, lifes, respawn_pos):
+        super().__init__(game, 'player', pos, size, e_id)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
-        self.alive = True
-        self.lifes = 3
-        self.respawn_pos = []
+        self.lifes = lifes
+        self.respawn_pos = respawn_pos
     
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)

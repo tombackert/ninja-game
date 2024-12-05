@@ -2,6 +2,7 @@ import pygame
 import json
 from scripts.entities import Enemy, Player
 from settings import settings
+from scripts.utils import Animation
 
 AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (0, 1)]))                     : 0,
@@ -29,6 +30,7 @@ class Tilemap:
         self.offgrid_tiles = []
         self.enemies = []
         self.players = []
+        self.meta_data = {}
 
     def extract(self, id_pairs, keep=False):
         matches = []
@@ -60,78 +62,94 @@ class Tilemap:
         return tiles
 
     def save(self, path):
-        #print(f"Players: {self.players}")
-        #print("-"*50)
-        #print(f"Enemies: {self.enemies}")
         game_state = {}
-        
-        # Meta data
-        meta_data = {
-            'map': self.level,
-            'timer': {
-                'current_time': "00:00:00",
-                'start_time': "00:00:00",
+
+        meta_data = self.meta_data.copy()
+        if not meta_data:
+            meta_data = {
+                'map': self.level,
+                'timer': {
+                    'current_time': "00:00:00",
+                    'start_time': "00:00:00",
+                }
             }
-        }
 
         entity_data = {
-            'players': self.players,
-            'enemies': self.enemies
+            'players': [{
+                'id': player.id,
+                'pos': player.pos,
+                'velocity': player.velocity,
+                'air_time': player.air_time,
+                'action': player.action,
+                'flip': player.flip,
+                'alive': player.alive,
+                'lifes': player.lifes,
+                'respawn_pos': player.respawn_pos,
+            } for player in self.players],
+            'enemies': [{
+                'id': enemy.id,
+                'pos': enemy.pos,
+                'velocity': enemy.velocity,
+                'alive': enemy.alive
+            } for enemy in self.enemies]
         }
-        
-        # Map data
+
         tilemap_data = {
             'tilemap': self.tilemap,
             'tile_size': self.tile_size,
             'offgrid': self.offgrid_tiles
         }
 
-        # Game data
         game_state['meta_data'] = meta_data
         game_state['entities_data'] = entity_data
         game_state['map_data'] = tilemap_data
+
         try:
             with open(path, 'w') as f:
                 json.dump(game_state, f, indent=4)
-            print(f"Tilemap saved under {path}")
+            print(f"Game saved under {path}")
+            return True
         except Exception as e:
             print(f"Error saving tilemap: {e}")
+            return False
 
     def load(self, path):
         try:
             with open(path, 'r') as f:
                 data = json.load(f)
 
-            map_data = data.get('map_data', data)  # Unterstützt alte und neue Formate
-            self.tilemap = map_data['tilemap']
-            self.tile_size = map_data['tile_size']
-            self.offgrid_tiles = map_data['offgrid']
+            self.meta_data = data.get('meta_data', {})
+            self.level = self.meta_data.get('map', self.level)
 
-            # Load entities
             entities_data = data.get('entities_data', {})
             self.players = []
             self.enemies = []
 
             for player_data in entities_data.get('players', []):
-                player = Player(self.game, player_data['pos'], (8, 15), id=player_data['id'])
+                player = Player(self.game, player_data['pos'], (8, 15), e_id=player_data['id'],
+                                lifes=player_data['lifes'], respawn_pos=player_data['respawn_pos'])
                 player.velocity = player_data['velocity']
                 player.air_time = player_data['air_time']
                 player.action = player_data['action']
                 player.flip = player_data['flip']
                 player.alive = player_data['alive']
-                player.lifes = player_data['lifes']
                 player.respawn_pos = player_data['respawn_pos']
                 self.players.append(player)
 
             for enemy_data in entities_data.get('enemies', []):
-                enemy = Enemy(self.game, enemy_data['pos'], (8, 15), id=enemy_data['id'])
+                enemy = Enemy(self.game, enemy_data['pos'], (8, 15), e_id=enemy_data['id'])
                 enemy.velocity = enemy_data['velocity']
                 enemy.alive = enemy_data['alive']
                 self.enemies.append(enemy)
 
-            print(f"Tilemap geladen von {path}")
+            map_data = data.get('map_data', data)
+            self.tilemap = map_data['tilemap']
+            self.tile_size = map_data['tile_size']
+            self.offgrid_tiles = map_data['offgrid']
+
+            print(f"Tilemap loaded from {path}")
         except Exception as e:
-            print(f"Fehler beim Laden der Tilemap: {e}")
+            print(f"Error while loading Tilemap: {e}")
 
     def solid_check(self, pos):
         tile_loc = str(int(pos[0] // self.tile_size)) + ';' + str(int(pos[1] // self.tile_size))
@@ -164,15 +182,46 @@ class Tilemap:
 
     def render(self, surf, offset=(0, 0)):
         for tile in self.offgrid_tiles:
-            surf.blit(self.game.assets[tile['type']][tile['variant']], 
-                      (tile['pos'][0] - offset[0], 
-                       tile['pos'][1] - offset[1])) 
+            image = self.get_image(tile)
+            if image:
+                surf.blit(image, 
+                        (tile['pos'][0] - offset[0], 
+                        tile['pos'][1] - offset[1])) 
 
         for x in range(int(offset[0] // self.tile_size), int((offset[0] + surf.get_width()) // self.tile_size) + 1):
             for y in range(int(offset[1] // self.tile_size), int((offset[1] + surf.get_height()) // self.tile_size) + 1):
                 loc = str(x) + ';' + str(y)
                 if loc in self.tilemap:
                     tile = self.tilemap[loc]
-                    surf.blit(self.game.assets[tile['type']][tile['variant']], 
-                              (tile['pos'][0] * self.tile_size - offset[0], 
-                               tile['pos'][1] * self.tile_size - offset[1]))
+                    image = self.get_image(tile)
+                    if image:
+                        surf.blit(image, 
+                                (tile['pos'][0] * self.tile_size - offset[0], 
+                                tile['pos'][1] * self.tile_size - offset[1]))
+
+    def get_image(self, tile):
+        asset = self.game.assets.get(tile['type'])
+        if asset is None:
+            print(f"Warning: Asset for tile type '{tile['type']}' not found.")
+            return None
+        
+        if isinstance(asset, list):
+            if 0 <= tile['variant'] < len(asset):
+                return asset[tile['variant']]
+            else:
+                print(f"Warning: Variant index {tile['variant']} out of bounds for tile type '{tile['type']}'.")
+                return None
+        elif isinstance(asset, pygame.Surface):
+            return asset
+        elif isinstance(asset, Animation):
+            frame = asset.get_current_frame()
+            if isinstance(frame, pygame.Surface):
+                return frame
+            else:
+                print(f"Warning: Animation frame is not a Surface for tile type '{tile['type']}'.")
+                return None
+        else:
+            print(f"Warning: Unexpected asset type for tile type '{tile['type']}': {type(asset)}")
+            return None
+
+    

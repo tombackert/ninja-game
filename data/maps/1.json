@@ -7,8 +7,134 @@
         }
     },
     "entities_data": {
-        "players": [],
-        "enemies": []
+        "players": [
+            {
+                "id": 0,
+                "pos": [
+                    320,
+                    144
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "air_time": 0,
+                "action": "idle",
+                "flip": false,
+                "alive": true,
+                "lifes": 3,
+                "respawn_pos": [
+                    320,
+                    144
+                ]
+            },
+            {
+                "id": 1,
+                "pos": [
+                    336,
+                    144
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "air_time": 0,
+                "action": "idle",
+                "flip": false,
+                "alive": true,
+                "lifes": 3,
+                "respawn_pos": [
+                    336,
+                    144
+                ]
+            }
+        ],
+        "enemies": [
+            {
+                "id": 2,
+                "pos": [
+                    -48,
+                    48
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 3,
+                "pos": [
+                    -32,
+                    48
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 3,
+                "pos": [
+                    320,
+                    -32
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 4,
+                "pos": [
+                    368,
+                    -16
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 5,
+                "pos": [
+                    208,
+                    -64
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 6,
+                "pos": [
+                    224,
+                    -64
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 7,
+                "pos": [
+                    176,
+                    96
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            }
+        ]
     },
     "map_data": {
         "tilemap": {
@@ -1924,28 +2050,12 @@
                     9
                 ]
             },
-            "21;9": {
-                "type": "spawners",
-                "variant": 0,
-                "pos": [
-                    21,
-                    9
-                ]
-            },
             "24;9": {
                 "type": "decor",
                 "variant": 0,
                 "pos": [
                     24,
                     9
-                ]
-            },
-            "14;-4": {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    14,
-                    -4
                 ]
             },
             "5;-1": {
@@ -1980,36 +2090,12 @@
                     3
                 ]
             },
-            "-5;3": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    -5,
-                    3
-                ]
-            },
-            "-3;3": {
-                "type": "decor",
-                "variant": 1,
-                "pos": [
-                    -3,
-                    3
-                ]
-            },
             "6;-1": {
                 "type": "decor",
                 "variant": 1,
                 "pos": [
                     6,
                     -1
-                ]
-            },
-            "11;6": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    11,
-                    6
                 ]
             },
             "15;-4": {
@@ -2052,28 +2138,12 @@
                     9
                 ]
             },
-            "20;9": {
-                "type": "decor",
-                "variant": 2,
-                "pos": [
-                    20,
-                    9
-                ]
-            },
             "9;6": {
                 "type": "decor",
                 "variant": 2,
                 "pos": [
                     9,
                     6
-                ]
-            },
-            "13;-4": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    13,
-                    -4
                 ]
             },
             "10;-4": {
@@ -2090,14 +2160,6 @@
                 "pos": [
                     1,
                     2
-                ]
-            },
-            "-4;3": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    -4,
-                    3
                 ]
             },
             "-8;3": {
@@ -2132,14 +2194,6 @@
                     -1
                 ]
             },
-            "26;-1": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    26,
-                    -1
-                ]
-            },
             "32;7": {
                 "type": "decor",
                 "variant": 3,
@@ -2156,12 +2210,44 @@
                     2
                 ]
             },
-            "31;7": {
+            "10;6": {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    10,
+                    6
+                ]
+            },
+            "14;-4": {
                 "type": "spawners",
                 "variant": 1,
                 "pos": [
-                    31,
-                    7
+                    14,
+                    -4
+                ]
+            },
+            "-3;3": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -3,
+                    3
+                ]
+            },
+            "-2;3": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -2,
+                    3
+                ]
+            },
+            "20;-2": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    20,
+                    -2
                 ]
             },
             "23;-1": {
@@ -2170,6 +2256,30 @@
                 "pos": [
                     23,
                     -1
+                ]
+            },
+            "13;-4": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    13,
+                    -4
+                ]
+            },
+            "11;6": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    11,
+                    6
+                ]
+            },
+            "21;9": {
+                "type": "spawners",
+                "variant": 0,
+                "pos": [
+                    21,
+                    9
                 ]
             }
         },
@@ -2251,14 +2361,6 @@
                 "type": "large_decor",
                 "variant": 2,
                 "pos": [
-                    -45.5,
-                    20.5
-                ]
-            },
-            {
-                "type": "large_decor",
-                "variant": 2,
-                "pos": [
                     10.5,
                     29.5
                 ]
@@ -2269,14 +2371,6 @@
                 "pos": [
                     88.0,
                     -42.5
-                ]
-            },
-            {
-                "type": "large_decor",
-                "variant": 2,
-                "pos": [
-                    224.5,
-                    -89.5
                 ]
             },
             {

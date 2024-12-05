@@ -36,3 +36,6 @@ class Animation:
 
     def img(self):
         return self.images[int(self.frame / self.img_duration)]
+
+    def get_current_frame(self):
+        return self.img()
