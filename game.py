@@ -15,7 +15,7 @@ from scripts.particle import Particle
 from scripts.spark import Spark 
 from scripts.button import Button
 from scripts.timer import Timer
-from settings import settings
+from scripts.settings import settings
 from menu import Menu
 
 class Game:
@@ -87,37 +87,6 @@ class Game:
         # Game state
         self.running = True
         self.paused = False
-
-        # Save game directory
-        self.save_dir = 'data/saves'
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
-
-    def save_game(self):
-        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-        filename = f"round-{self.level}-{timestamp}.json"
-        save_path = os.path.join(self.save_dir, filename)
-
-        self.tilemap.meta_data = {
-            'map': self.level,
-            'timer': {
-                'current_time': self.timer.text,
-                'start_time': self.timer.start_time
-            }
-        }
-
-        self.tilemap.players = self.players
-        self.tilemap.enemies = self.enemies
-
-        success = self.tilemap.save(save_path)
-        if success:
-            return True, filename
-        else:
-            return False, ''
-        
-
-    def load_game(self, game_state):
-        pass
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):

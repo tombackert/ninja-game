@@ -5,7 +5,7 @@ from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 from scripts.entities import Player
 from scripts.entities import Enemy
-from settings import settings
+from scripts.settings import settings
 
 RENDER_SCALE = 2.0
 MAP_NAME = '1'
