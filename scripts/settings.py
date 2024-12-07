@@ -1,4 +1,3 @@
-# This module contains the Settings class that manages the game settings.
 import json
 import os
 
@@ -12,7 +11,6 @@ class Settings:
         self._selected_level = 0
         self.selected_editor_level = 0
 
-        # Load settings from the JSON file if it exists
         self.load_settings()
 
     @property
@@ -58,7 +56,6 @@ class Settings:
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
                     self._selected_level = data.get("selected_level", self._selected_level)
                     self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
-                # print("Settings loaded successfully.")
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading settings: {e}")
                 self.save_settings()
@@ -77,9 +74,7 @@ class Settings:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
             with open(self.SETTINGS_FILE, "w") as f:
                 json.dump(data, f, indent=4)
-            # print("Settings saved successfully.")
         except IOError as e:
             print(f"Error saving settings: {e}")
 
-# Create a global Settings instance
 settings = Settings()

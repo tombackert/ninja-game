@@ -1,8 +1,10 @@
 import pygame
 import sys
 import os
+from datetime import datetime
 from scripts.button import Button
-from settings import settings
+from scripts.settings import settings
+from scripts.tilemap import Tilemap
 
 class Menu:
 
@@ -395,7 +397,6 @@ class Menu:
             pygame.display.update()
             self.clock.tick(60)
 
-    # In menu.py
     def pause_menu(game):
         options = ["Continue", "Save Game", "Menu"]
         selected_option = 0
@@ -414,7 +415,7 @@ class Menu:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE, pygame.K_LEFT):
-                        game.save_game()
+                        game.tilemap.save_game()
                         game.running = False
                         pause = False
                         Menu().menu()  
@@ -429,14 +430,14 @@ class Menu:
                             game.paused = False
                             pause = False
                         elif chosen == "Save Game":
-                            success, filename = game.save_game()
+                            success, filename = game.tilemap.save_game()
                             if success:
                                 message = f"Game saved as {filename}"
                             else:
                                 message = "Failed to save game"
                             message_timer = 180
                         elif chosen == "Menu":
-                            #game.save_game()
+                            #game.tilemap.save_game()
                             game.running = False
                             pause = False
                             Menu().menu()
@@ -523,7 +524,6 @@ class Menu:
             game.clock.tick(60)
 
         return
-
 
 if __name__ == "__main__":
     Menu()

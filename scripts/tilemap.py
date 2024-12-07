@@ -1,8 +1,10 @@
 import pygame
 import json
 from scripts.entities import Enemy, Player
-from settings import settings
+from scripts.settings import settings
 from scripts.utils import Animation
+from datetime import datetime
+import os
 
 AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (0, 1)]))                     : 0,
@@ -31,6 +33,10 @@ class Tilemap:
         self.enemies = []
         self.players = []
         self.meta_data = {}
+
+        self.save_dir = 'data/saves'
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
 
     def extract(self, id_pairs, keep=False):
         matches = []
@@ -224,4 +230,27 @@ class Tilemap:
             print(f"Warning: Unexpected asset type for tile type '{tile['type']}': {type(asset)}")
             return None
 
-    
+    def save_game(self):
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        filename = f"round-{self.level}-{timestamp}.json"
+        save_path = os.path.join(self.save_dir, filename)
+
+        self.meta_data = {
+            'map': self.game.level,
+            'timer': {
+                'current_time': self.game.timer.text,
+                'start_time': self.game.timer.start_time
+            }
+        }
+
+        self.players = self.game.players
+        self.enemies = self.game.enemies
+
+        success = self.save(save_path)
+        if success:
+            return True, filename
+        else:
+            return False, ''
+
+    def load_game(self, game_state):
+        pass
