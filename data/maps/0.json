@@ -1319,7 +1319,7 @@
                 ]
             },
             "13;12": {
-                "type": "decor",
+                "type": "coin",
                 "variant": 0,
                 "pos": [
                     13,
@@ -1470,30 +1470,6 @@
                     9
                 ]
             },
-            "19;9": {
-                "type": "decor",
-                "variant": 3,
-                "pos": [
-                    19,
-                    9
-                ]
-            },
-            "6;4": {
-                "type": "decor",
-                "variant": 3,
-                "pos": [
-                    6,
-                    4
-                ]
-            },
-            "27;7": {
-                "type": "decor",
-                "variant": 3,
-                "pos": [
-                    27,
-                    7
-                ]
-            },
             "14;12": {
                 "type": "spawners",
                 "variant": 0,
@@ -1508,6 +1484,70 @@
                 "pos": [
                     28,
                     7
+                ]
+            },
+            "18;9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    18,
+                    9
+                ]
+            },
+            "26;7": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    26,
+                    7
+                ]
+            },
+            "14;9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    14,
+                    9
+                ]
+            },
+            "6;9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    6,
+                    9
+                ]
+            },
+            "15;10": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    15,
+                    10
+                ]
+            },
+            "20;3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    20,
+                    3
+                ]
+            },
+            "6;4": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    6,
+                    4
+                ]
+            },
+            "13;4": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    13,
+                    4
                 ]
             }
         },
@@ -1551,14 +1591,6 @@
                 "pos": [
                     278.5,
                     165.5
-                ]
-            },
-            {
-                "type": "large_decor",
-                "variant": 1,
-                "pos": [
-                    293.5,
-                    149.0
                 ]
             },
             {

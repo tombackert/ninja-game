@@ -5,10 +5,11 @@ from scripts.utils import load_images, load_image
 from scripts.tilemap import Tilemap
 from scripts.entities import Player
 from scripts.entities import Enemy
+from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '1'
+MAP_NAME = '0'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
@@ -29,6 +30,7 @@ class Editor:
             'spawners': load_images('tiles/spawners'),
             'player/idle': load_images('tiles/large_decor'),
             'enemy/idle': load_images('tiles/large_decor'),
+            'coin': load_images('collectables/coin'),
         }
 
         self.background = load_image('background.png')
