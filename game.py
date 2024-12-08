@@ -16,6 +16,7 @@ from scripts.spark import Spark
 from scripts.button import Button
 from scripts.timer import Timer
 from scripts.settings import settings
+from scripts.collectableManager import CollectableManager
 from menu import Menu
 
 class Game:
@@ -67,7 +68,6 @@ class Game:
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
         }
 
-        # Set sound volumes based on settings
         self.update_sound_volumes()
 
         # Entities
@@ -80,6 +80,9 @@ class Game:
         self.level = settings.selected_level
         self.screenshake = 0
         self.timer = Timer(self.level)
+
+        # Collectable Manager
+        self.collectable_manager = CollectableManager(self, coin_image_path='collectables/coin.png', data_file='data/collectables.json')
 
         # Load the selected level
         self.load_level(self.level)
@@ -116,11 +119,13 @@ class Game:
         else:
             self.enemies = []
             enemy_id = 0
+            player_spawned = False
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
-                if spawner['variant'] == 0:
+                if spawner['variant'] == 0 and not player_spawned:
                     self.player.pos = spawner['pos']
                     self.player.respawn_pos = list(self.player.pos)
                     self.player.air_time = 0
+                    player_spawned = True
                 else:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
@@ -135,14 +140,12 @@ class Game:
         self.player.lifes = lifes
         self.transition = -30
 
-        #print('loaded level:', map_id)
-        #print('respawn pos:', self.respawn_pos)
+        self.collectable_manager.load_coins_from_tilemap(self.tilemap)
 
     def get_font(self, size):
         return pygame.font.Font("data/font.ttf", size)
 
     def run(self):
-        # Music setup
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
@@ -163,7 +166,6 @@ class Game:
                 if not len(self.enemies):
                     self.transition += 1
                     if self.transition > 30:
-                        # Update best time before loading next level
                         self.timer.update_best_time()
                         self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
                         self.load_level(self.level)
@@ -193,12 +195,12 @@ class Game:
                         pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
                         self.particles.append(Particle(self, 'leaf', pos, velocity=[-0.1, 0.3], frame=random.randint(0, 20)))
 
-                # Rendering
+                # Clouds
                 self.clouds.update()
                 self.clouds.render(self.display_2, offset=render_scroll)
                 self.tilemap.render(self.display, offset=render_scroll)
 
-                # Handling enemies
+                # Enemies
                 for enemy in self.enemies.copy():
                     kill = enemy.update(self.tilemap, (0, 0))
                     enemy.render(self.display, offset=render_scroll)
@@ -210,7 +212,7 @@ class Game:
                         player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                         player.render(self.display, offset=render_scroll)
 
-                # Handling projectiles [[x, y], direction, timer]
+                # Projectiles
                 for projectile in self.projectiles.copy():
                     projectile[0][0] += projectile[1]
                     projectile[2] += 1
@@ -238,7 +240,7 @@ class Game:
                                     frame=random.randint(0, 7)
                                 ))
 
-                # Handling sparks
+                # Sparks
                 for spark in self.sparks.copy():
                     kill = spark.update()
                     spark.render(self.display, offset=render_scroll)
@@ -247,10 +249,10 @@ class Game:
 
                 display_mask = pygame.mask.from_surface(self.display)
                 display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
-                for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    self.display_2.blit(display_sillhouette, offset)
+                for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    self.display_2.blit(display_sillhouette, offset_o)
 
-                # Handling particles
+                # Particles
                 for particle in self.particles.copy():
                     kill = particle.update()
                     particle.render(self.display, offset=render_scroll)
@@ -259,7 +261,11 @@ class Game:
                     if kill:
                         self.particles.remove(particle)
 
-                # Handling player movement
+                # Collectables updaten & rendern
+                self.collectable_manager.update(self.player.rect())
+                self.collectable_manager.render(self.display, offset=render_scroll)
+
+                # Events
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()
@@ -354,6 +360,12 @@ class Game:
                 LEVEL_TEXT = get_font(10).render(level, True, "black")
                 LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
                 self.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
+
+                # Coins
+                coins_str = 'COINS:' + str(self.collectable_manager.coin_count)
+                COIN_TEXT = get_font(10).render(coins_str, True, "black")
+                COIN_RECT = COIN_TEXT.get_rect(center=(50, 25))
+                self.display_2.blit(COIN_TEXT, COIN_RECT)
 
                 # Screen shake
                 screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
