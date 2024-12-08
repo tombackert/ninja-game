@@ -30,7 +30,7 @@ class Editor:
             'spawners': load_images('tiles/spawners'),
             'player/idle': load_images('tiles/large_decor'),
             'enemy/idle': load_images('tiles/large_decor'),
-            'coin': load_images('collectables'),
+            'coin': load_images('collectables/coin'),
         }
 
         self.background = load_image('background.png')

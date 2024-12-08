@@ -1509,6 +1509,46 @@
                     14,
                     9
                 ]
+            },
+            "6;9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    6,
+                    9
+                ]
+            },
+            "15;10": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    15,
+                    10
+                ]
+            },
+            "20;3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    20,
+                    3
+                ]
+            },
+            "6;4": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    6,
+                    4
+                ]
+            },
+            "13;4": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    13,
+                    4
+                ]
             }
         },
         "tile_size": 16,

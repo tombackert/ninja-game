@@ -14,7 +14,6 @@ class CollectableManager:
         self.data_file = data_file
         self.coin_image_path = coin_image_path
         self.coin_count = self.load_collectable_count()
-        self.coin_image = load_image(self.coin_image_path)
 
     def load_collectable_count(self):
         if os.path.exists(self.data_file):
@@ -34,7 +33,7 @@ class CollectableManager:
         self.coins.clear()
         coin_tiles = tilemap.extract(coin_id_pairs)
         for coin_tile in coin_tiles:
-            c = Collectables(self.game, coin_tile['pos'], self.coin_image)
+            c = Collectables(self.game, coin_tile['pos'], self.game.assets['coin'])
             self.coins.append(c)
 
     def update(self, player_rect):

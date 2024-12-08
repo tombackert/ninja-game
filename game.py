@@ -55,6 +55,7 @@ class Game:
             'player/wall_slide': Animation(load_images('entities/player/wall_slide')),
             'particle/leaf': Animation(load_images('particles/leaf'), img_dur=20, loop=False),
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
+            'coin': Animation(load_images('collectables/coin'), img_dur=6),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
         }
@@ -82,7 +83,7 @@ class Game:
         self.timer = Timer(self.level)
 
         # Collectable Manager
-        self.collectable_manager = CollectableManager(self, coin_image_path='collectables/coin.png', data_file='data/collectables.json')
+        self.collectable_manager = CollectableManager(self)
 
         # Load the selected level
         self.load_level(self.level)
@@ -246,6 +247,10 @@ class Game:
                     spark.render(self.display, offset=render_scroll)
                     if kill:
                         self.sparks.remove(spark)
+                
+                # Collectables updaten & rendern
+                self.collectable_manager.update(self.player.rect())
+                self.collectable_manager.render(self.display, offset=render_scroll)dw
 
                 display_mask = pygame.mask.from_surface(self.display)
                 display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
@@ -260,10 +265,6 @@ class Game:
                         particle.pos[0] += math.sin(particle.animation.frame * 0.035) * 0.3
                     if kill:
                         self.particles.remove(particle)
-
-                # Collectables updaten & rendern
-                self.collectable_manager.update(self.player.rect())
-                self.collectable_manager.render(self.display, offset=render_scroll)
 
                 # Events
                 for event in pygame.event.get():
