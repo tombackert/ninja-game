@@ -1,6 +1,6 @@
 {
-    "music_volume": 0.0,
-    "sound_volume": 0.1,
-    "selected_level": 0,
-    "selected_editor_level": 0
+    "music_volume": 0.2,
+    "sound_volume": 0.2,
+    "selected_level": 3,
+    "selected_editor_level": 10
 }

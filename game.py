@@ -67,6 +67,7 @@ class Game:
             'hit': pygame.mixer.Sound('data/sfx/hit.wav'),
             'shoot': pygame.mixer.Sound('data/sfx/shoot.wav'),
             'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
+            'collect': pygame.mixer.Sound('data/sfx/collect.wav'),
         }
 
         self.update_sound_volumes()
@@ -98,7 +99,8 @@ class Game:
         self.sfx['shoot'].set_volume(settings.sound_volume * 0.4)
         self.sfx['hit'].set_volume(settings.sound_volume * 0.8)
         self.sfx['dash'].set_volume(settings.sound_volume * 0.1)
-        self.sfx['jump'].set_volume(settings.sound_volume * 0.7)    
+        self.sfx['jump'].set_volume(settings.sound_volume * 0.7)
+        self.sfx['collect'].set_volume(settings.sound_volume * 0.4)
 
     def load_level(self, map_id, lifes=3, respawn=False):
         self.timer.reset()
@@ -169,6 +171,7 @@ class Game:
                     if self.transition > 30:
                         self.timer.update_best_time()
                         self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
+                        settings.selected_level = self.level
                         self.load_level(self.level)
 
                 if self.transition < 0:
@@ -250,7 +253,7 @@ class Game:
                 
                 # Collectables updaten & rendern
                 self.collectable_manager.update(self.player.rect())
-                self.collectable_manager.render(self.display, offset=render_scroll)dw
+                self.collectable_manager.render(self.display, offset=render_scroll)
 
                 display_mask = pygame.mask.from_surface(self.display)
                 display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
@@ -366,7 +369,7 @@ class Game:
                 coins_str = 'COINS:' + str(self.collectable_manager.coin_count)
                 COIN_TEXT = get_font(10).render(coins_str, True, "black")
                 COIN_RECT = COIN_TEXT.get_rect(center=(50, 25))
-                self.display_2.blit(COIN_TEXT, COIN_RECT)
+                #self.display_2.blit(COIN_TEXT, COIN_RECT)
 
                 # Screen shake
                 screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)

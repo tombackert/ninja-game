@@ -149,6 +149,18 @@
                     0
                 ],
                 "alive": true
+            },
+            {
+                "id": 10,
+                "pos": [
+                    560,
+                    -16
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
             }
         ]
     },
@@ -2499,8 +2511,8 @@
                 ]
             },
             "36;-1": {
-                "type": "spawners",
-                "variant": 1,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     36,
                     -1
@@ -2632,6 +2644,94 @@
                 "pos": [
                     13,
                     -9
+                ]
+            },
+            "9;-2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    9,
+                    -2
+                ]
+            },
+            "5;-2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    5,
+                    -2
+                ]
+            },
+            "35;-1": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    35,
+                    -1
+                ]
+            },
+            "27;-6": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    27,
+                    -6
+                ]
+            },
+            "14;-10": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    14,
+                    -10
+                ]
+            },
+            "20;-12": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    20,
+                    -12
+                ]
+            },
+            "28;-14": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    28,
+                    -14
+                ]
+            },
+            "31;-15": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    31,
+                    -15
+                ]
+            },
+            "14;-3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    14,
+                    -3
+                ]
+            },
+            "-2;-3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -2,
+                    -3
+                ]
+            },
+            "-5;-3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -5,
+                    -3
                 ]
             }
         },

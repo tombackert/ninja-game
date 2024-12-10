@@ -44,7 +44,7 @@ class CollectableManager:
                 self.coin_count += 1
                 removed += 1
         if removed > 0:
-            self.game.sfx['hit'].play()
+            self.game.sfx['collect'].play()
             self.save_collectable_count()
 
     def render(self, surf, offset=(0,0)):

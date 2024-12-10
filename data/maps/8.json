@@ -9447,7 +9447,7 @@
                 ]
             },
             "-45;-60": {
-                "type": "grass",
+                "type": "coin",
                 "variant": 0,
                 "pos": [
                     -45,
@@ -15799,8 +15799,8 @@
                 ]
             },
             "-49;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -49,
                     -39
@@ -16431,320 +16431,320 @@
                 ]
             },
             "-61;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -61,
                     -37
                 ]
             },
             "-61;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -61,
                     -36
                 ]
             },
             "-61;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -61,
                     -35
                 ]
             },
             "-60;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -60,
                     -35
                 ]
             },
             "-60;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -60,
                     -37
                 ]
             },
             "-61;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -61,
                     -38
                 ]
             },
             "-61;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -61,
                     -39
                 ]
             },
             "-60;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -60,
                     -39
                 ]
             },
             "-59;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -59,
                     -39
                 ]
             },
             "-59;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -59,
                     -37
                 ]
             },
             "-59;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -59,
                     -35
                 ]
             },
             "-57;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -57,
                     -35
                 ]
             },
             "-57;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -57,
                     -36
                 ]
             },
             "-57;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -57,
                     -37
                 ]
             },
             "-57;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -57,
                     -38
                 ]
             },
             "-57;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -57,
                     -39
                 ]
             },
             "-56;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -56,
                     -39
                 ]
             },
             "-55;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -55,
                     -38
                 ]
             },
             "-56;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -56,
                     -38
                 ]
             },
             "-55;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -55,
                     -37
                 ]
             },
             "-54;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -54,
                     -36
                 ]
             },
             "-54;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -54,
                     -37
                 ]
             },
             "-53;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -53,
                     -35
                 ]
             },
             "-53;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -53,
                     -36
                 ]
             },
             "-53;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -53,
                     -37
                 ]
             },
             "-53;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -53,
                     -38
                 ]
             },
             "-53;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -53,
                     -39
                 ]
             },
             "-51;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -51,
                     -39
                 ]
             },
             "-51;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -51,
                     -38
                 ]
             },
             "-51;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -51,
                     -37
                 ]
             },
             "-51;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -51,
                     -36
                 ]
             },
             "-51;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -51,
                     -35
                 ]
             },
             "-50;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -50,
                     -35
                 ]
             },
             "-49;-35": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -49,
                     -35
                 ]
             },
             "-48;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -48,
                     -36
                 ]
             },
             "-48;-37": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -48,
                     -37
                 ]
             },
             "-48;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -48,
                     -38
                 ]
             },
             "-50;-39": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -50,
                     -39
                 ]
             },
             "-49;-36": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -49,
                     -36
                 ]
             },
             "-49;-38": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     -49,
                     -38
@@ -17812,6 +17812,430 @@
                 "pos": [
                     -35,
                     -36
+                ]
+            },
+            "9;4": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    9,
+                    4
+                ]
+            },
+            "19;2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    19,
+                    2
+                ]
+            },
+            "5;9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    5,
+                    9
+                ]
+            },
+            "23;8": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    23,
+                    8
+                ]
+            },
+            "13;-5": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    13,
+                    -5
+                ]
+            },
+            "12;-3": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    12,
+                    -3
+                ]
+            },
+            "12;-7": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    12,
+                    -7
+                ]
+            },
+            "13;-9": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    13,
+                    -9
+                ]
+            },
+            "12;-12": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    12,
+                    -12
+                ]
+            },
+            "65;-30": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -30
+                ]
+            },
+            "65;-32": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -32
+                ]
+            },
+            "65;-34": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -34
+                ]
+            },
+            "65;-36": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -36
+                ]
+            },
+            "65;-38": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -38
+                ]
+            },
+            "65;-28": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    65,
+                    -28
+                ]
+            },
+            "58;-31": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    58,
+                    -31
+                ]
+            },
+            "57;-35": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    57,
+                    -35
+                ]
+            },
+            "54;-27": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    54,
+                    -27
+                ]
+            },
+            "46;-27": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    46,
+                    -27
+                ]
+            },
+            "42;-27": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    42,
+                    -27
+                ]
+            },
+            "20;-39": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    20,
+                    -39
+                ]
+            },
+            "10;-41": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    10,
+                    -41
+                ]
+            },
+            "16;-33": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    16,
+                    -33
+                ]
+            },
+            "26;-28": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    26,
+                    -28
+                ]
+            },
+            "5;-49": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    5,
+                    -49
+                ]
+            },
+            "15;-51": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    15,
+                    -51
+                ]
+            },
+            "27;-57": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    27,
+                    -57
+                ]
+            },
+            "38;-61": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    38,
+                    -61
+                ]
+            },
+            "-17;-60": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -17,
+                    -60
+                ]
+            },
+            "-16;-60": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -16,
+                    -60
+                ]
+            },
+            "-2;-59": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -2,
+                    -59
+                ]
+            },
+            "0;-58": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    0,
+                    -58
+                ]
+            },
+            "3;-57": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    3,
+                    -57
+                ]
+            },
+            "11;-72": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    11,
+                    -72
+                ]
+            },
+            "4;-74": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    4,
+                    -74
+                ]
+            },
+            "-1;-77": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -1,
+                    -77
+                ]
+            },
+            "-8;-80": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -8,
+                    -80
+                ]
+            },
+            "-13;-82": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -13,
+                    -82
+                ]
+            },
+            "-14;-82": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -14,
+                    -82
+                ]
+            },
+            "-19;-81": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -19,
+                    -81
+                ]
+            },
+            "-26;-78": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -26,
+                    -78
+                ]
+            },
+            "-39;-69": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -39,
+                    -69
+                ]
+            },
+            "-41;-72": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -41,
+                    -72
+                ]
+            },
+            "-42;-65": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -42,
+                    -65
+                ]
+            },
+            "-36;-61": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -36,
+                    -61
+                ]
+            },
+            "-42;-57": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -42,
+                    -57
+                ]
+            },
+            "-45;-61": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -45,
+                    -61
+                ]
+            },
+            "-46;-53": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -46,
+                    -53
+                ]
+            },
+            "-39;-51": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -39,
+                    -51
+                ]
+            },
+            "-36;-53": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -36,
+                    -53
+                ]
+            },
+            "-34;-47": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -34,
+                    -47
+                ]
+            },
+            "-44;-47": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -44,
+                    -47
+                ]
+            },
+            "-39;-39": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -39,
+                    -39
                 ]
             }
         },

@@ -133,6 +133,42 @@
                     0
                 ],
                 "alive": true
+            },
+            {
+                "id": 7,
+                "pos": [
+                    496,
+                    112
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 8,
+                "pos": [
+                    416,
+                    -16
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 9,
+                "pos": [
+                    80,
+                    -16
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
             }
         ]
     },
@@ -2051,7 +2087,7 @@
                 ]
             },
             "24;9": {
-                "type": "decor",
+                "type": "coin",
                 "variant": 0,
                 "pos": [
                     24,
@@ -2059,8 +2095,8 @@
                 ]
             },
             "5;-1": {
-                "type": "decor",
-                "variant": 0,
+                "type": "spawners",
+                "variant": 1,
                 "pos": [
                     5,
                     -1
@@ -2083,7 +2119,7 @@
                 ]
             },
             "-6;3": {
-                "type": "decor",
+                "type": "coin",
                 "variant": 0,
                 "pos": [
                     -6,
@@ -2171,8 +2207,8 @@
                 ]
             },
             "12;6": {
-                "type": "decor",
-                "variant": 3,
+                "type": "coin",
+                "variant": 0,
                 "pos": [
                     12,
                     6
@@ -2280,6 +2316,70 @@
                 "pos": [
                     21,
                     9
+                ]
+            },
+            "31;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    31,
+                    1
+                ]
+            },
+            "35;-1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    35,
+                    -1
+                ]
+            },
+            "21;-1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    21,
+                    -1
+                ]
+            },
+            "12;-5": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    12,
+                    -5
+                ]
+            },
+            "4;-2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    4,
+                    -2
+                ]
+            },
+            "0;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    0,
+                    1
+                ]
+            },
+            "31;7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    31,
+                    7
+                ]
+            },
+            "26;-1": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    26,
+                    -1
                 ]
             }
         },

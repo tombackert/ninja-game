@@ -502,6 +502,12 @@ class Menu:
             info_rect = info_surface.get_rect(center=(320, start_y + 3 * spacing))
             game.screen.blit(info_surface, info_rect)
 
+            # coins
+            info_text = f"Coins: {game.collectable_manager.coin_count}"
+            info_surface = game.get_font(15).render(info_text, True, base_color)
+            info_rect = info_surface.get_rect(center=(320, start_y + 4 * spacing))
+            game.screen.blit(info_surface, info_rect)
+
             # Menu options
             option_rects = []
             start_y = 250
