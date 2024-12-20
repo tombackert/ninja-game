@@ -18,6 +18,7 @@ from scripts.timer import Timer
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
 from scripts.ui import UI
+from scripts.keyboardManager import KeyboardManager
 from menu import Menu
 
 class Game:
@@ -93,6 +94,9 @@ class Game:
         # Game state
         self.running = True
         self.paused = False
+
+        # Keyboard Manager
+        self.keyboard_manager = KeyboardManager(self)
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -194,6 +198,8 @@ class Game:
                 self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
                 render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
+                #### Graphics rendering start
+
                 # Leaf particles
                 for rect in self.leaf_spawners:
                     if random.random() * 49999 < rect.width * rect.height:
@@ -270,65 +276,10 @@ class Game:
                     if kill:
                         self.particles.remove(particle)
 
-                # Events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
+                #### Graphics rendering end
 
-                    # Movement keys
-                    if event.type == pygame.KEYDOWN:
-
-                        if event.key == pygame.K_ESCAPE:
-                            self.paused = True
-                            Menu.pause_menu(self)
-
-                        # W, A, S, D
-                        if event.key == pygame.K_a:
-                            self.movement[0] = True
-                        if event.key == pygame.K_d:
-                            self.movement[1] = True
-                        if event.key == pygame.K_w:
-                            if self.player.jump():
-                                self.sfx['jump'].play()
-
-                        # Arrow keys
-                        if event.key == pygame.K_LEFT:
-                            self.movement[0] = True
-                        if event.key == pygame.K_RIGHT:
-                            self.movement[1] = True
-                        if event.key == pygame.K_UP:
-                            if self.player.jump():
-                                self.sfx['jump'].play()
-
-                        # Space
-                        if event.key == pygame.K_SPACE:
-                            self.player.dash()
-
-                        # Respawn
-                        if event.key == pygame.K_r:
-                            self.dead += 1
-                            self.player.lifes -= 1
-                            print(self.dead)
-
-                        # Save position
-                        if event.key == pygame.K_p:
-                            if self.saves > 0:
-                                self.saves -= 1
-                                self.player.respawn_pos = list(self.player.pos)
-                                print('saved respawn pos: ', self.player.respawn_pos)
-
-                    # Stop movement
-                    if event.type == pygame.KEYUP:
-                        if event.key == pygame.K_a:
-                            self.movement[0] = False
-                        if event.key == pygame.K_d:
-                            self.movement[1] = False
-
-                        if event.key == pygame.K_LEFT:
-                            self.movement[0] = False
-                        if event.key == pygame.K_RIGHT:
-                            self.movement[1] = False
+                # Keyboard events
+                self.keyboard_manager.handle_keydown()
 
                 # Level transition
                 if self.transition:
@@ -341,7 +292,6 @@ class Game:
                 # UI 
                 UI.render_game_ui(self)
 
-
                 # Screen shake
                 screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
                 self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
@@ -349,6 +299,8 @@ class Game:
                 # Clock
                 pygame.display.update()
                 self.clock.tick(60)  # 60fps
+
+            Menu.pause_menu(self)
 
         print("Game Over")
 
