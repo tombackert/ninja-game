@@ -18,6 +18,8 @@ from scripts.timer import Timer
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
 from scripts.ui import UI
+from scripts.keyboardManager import KeyboardManager
+from scripts.effects import Effects
 from menu import Menu
 
 class Game:
@@ -94,6 +96,9 @@ class Game:
         self.running = True
         self.paused = False
 
+        # Keyboard Manager
+        self.keyboard_manager = KeyboardManager(self)
+
     # Update sound volumes based on settings
     def update_sound_volumes(self):
         self.sfx['ambience'].set_volume(settings.sound_volume * 0.2)
@@ -159,13 +164,13 @@ class Game:
 
             while not self.paused:
 
+                # Init 
                 self.timer.update(self.level)
-
                 self.display.fill((0, 0, 0, 0))
-
                 self.display_2.blit(self.assets['background'], (0, 0))
-
                 self.screenshake = max(0, self.screenshake - 1)
+
+                #### START COMPUTE GAME FLAGS
 
                 if not len(self.enemies):
                     self.transition += 1
@@ -190,165 +195,35 @@ class Game:
                     if self.dead > 40 and self.player.lifes < 1:
                         self.load_level(self.level)
 
+                ##### END COMPUTE GAME FLAGS
+
+                # Rendering?
                 self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
                 self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
                 render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
-                # Leaf particles
-                for rect in self.leaf_spawners:
-                    if random.random() * 49999 < rect.width * rect.height:
-                        pos = (rect.x + random.random() * rect.width, rect.y + random.random() * rect.height)
-                        self.particles.append(Particle(self, 'leaf', pos, velocity=[-0.1, 0.3], frame=random.randint(0, 20)))
+                #Graphics rendering
+                UI.render_game_elements(self, render_scroll)
 
-                # Clouds
-                self.clouds.update()
-                self.clouds.render(self.display_2, offset=render_scroll)
-                self.tilemap.render(self.display, offset=render_scroll)
-
-                # Enemies
-                for enemy in self.enemies.copy():
-                    kill = enemy.update(self.tilemap, (0, 0))
-                    enemy.render(self.display, offset=render_scroll)
-                    if kill:
-                        self.enemies.remove(enemy)
-
-                if not self.dead:
-                    for player in self.players:
-                        player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
-                        player.render(self.display, offset=render_scroll)
-
-                # Projectiles
-                for projectile in self.projectiles.copy():
-                    projectile[0][0] += projectile[1]
-                    projectile[2] += 1
-                    img = self.assets['projectile']
-                    self.display.blit(img, (projectile[0][0] - img.get_width() / 2 - render_scroll[0], projectile[0][1] - img.get_height() / 2 - render_scroll[1]))
-                    if self.tilemap.solid_check(projectile[0]):
-                        self.projectiles.remove(projectile)
-                        for i in range(4):
-                            self.sparks.append(Spark(projectile[0], random.random() - 0.5 + (math.pi if projectile[1] > 0 else 0), 2 + random.random()))
-                    elif projectile[2] > 360:
-                        self.projectiles.remove(projectile)
-                    elif abs(self.player.dashing) < 50:
-                        if self.player.rect().collidepoint(projectile[0]):
-                            self.projectiles.remove(projectile)
-                            self.player.lifes -= 1
-                            self.sfx['hit'].play()
-                            self.screenshake = max(16, self.screenshake)
-                            for i in range(30):
-                                angle = random.random() * math.pi * 2
-                                speed = random.random() * 5
-                                self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
-                                self.particles.append(Particle(
-                                    self, 'particle', self.player.rect().center,
-                                    velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
-                                    frame=random.randint(0, 7)
-                                ))
-
-                # Sparks
-                for spark in self.sparks.copy():
-                    kill = spark.update()
-                    spark.render(self.display, offset=render_scroll)
-                    if kill:
-                        self.sparks.remove(spark)
-                
-                # Collectables updaten & rendern
-                self.collectable_manager.update(self.player.rect())
-                self.collectable_manager.render(self.display, offset=render_scroll)
-
-                display_mask = pygame.mask.from_surface(self.display)
-                display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
-                for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    self.display_2.blit(display_sillhouette, offset_o)
-
-                # Particles
-                for particle in self.particles.copy():
-                    kill = particle.update()
-                    particle.render(self.display, offset=render_scroll)
-                    if particle.type == 'leaf':
-                        particle.pos[0] += math.sin(particle.animation.frame * 0.035) * 0.3
-                    if kill:
-                        self.particles.remove(particle)
-
-                # Events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-
-                    # Movement keys
-                    if event.type == pygame.KEYDOWN:
-
-                        if event.key == pygame.K_ESCAPE:
-                            self.paused = True
-                            Menu.pause_menu(self)
-
-                        # W, A, S, D
-                        if event.key == pygame.K_a:
-                            self.movement[0] = True
-                        if event.key == pygame.K_d:
-                            self.movement[1] = True
-                        if event.key == pygame.K_w:
-                            if self.player.jump():
-                                self.sfx['jump'].play()
-
-                        # Arrow keys
-                        if event.key == pygame.K_LEFT:
-                            self.movement[0] = True
-                        if event.key == pygame.K_RIGHT:
-                            self.movement[1] = True
-                        if event.key == pygame.K_UP:
-                            if self.player.jump():
-                                self.sfx['jump'].play()
-
-                        # Space
-                        if event.key == pygame.K_SPACE:
-                            self.player.dash()
-
-                        # Respawn
-                        if event.key == pygame.K_r:
-                            self.dead += 1
-                            self.player.lifes -= 1
-                            print(self.dead)
-
-                        # Save position
-                        if event.key == pygame.K_p:
-                            if self.saves > 0:
-                                self.saves -= 1
-                                self.player.respawn_pos = list(self.player.pos)
-                                print('saved respawn pos: ', self.player.respawn_pos)
-
-                    # Stop movement
-                    if event.type == pygame.KEYUP:
-                        if event.key == pygame.K_a:
-                            self.movement[0] = False
-                        if event.key == pygame.K_d:
-                            self.movement[1] = False
-
-                        if event.key == pygame.K_LEFT:
-                            self.movement[0] = False
-                        if event.key == pygame.K_RIGHT:
-                            self.movement[1] = False
+                # Keyboard events
+                self.keyboard_manager.handle_keydown()
 
                 # Level transition
                 if self.transition:
-                    transition_surf = pygame.Surface(self.display.get_size())
-                    pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, self.display.get_height() // 2), (30 - abs(self.transition)) * 8)
-                    transition_surf.set_colorkey((255, 255, 255))
-                    self.display.blit(transition_surf, (0, 0))
+                    Effects.transition(self)
                 self.display_2.blit(self.display, (0, 0))
 
                 # UI 
                 UI.render_game_ui(self)
 
-
                 # Screen shake
-                screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
-                self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
+                Effects.screenshake(self)
 
                 # Clock
                 pygame.display.update()
                 self.clock.tick(60)  # 60fps
+
+            Menu.pause_menu(self)
 
         print("Game Over")
 
