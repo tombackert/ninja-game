@@ -19,6 +19,7 @@ from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
 from scripts.ui import UI
 from scripts.keyboardManager import KeyboardManager
+from scripts.effects import Effects
 from menu import Menu
 
 class Game:
@@ -206,18 +207,14 @@ class Game:
 
                 # Level transition
                 if self.transition:
-                    transition_surf = pygame.Surface(self.display.get_size())
-                    pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, self.display.get_height() // 2), (30 - abs(self.transition)) * 8)
-                    transition_surf.set_colorkey((255, 255, 255))
-                    self.display.blit(transition_surf, (0, 0))
+                    Effects.transition(self)
                 self.display_2.blit(self.display, (0, 0))
 
                 # UI 
                 UI.render_game_ui(self)
 
                 # Screen shake
-                screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
-                self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
+                Effects.screen_shake(self)
 
                 # Clock
                 pygame.display.update()
