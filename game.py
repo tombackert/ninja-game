@@ -164,13 +164,13 @@ class Game:
 
             while not self.paused:
 
+                # Init 
                 self.timer.update(self.level)
-
                 self.display.fill((0, 0, 0, 0))
-
                 self.display_2.blit(self.assets['background'], (0, 0))
-
                 self.screenshake = max(0, self.screenshake - 1)
+
+                #### START COMPUTE GAME FLAGS
 
                 if not len(self.enemies):
                     self.transition += 1
@@ -195,6 +195,9 @@ class Game:
                     if self.dead > 40 and self.player.lifes < 1:
                         self.load_level(self.level)
 
+                ##### END COMPUTE GAME FLAGS
+
+                # Rendering?
                 self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
                 self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
                 render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
@@ -214,7 +217,7 @@ class Game:
                 UI.render_game_ui(self)
 
                 # Screen shake
-                Effects.screen_shake(self)
+                Effects.screenshake(self)
 
                 # Clock
                 pygame.display.update()

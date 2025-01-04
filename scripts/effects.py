@@ -7,7 +7,7 @@ class Effects:
     Class that handles all game effects
     """
     
-    def screen_shake(game):
+    def screenshake(game):
         screenshake_offset = (random.random() * game.screenshake - game.screenshake / 2, random.random() * game.screenshake - game.screenshake / 2)
         game.screen.blit(pygame.transform.scale(game.display_2, game.screen.get_size()), screenshake_offset)
 
