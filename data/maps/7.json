@@ -7,438 +7,8 @@
         }
     },
     "entities_data": {
-        "players": [
-            {
-                "id": 0,
-                "pos": [
-                    224,
-                    192
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "air_time": 0,
-                "action": "idle",
-                "flip": false,
-                "alive": true,
-                "lifes": 3,
-                "respawn_pos": [
-                    224,
-                    192
-                ]
-            }
-        ],
-        "enemies": [
-            {
-                "id": 0,
-                "pos": [
-                    112,
-                    160
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 1,
-                "pos": [
-                    336,
-                    144
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 2,
-                "pos": [
-                    448,
-                    112
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 3,
-                "pos": [
-                    -144,
-                    -448
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 4,
-                "pos": [
-                    64,
-                    -464
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 5,
-                "pos": [
-                    432,
-                    -432
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 6,
-                "pos": [
-                    800,
-                    -432
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 7,
-                "pos": [
-                    912,
-                    -432
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 8,
-                "pos": [
-                    912,
-                    -560
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 9,
-                "pos": [
-                    960,
-                    -624
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 10,
-                "pos": [
-                    832,
-                    -496
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 11,
-                "pos": [
-                    688,
-                    -560
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 12,
-                "pos": [
-                    688,
-                    -496
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 13,
-                "pos": [
-                    592,
-                    -624
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 14,
-                "pos": [
-                    704,
-                    -624
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 15,
-                "pos": [
-                    896,
-                    -704
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 16,
-                "pos": [
-                    880,
-                    -704
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 17,
-                "pos": [
-                    752,
-                    -960
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 18,
-                "pos": [
-                    608,
-                    -960
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 19,
-                "pos": [
-                    256,
-                    -800
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 20,
-                "pos": [
-                    -128,
-                    -704
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 21,
-                "pos": [
-                    -384,
-                    -736
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 22,
-                "pos": [
-                    -320,
-                    -736
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 23,
-                "pos": [
-                    -288,
-                    -960
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 24,
-                "pos": [
-                    -160,
-                    -960
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 25,
-                "pos": [
-                    96,
-                    -960
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 26,
-                "pos": [
-                    -560,
-                    -1104
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 27,
-                "pos": [
-                    -640,
-                    -1040
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 28,
-                "pos": [
-                    -560,
-                    -976
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 29,
-                "pos": [
-                    -624,
-                    -912
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 30,
-                "pos": [
-                    -656,
-                    -816
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 31,
-                "pos": [
-                    -656,
-                    -544
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 32,
-                "pos": [
-                    -1376,
-                    -624
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            },
-            {
-                "id": 33,
-                "pos": [
-                    512,
-                    112
-                ],
-                "velocity": [
-                    0,
-                    0
-                ],
-                "alive": true
-            }
-        ]
+        "players": [],
+        "enemies": []
     },
     "map_data": {
         "tilemap": {
@@ -1244,7 +814,7 @@
             },
             "16;6": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 7,
                 "pos": [
                     16,
                     6
@@ -1252,7 +822,7 @@
             },
             "17;6": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     17,
                     6
@@ -1284,7 +854,7 @@
             },
             "20;5": {
                 "type": "grass",
-                "variant": 4,
+                "variant": 5,
                 "pos": [
                     20,
                     5
@@ -1292,7 +862,7 @@
             },
             "20;4": {
                 "type": "grass",
-                "variant": 2,
+                "variant": 1,
                 "pos": [
                     20,
                     4
@@ -1364,7 +934,7 @@
             },
             "9;7": {
                 "type": "grass",
-                "variant": 4,
+                "variant": 5,
                 "pos": [
                     9,
                     7
@@ -1372,7 +942,7 @@
             },
             "9;6": {
                 "type": "grass",
-                "variant": 2,
+                "variant": 1,
                 "pos": [
                     9,
                     6
@@ -14689,6 +14259,254 @@
                     4,
                     14
                 ]
+            },
+            "16;7": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    16,
+                    7
+                ]
+            },
+            "16;8": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    16,
+                    8
+                ]
+            },
+            "15;8": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    15,
+                    8
+                ]
+            },
+            "15;7": {
+                "type": "grass",
+                "variant": 0,
+                "pos": [
+                    15,
+                    7
+                ]
+            },
+            "17;7": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    17,
+                    7
+                ]
+            },
+            "21;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    21,
+                    4
+                ]
+            },
+            "22;4": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    22,
+                    4
+                ]
+            },
+            "22;5": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    22,
+                    5
+                ]
+            },
+            "21;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    21,
+                    5
+                ]
+            },
+            "10;7": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    10,
+                    7
+                ]
+            },
+            "10;6": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    10,
+                    6
+                ]
+            },
+            "26;5": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    26,
+                    5
+                ]
+            },
+            "27;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    27,
+                    5
+                ]
+            },
+            "28;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    28,
+                    5
+                ]
+            },
+            "29;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    29,
+                    5
+                ]
+            },
+            "30;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    30,
+                    5
+                ]
+            },
+            "31;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    31,
+                    5
+                ]
+            },
+            "32;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    32,
+                    5
+                ]
+            },
+            "33;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    33,
+                    5
+                ]
+            },
+            "34;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    34,
+                    5
+                ]
+            },
+            "35;5": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    35,
+                    5
+                ]
+            },
+            "35;4": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    35,
+                    4
+                ]
+            },
+            "34;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    34,
+                    4
+                ]
+            },
+            "33;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    33,
+                    4
+                ]
+            },
+            "32;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    32,
+                    4
+                ]
+            },
+            "31;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    31,
+                    4
+                ]
+            },
+            "30;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    30,
+                    4
+                ]
+            },
+            "29;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    29,
+                    4
+                ]
+            },
+            "28;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    28,
+                    4
+                ]
+            },
+            "27;4": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    27,
+                    4
+                ]
+            },
+            "26;4": {
+                "type": "grass",
+                "variant": 0,
+                "pos": [
+                    26,
+                    4
+                ]
             }
         },
         "tile_size": 16,
@@ -15686,7 +15504,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15694,7 +15512,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15702,7 +15520,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15710,7 +15528,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15718,7 +15536,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15726,7 +15544,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15734,7 +15552,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15742,7 +15560,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15750,7 +15568,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -9.0,
@@ -15758,7 +15576,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15766,7 +15584,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15774,7 +15592,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15782,7 +15600,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15790,7 +15608,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15798,7 +15616,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -8.5,
@@ -15806,7 +15624,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15814,7 +15632,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15822,7 +15640,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15830,7 +15648,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15838,7 +15656,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15846,7 +15664,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15854,7 +15672,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -14.0,
@@ -15862,7 +15680,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15870,7 +15688,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15878,7 +15696,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15886,7 +15704,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15894,7 +15712,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15902,7 +15720,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15910,7 +15728,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -15.5,
@@ -15918,7 +15736,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15926,7 +15744,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15934,7 +15752,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15942,7 +15760,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15950,7 +15768,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15958,7 +15776,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15966,7 +15784,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15974,7 +15792,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15982,7 +15800,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -0.5,
@@ -15990,7 +15808,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -15998,7 +15816,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -16006,7 +15824,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -16014,7 +15832,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -16022,7 +15840,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -16030,7 +15848,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     15.0,
@@ -16038,7 +15856,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     58.0,
@@ -16046,7 +15864,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     58.0,
@@ -16054,7 +15872,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     58.0,
@@ -16062,7 +15880,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     58.0,
@@ -16070,7 +15888,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16078,7 +15896,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16086,7 +15904,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16094,7 +15912,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16102,7 +15920,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16110,7 +15928,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16118,7 +15936,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16126,7 +15944,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16134,7 +15952,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16142,7 +15960,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16150,7 +15968,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16158,7 +15976,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16166,7 +15984,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     19.0,
@@ -16174,7 +15992,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     76.5,
@@ -16182,7 +16000,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     76.5,
@@ -16190,7 +16008,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     76.5,
@@ -16198,7 +16016,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     76.5,
@@ -16206,7 +16024,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     76.5,
@@ -16214,7 +16032,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16222,7 +16040,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16230,7 +16048,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16238,7 +16056,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16246,7 +16064,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16254,7 +16072,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     74.0,
@@ -16262,7 +16080,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16270,7 +16088,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16278,7 +16096,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16286,7 +16104,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16294,7 +16112,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16302,7 +16120,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     14.0,
@@ -16310,7 +16128,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16318,7 +16136,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16326,7 +16144,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16334,7 +16152,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16342,7 +16160,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16350,7 +16168,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16358,7 +16176,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16366,7 +16184,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16374,7 +16192,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     301.5,
@@ -16382,7 +16200,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16390,7 +16208,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16398,7 +16216,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16406,7 +16224,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16414,7 +16232,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16422,7 +16240,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16430,7 +16248,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     303.0,
@@ -16438,7 +16256,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     425.5,
@@ -16446,7 +16264,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     425.5,
@@ -16454,7 +16272,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     425.5,
@@ -16462,7 +16280,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     425.5,
@@ -16470,7 +16288,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     425.5,
@@ -16478,7 +16296,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     555.5,
@@ -16486,7 +16304,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     555.5,
@@ -16494,7 +16312,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     555.5,
@@ -16502,7 +16320,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     555.5,
@@ -16510,7 +16328,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -21.5,
@@ -16518,7 +16336,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -21.5,
@@ -16526,7 +16344,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -21.5,
@@ -16534,7 +16352,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -21.5,
@@ -16542,7 +16360,7 @@
                 ]
             },
             {
-                "type": "enemy/idle",
+                "type": "large_decor",
                 "variant": 1,
                 "pos": [
                     -21.5,
@@ -16550,7 +16368,7 @@
                 ]
             },
             {
-                "type": "player/idle",
+                "type": "large_decor",
                 "variant": 2,
                 "pos": [
                     14.0,
@@ -16558,7 +16376,7 @@
                 ]
             },
             {
-                "type": "player/idle",
+                "type": "large_decor",
                 "variant": 2,
                 "pos": [
                     14.0,
@@ -16566,7 +16384,7 @@
                 ]
             },
             {
-                "type": "player/idle",
+                "type": "large_decor",
                 "variant": 2,
                 "pos": [
                     14.0,
@@ -16574,7 +16392,7 @@
                 ]
             },
             {
-                "type": "player/idle",
+                "type": "large_decor",
                 "variant": 2,
                 "pos": [
                     14.0,
@@ -16582,7 +16400,7 @@
                 ]
             },
             {
-                "type": "player/idle",
+                "type": "large_decor",
                 "variant": 2,
                 "pos": [
                     14.0,

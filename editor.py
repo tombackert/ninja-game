@@ -9,7 +9,7 @@ from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '9'
+MAP_NAME = '7'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
@@ -28,9 +28,7 @@ class Editor:
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'spawners': load_images('tiles/spawners'),
-            'player/idle': load_images('tiles/large_decor'),
-            'enemy/idle': load_images('tiles/large_decor'),
-            'coin': load_images('collectables/coin'),
+            'coin': load_images('tiles/collectables'),
         }
 
         self.background = load_image('background.png')
@@ -40,7 +38,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
 
         try:
-            self.tilemap.load(CURRENT_MAP)
+            self.tilemap.load(CURRENT_MAP, load_entities=False)
         except FileNotFoundError:
             pass
 
@@ -95,37 +93,8 @@ class Editor:
                     'variant': variant, 
                     'pos': pos
                 }
-                
-                # Entities
-                if tile_type == 'spawners':
-                    # Player
-                    if variant == 0:
-                        if not any([p.pos == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for p in self.tilemap.players]):
-                            self.tilemap.players.append(
-                                Player(
-                                    game=self, 
-                                    pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size], 
-                                    size=(8, 15), 
-                                    e_id=len(self.tilemap.players),
-                                    lifes=3,
-                                    respawn_pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size]
-                                )
-                            )
-                            print('Player added')
-                            print(self.tilemap.players)
-                    # Enemy
-                    elif variant == 1:
-                        if not any([e.pos == [pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size] for e in self.tilemap.enemies]):
-                            self.tilemap.enemies.append(
-                                Enemy(
-                                    game=self, 
-                                    pos=[pos[0] * self.tilemap.tile_size, pos[1] * self.tilemap.tile_size], 
-                                    size=(8, 15), 
-                                    e_id=len(self.tilemap.enemies),
-                                )
-                            )
-                            print('Enemy added')
-                            print(self.tilemap.enemies)
+                #print('Tile added of type: ', tile_type)
+
             # Offgrid tiles
             elif self.clicking and not self.ongrid:
                 self.tilemap.offgrid_tiles.append({
@@ -133,26 +102,24 @@ class Editor:
                     'variant': self.tile_variant, 
                     'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
                 })
+                #print('Offgrid tile added of type: ', self.tile_list[self.tile_group])
 
             # Tile removal
             if self.right_clicking:
                 tile_loc = str(tile_pos[0]) + ';' + str(tile_pos[1])
                 if tile_loc in self.tilemap.tilemap:
                     tile = self.tilemap.tilemap[tile_loc]
-                    if tile['type'] == 'spawners':
-                        if tile['variant'] == 0:
-                            # Player removal
-                            self.tilemap.players = [p for p in self.tilemap.players if p.pos != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
-                        elif tile['variant'] == 1:
-                            # Enemy removal
-                            self.tilemap.enemies = [e for e in self.tilemap.enemies if e.pos != [tile_pos[0] * self.tilemap.tile_size, tile_pos[1] * self.tilemap.tile_size]]
                     del self.tilemap.tilemap[tile_loc]
+                    
                 for tile in self.tilemap.offgrid_tiles.copy():
                     tile_img = self.assets[tile['type']][tile['variant']]
                     tile_r = pygame.Rect(tile['pos'][0] - self.scroll[0], tile['pos'][1] - self.scroll[1], tile_img.get_width(), tile_img.get_height())
                     if tile_r.collidepoint(mpos):
                         self.tilemap.offgrid_tiles.remove(tile)
             self.display.blit(current_tile_img, (5, 5))
+            tile_name = f"{self.tile_list[self.tile_group]}/{self.tile_variant}"
+            name_surface = self.font.render(tile_name, True, (0, 0, 0))
+            self.display.blit(name_surface, (30, 5))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

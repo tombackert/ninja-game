@@ -5,6 +5,7 @@ from scripts.settings import settings
 from scripts.utils import Animation
 from datetime import datetime
 import os
+import traceback
 
 AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (0, 1)]))                     : 0,
@@ -119,7 +120,7 @@ class Tilemap:
             print(f"Error saving tilemap: {e}")
             return False
 
-    def load(self, path):
+    def load(self, path, load_entities=True):
         try:
             with open(path, 'r') as f:
                 data = json.load(f)
@@ -127,34 +128,37 @@ class Tilemap:
             self.meta_data = data.get('meta_data', {})
             self.level = self.meta_data.get('map', self.level)
 
-            entities_data = data.get('entities_data', {})
-            self.players = []
-            self.enemies = []
-
-            for player_data in entities_data.get('players', []):
-                player = Player(self.game, player_data['pos'], (8, 15), e_id=player_data['id'],
-                                lifes=player_data['lifes'], respawn_pos=player_data['respawn_pos'])
-                player.velocity = player_data['velocity']
-                player.air_time = player_data['air_time']
-                player.action = player_data['action']
-                player.flip = player_data['flip']
-                player.alive = player_data['alive']
-                player.respawn_pos = player_data['respawn_pos']
-                self.players.append(player)
-
-            for enemy_data in entities_data.get('enemies', []):
-                enemy = Enemy(self.game, enemy_data['pos'], (8, 15), e_id=enemy_data['id'])
-                enemy.velocity = enemy_data['velocity']
-                enemy.alive = enemy_data['alive']
-                self.enemies.append(enemy)
-
             map_data = data.get('map_data', data)
             self.tilemap = map_data['tilemap']
             self.tile_size = map_data['tile_size']
             self.offgrid_tiles = map_data['offgrid']
 
+            self.players = []
+            self.enemies = []
+
+            if load_entities:
+                entities_data = data.get('entities_data', {})
+
+                for player_data in entities_data.get('players', []):
+                    player = Player(self.game, player_data['pos'], (8, 15), e_id=player_data['id'],
+                                    lifes=player_data['lifes'], respawn_pos=player_data['respawn_pos'])
+                    player.velocity = player_data['velocity']
+                    player.air_time = player_data['air_time']
+                    player.action = player_data['action']
+                    player.flip = player_data['flip']
+                    player.alive = player_data['alive']
+                    player.respawn_pos = player_data['respawn_pos']
+                    self.players.append(player)
+
+                for enemy_data in entities_data.get('enemies', []):
+                    enemy = Enemy(self.game, enemy_data['pos'], (8, 15), e_id=enemy_data['id'])
+                    enemy.velocity = enemy_data['velocity']
+                    enemy.alive = enemy_data['alive']
+                    self.enemies.append(enemy)
+
             print(f"Tilemap loaded from {path}")
         except Exception as e:
+            traceback.print_exc()
             print(f"Error while loading Tilemap: {e}")
 
     def solid_check(self, pos):
