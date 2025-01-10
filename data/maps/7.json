@@ -425,6 +425,18 @@
                     0
                 ],
                 "alive": true
+            },
+            {
+                "id": 33,
+                "pos": [
+                    512,
+                    112
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
             }
         ]
     },
@@ -568,7 +580,7 @@
             },
             "8;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     8,
                     15
@@ -576,7 +588,7 @@
             },
             "9;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     9,
                     15
@@ -584,7 +596,7 @@
             },
             "10;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     10,
                     15
@@ -592,7 +604,7 @@
             },
             "11;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     11,
                     15
@@ -600,7 +612,7 @@
             },
             "12;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     12,
                     15
@@ -608,7 +620,7 @@
             },
             "13;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     13,
                     15
@@ -616,7 +628,7 @@
             },
             "14;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     14,
                     15
@@ -624,7 +636,7 @@
             },
             "15;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     15,
                     15
@@ -632,7 +644,7 @@
             },
             "7;15": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 8,
                 "pos": [
                     7,
                     15
@@ -744,47 +756,15 @@
             },
             "2;12": {
                 "type": "grass",
-                "variant": 8,
+                "variant": 5,
                 "pos": [
                     2,
                     12
                 ]
             },
-            "2;13": {
-                "type": "grass",
-                "variant": 8,
-                "pos": [
-                    2,
-                    13
-                ]
-            },
-            "3;13": {
-                "type": "grass",
-                "variant": 8,
-                "pos": [
-                    3,
-                    13
-                ]
-            },
-            "4;13": {
-                "type": "grass",
-                "variant": 8,
-                "pos": [
-                    4,
-                    13
-                ]
-            },
-            "4;14": {
-                "type": "grass",
-                "variant": 5,
-                "pos": [
-                    4,
-                    14
-                ]
-            },
             "5;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 7,
                 "pos": [
                     5,
                     14
@@ -792,31 +772,15 @@
             },
             "6;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     6,
                     14
                 ]
             },
-            "3;14": {
-                "type": "grass",
-                "variant": 5,
-                "pos": [
-                    3,
-                    14
-                ]
-            },
-            "2;14": {
-                "type": "grass",
-                "variant": 5,
-                "pos": [
-                    2,
-                    14
-                ]
-            },
             "1;14": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 3,
                 "pos": [
                     1,
                     14
@@ -824,7 +788,7 @@
             },
             "1;13": {
                 "type": "grass",
-                "variant": 8,
+                "variant": 3,
                 "pos": [
                     1,
                     13
@@ -832,7 +796,7 @@
             },
             "3;12": {
                 "type": "grass",
-                "variant": 8,
+                "variant": 5,
                 "pos": [
                     3,
                     12
@@ -840,7 +804,7 @@
             },
             "4;12": {
                 "type": "grass",
-                "variant": 8,
+                "variant": 5,
                 "pos": [
                     4,
                     12
@@ -872,7 +836,7 @@
             },
             "5;13": {
                 "type": "grass",
-                "variant": 8,
+                "variant": 7,
                 "pos": [
                     5,
                     13
@@ -880,7 +844,7 @@
             },
             "0;13": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 8,
                 "pos": [
                     0,
                     13
@@ -888,7 +852,7 @@
             },
             "0;12": {
                 "type": "grass",
-                "variant": 7,
+                "variant": 8,
                 "pos": [
                     0,
                     12
@@ -896,7 +860,7 @@
             },
             "0;11": {
                 "type": "grass",
-                "variant": 0,
+                "variant": 8,
                 "pos": [
                     0,
                     11
@@ -968,7 +932,7 @@
             },
             "16;15": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     16,
                     15
@@ -976,7 +940,7 @@
             },
             "17;15": {
                 "type": "grass",
-                "variant": 4,
+                "variant": 8,
                 "pos": [
                     17,
                     15
@@ -984,7 +948,7 @@
             },
             "18;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     18,
                     14
@@ -992,7 +956,7 @@
             },
             "19;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     19,
                     14
@@ -1000,7 +964,7 @@
             },
             "20;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     20,
                     14
@@ -1008,7 +972,7 @@
             },
             "21;14": {
                 "type": "grass",
-                "variant": 5,
+                "variant": 8,
                 "pos": [
                     21,
                     14
@@ -1360,7 +1324,7 @@
             },
             "6;5": {
                 "type": "grass",
-                "variant": 0,
+                "variant": 1,
                 "pos": [
                     6,
                     5
@@ -1368,7 +1332,7 @@
             },
             "6;6": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 8,
                 "pos": [
                     6,
                     6
@@ -1384,7 +1348,7 @@
             },
             "7;7": {
                 "type": "grass",
-                "variant": 6,
+                "variant": 5,
                 "pos": [
                     7,
                     7
@@ -1480,7 +1444,7 @@
             },
             "29;13": {
                 "type": "stone",
-                "variant": 4,
+                "variant": 5,
                 "pos": [
                     29,
                     13
@@ -1496,7 +1460,7 @@
             },
             "30;12": {
                 "type": "stone",
-                "variant": 4,
+                "variant": 8,
                 "pos": [
                     30,
                     12
@@ -1504,7 +1468,7 @@
             },
             "30;11": {
                 "type": "stone",
-                "variant": 3,
+                "variant": 8,
                 "pos": [
                     30,
                     11
@@ -1512,7 +1476,7 @@
             },
             "30;10": {
                 "type": "stone",
-                "variant": 3,
+                "variant": 8,
                 "pos": [
                     30,
                     10
@@ -1520,7 +1484,7 @@
             },
             "30;9": {
                 "type": "stone",
-                "variant": 3,
+                "variant": 8,
                 "pos": [
                     30,
                     9
@@ -1528,7 +1492,7 @@
             },
             "30;8": {
                 "type": "stone",
-                "variant": 2,
+                "variant": 1,
                 "pos": [
                     30,
                     8
@@ -13293,6 +13257,1438 @@
                     -90,
                     -43
                 ]
+            },
+            "31;12": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    31,
+                    12
+                ]
+            },
+            "32;12": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    32,
+                    12
+                ]
+            },
+            "33;12": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    33,
+                    12
+                ]
+            },
+            "31;8": {
+                "type": "stone",
+                "variant": 1,
+                "pos": [
+                    31,
+                    8
+                ]
+            },
+            "32;8": {
+                "type": "stone",
+                "variant": 1,
+                "pos": [
+                    32,
+                    8
+                ]
+            },
+            "33;8": {
+                "type": "stone",
+                "variant": 1,
+                "pos": [
+                    33,
+                    8
+                ]
+            },
+            "34;8": {
+                "type": "stone",
+                "variant": 1,
+                "pos": [
+                    34,
+                    8
+                ]
+            },
+            "33;9": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    33,
+                    9
+                ]
+            },
+            "33;10": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    33,
+                    10
+                ]
+            },
+            "33;11": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    33,
+                    11
+                ]
+            },
+            "34;11": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    34,
+                    11
+                ]
+            },
+            "34;12": {
+                "type": "stone",
+                "variant": 3,
+                "pos": [
+                    34,
+                    12
+                ]
+            },
+            "34;10": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    34,
+                    10
+                ]
+            },
+            "34;9": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    34,
+                    9
+                ]
+            },
+            "35;9": {
+                "type": "stone",
+                "variant": 3,
+                "pos": [
+                    35,
+                    9
+                ]
+            },
+            "32;9": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    32,
+                    9
+                ]
+            },
+            "31;9": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    31,
+                    9
+                ]
+            },
+            "31;10": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    31,
+                    10
+                ]
+            },
+            "31;11": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    31,
+                    11
+                ]
+            },
+            "32;11": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    32,
+                    11
+                ]
+            },
+            "32;10": {
+                "type": "stone",
+                "variant": 8,
+                "pos": [
+                    32,
+                    10
+                ]
+            },
+            "35;8": {
+                "type": "stone",
+                "variant": 2,
+                "pos": [
+                    35,
+                    8
+                ]
+            },
+            "35;10": {
+                "type": "stone",
+                "variant": 3,
+                "pos": [
+                    35,
+                    10
+                ]
+            },
+            "35;11": {
+                "type": "stone",
+                "variant": 4,
+                "pos": [
+                    35,
+                    11
+                ]
+            },
+            "34;13": {
+                "type": "stone",
+                "variant": 4,
+                "pos": [
+                    34,
+                    13
+                ]
+            },
+            "33;13": {
+                "type": "stone",
+                "variant": 5,
+                "pos": [
+                    33,
+                    13
+                ]
+            },
+            "32;13": {
+                "type": "stone",
+                "variant": 5,
+                "pos": [
+                    32,
+                    13
+                ]
+            },
+            "31;13": {
+                "type": "stone",
+                "variant": 5,
+                "pos": [
+                    31,
+                    13
+                ]
+            },
+            "30;13": {
+                "type": "stone",
+                "variant": 5,
+                "pos": [
+                    30,
+                    13
+                ]
+            },
+            "32;7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    32,
+                    7
+                ]
+            },
+            "0;10": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    0,
+                    10
+                ]
+            },
+            "3;6": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    3,
+                    6
+                ]
+            },
+            "4;6": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    4,
+                    6
+                ]
+            },
+            "5;6": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    5,
+                    6
+                ]
+            },
+            "5;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    5,
+                    5
+                ]
+            },
+            "4;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    4,
+                    5
+                ]
+            },
+            "3;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    3,
+                    5
+                ]
+            },
+            "2;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    2,
+                    5
+                ]
+            },
+            "1;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    1,
+                    5
+                ]
+            },
+            "0;5": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    0,
+                    5
+                ]
+            },
+            "-1;13": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    13
+                ]
+            },
+            "-1;12": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    12
+                ]
+            },
+            "-1;10": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    10
+                ]
+            },
+            "-1;9": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    -1,
+                    9
+                ]
+            },
+            "-1;8": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    -1,
+                    8
+                ]
+            },
+            "-1;7": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    -1,
+                    7
+                ]
+            },
+            "-1;6": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    -1,
+                    6
+                ]
+            },
+            "-1;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    5
+                ]
+            },
+            "-2;9": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    9
+                ]
+            },
+            "-2;10": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    10
+                ]
+            },
+            "-2;11": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    11
+                ]
+            },
+            "-2;12": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    12
+                ]
+            },
+            "-1;11": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    11
+                ]
+            },
+            "-2;13": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    13
+                ]
+            },
+            "-2;6": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    6
+                ]
+            },
+            "-2;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    5
+                ]
+            },
+            "0;14": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    0,
+                    14
+                ]
+            },
+            "-1;14": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    14
+                ]
+            },
+            "-1;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    15
+                ]
+            },
+            "0;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    0,
+                    15
+                ]
+            },
+            "1;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    1,
+                    15
+                ]
+            },
+            "2;15": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    2,
+                    15
+                ]
+            },
+            "4;15": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    4,
+                    15
+                ]
+            },
+            "5;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    5,
+                    15
+                ]
+            },
+            "6;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    6,
+                    15
+                ]
+            },
+            "3;15": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    3,
+                    15
+                ]
+            },
+            "5;4": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    5,
+                    4
+                ]
+            },
+            "4;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    4,
+                    4
+                ]
+            },
+            "3;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    3,
+                    4
+                ]
+            },
+            "2;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    2,
+                    4
+                ]
+            },
+            "1;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    1,
+                    4
+                ]
+            },
+            "0;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    0,
+                    4
+                ]
+            },
+            "-1;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    4
+                ]
+            },
+            "-2;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    4
+                ]
+            },
+            "5;7": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    5,
+                    7
+                ]
+            },
+            "6;7": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    6,
+                    7
+                ]
+            },
+            "4;7": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    4,
+                    7
+                ]
+            },
+            "-2;14": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    14
+                ]
+            },
+            "-3;14": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    14
+                ]
+            },
+            "-3;13": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    13
+                ]
+            },
+            "-3;12": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    12
+                ]
+            },
+            "-3;11": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    11
+                ]
+            },
+            "-3;10": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    10
+                ]
+            },
+            "-3;9": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    9
+                ]
+            },
+            "-3;8": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    8
+                ]
+            },
+            "-3;7": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    7
+                ]
+            },
+            "-3;6": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    6
+                ]
+            },
+            "-3;5": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    5
+                ]
+            },
+            "-4;5": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    5
+                ]
+            },
+            "-4;6": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    6
+                ]
+            },
+            "-4;7": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    7
+                ]
+            },
+            "-4;8": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    8
+                ]
+            },
+            "-4;9": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    9
+                ]
+            },
+            "-4;10": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    10
+                ]
+            },
+            "-4;11": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    11
+                ]
+            },
+            "-4;12": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    12
+                ]
+            },
+            "-4;13": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    13
+                ]
+            },
+            "-4;14": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    -4,
+                    14
+                ]
+            },
+            "-3;15": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -3,
+                    15
+                ]
+            },
+            "-2;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    15
+                ]
+            },
+            "-1;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    16
+                ]
+            },
+            "-2;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    16
+                ]
+            },
+            "0;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    0,
+                    16
+                ]
+            },
+            "1;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    1,
+                    16
+                ]
+            },
+            "2;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    2,
+                    16
+                ]
+            },
+            "3;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    3,
+                    16
+                ]
+            },
+            "4;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    4,
+                    16
+                ]
+            },
+            "5;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    5,
+                    16
+                ]
+            },
+            "6;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    6,
+                    16
+                ]
+            },
+            "7;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    7,
+                    16
+                ]
+            },
+            "8;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    8,
+                    16
+                ]
+            },
+            "9;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    9,
+                    16
+                ]
+            },
+            "10;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    10,
+                    16
+                ]
+            },
+            "11;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    11,
+                    16
+                ]
+            },
+            "12;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    12,
+                    16
+                ]
+            },
+            "13;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    13,
+                    16
+                ]
+            },
+            "14;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    14,
+                    16
+                ]
+            },
+            "15;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    15,
+                    16
+                ]
+            },
+            "16;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    16,
+                    16
+                ]
+            },
+            "17;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    17,
+                    16
+                ]
+            },
+            "18;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    18,
+                    16
+                ]
+            },
+            "18;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    18,
+                    15
+                ]
+            },
+            "19;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    19,
+                    15
+                ]
+            },
+            "20;15": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    20,
+                    15
+                ]
+            },
+            "21;15": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    21,
+                    15
+                ]
+            },
+            "21;16": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    21,
+                    16
+                ]
+            },
+            "21;17": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    21,
+                    17
+                ]
+            },
+            "20;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    20,
+                    17
+                ]
+            },
+            "19;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    19,
+                    17
+                ]
+            },
+            "19;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    19,
+                    16
+                ]
+            },
+            "20;16": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    20,
+                    16
+                ]
+            },
+            "18;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    18,
+                    17
+                ]
+            },
+            "17;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    17,
+                    17
+                ]
+            },
+            "16;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    16,
+                    17
+                ]
+            },
+            "15;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    15,
+                    17
+                ]
+            },
+            "14;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    14,
+                    17
+                ]
+            },
+            "13;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    13,
+                    17
+                ]
+            },
+            "12;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    12,
+                    17
+                ]
+            },
+            "11;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    11,
+                    17
+                ]
+            },
+            "10;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    10,
+                    17
+                ]
+            },
+            "9;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    9,
+                    17
+                ]
+            },
+            "8;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    8,
+                    17
+                ]
+            },
+            "7;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    7,
+                    17
+                ]
+            },
+            "6;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    6,
+                    17
+                ]
+            },
+            "5;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    5,
+                    17
+                ]
+            },
+            "4;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    4,
+                    17
+                ]
+            },
+            "3;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    3,
+                    17
+                ]
+            },
+            "2;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    2,
+                    17
+                ]
+            },
+            "1;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    1,
+                    17
+                ]
+            },
+            "0;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    0,
+                    17
+                ]
+            },
+            "-1;17": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    -1,
+                    17
+                ]
+            },
+            "-2;17": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    -2,
+                    17
+                ]
+            },
+            "-3;16": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    -3,
+                    16
+                ]
+            },
+            "5;3": {
+                "type": "grass",
+                "variant": 3,
+                "pos": [
+                    5,
+                    3
+                ]
+            },
+            "5;2": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    5,
+                    2
+                ]
+            },
+            "4;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    4,
+                    2
+                ]
+            },
+            "4;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    4,
+                    3
+                ]
+            },
+            "3;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    3,
+                    2
+                ]
+            },
+            "2;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    2,
+                    2
+                ]
+            },
+            "1;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    1,
+                    3
+                ]
+            },
+            "0;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    0,
+                    3
+                ]
+            },
+            "-1;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -1,
+                    3
+                ]
+            },
+            "-2;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    3
+                ]
+            },
+            "-3;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    3
+                ]
+            },
+            "-3;4": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -3,
+                    4
+                ]
+            },
+            "-4;4": {
+                "type": "grass",
+                "variant": 7,
+                "pos": [
+                    -4,
+                    4
+                ]
+            },
+            "-3;2": {
+                "type": "grass",
+                "variant": 0,
+                "pos": [
+                    -3,
+                    2
+                ]
+            },
+            "-2;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    -2,
+                    2
+                ]
+            },
+            "-1;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    -1,
+                    2
+                ]
+            },
+            "0;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    0,
+                    2
+                ]
+            },
+            "1;2": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    1,
+                    2
+                ]
+            },
+            "2;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    2,
+                    3
+                ]
+            },
+            "3;3": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    3,
+                    3
+                ]
+            },
+            "-4;3": {
+                "type": "grass",
+                "variant": 0,
+                "pos": [
+                    -4,
+                    3
+                ]
+            },
+            "-2;8": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    8
+                ]
+            },
+            "-2;7": {
+                "type": "grass",
+                "variant": 8,
+                "pos": [
+                    -2,
+                    7
+                ]
+            },
+            "3;14": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    3,
+                    14
+                ]
+            },
+            "2;14": {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    2,
+                    14
+                ]
+            },
+            "4;14": {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    4,
+                    14
+                ]
             }
         },
         "tile_size": 16,
@@ -14287,6 +15683,910 @@
                 "pos": [
                     174.5,
                     -10.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -9.0,
+                    149.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -8.5,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -14.0,
+                    94.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -15.5,
+                    97.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -0.5,
+                    92.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    15.0,
+                    89.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    58.0,
+                    109.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    58.0,
+                    109.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    58.0,
+                    109.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    58.0,
+                    109.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    204.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    19.0,
+                    200.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    76.5,
+                    211.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    76.5,
+                    211.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    76.5,
+                    211.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    76.5,
+                    211.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    76.5,
+                    211.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    74.0,
+                    229.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    14.0,
+                    220.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    301.5,
+                    87.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    303.0,
+                    91.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    425.5,
+                    197.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    425.5,
+                    197.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    425.5,
+                    197.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    425.5,
+                    197.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    425.5,
+                    197.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    555.5,
+                    159.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    555.5,
+                    159.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    555.5,
+                    159.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    555.5,
+                    159.0
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -21.5,
+                    21.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -21.5,
+                    21.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -21.5,
+                    21.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -21.5,
+                    21.5
+                ]
+            },
+            {
+                "type": "enemy/idle",
+                "variant": 1,
+                "pos": [
+                    -21.5,
+                    21.5
+                ]
+            },
+            {
+                "type": "player/idle",
+                "variant": 2,
+                "pos": [
+                    14.0,
+                    -6.5
+                ]
+            },
+            {
+                "type": "player/idle",
+                "variant": 2,
+                "pos": [
+                    14.0,
+                    -6.5
+                ]
+            },
+            {
+                "type": "player/idle",
+                "variant": 2,
+                "pos": [
+                    14.0,
+                    -6.5
+                ]
+            },
+            {
+                "type": "player/idle",
+                "variant": 2,
+                "pos": [
+                    14.0,
+                    -6.5
+                ]
+            },
+            {
+                "type": "player/idle",
+                "variant": 2,
+                "pos": [
+                    14.0,
+                    -6.5
                 ]
             }
         ]
