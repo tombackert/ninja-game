@@ -97,7 +97,7 @@ class Game:
         self.paused = False
 
         # Keyboard Manager
-        self.keyboard_manager = KeyboardManager(self)
+        self.km = KeyboardManager(game=self)
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -206,7 +206,7 @@ class Game:
                 UI.render_game_elements(self, render_scroll)
 
                 # Keyboard events
-                self.keyboard_manager.handle_keydown()
+                self.km.handle_keydown()
 
                 # Level transition
                 if self.transition:

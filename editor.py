@@ -7,10 +7,10 @@ from scripts.entities import Player
 from scripts.entities import Enemy
 from scripts.collectables import Collectables
 from scripts.settings import settings
+from scripts.keyboardManager import KeyboardManager
+
 
 RENDER_SCALE = 2.0
-MAP_NAME = '7'
-CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
     def __init__(self):
@@ -37,6 +37,9 @@ class Editor:
 
         self.tilemap = Tilemap(self, tile_size=16)
 
+        MAP_NAME = '7'
+        CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
+
         try:
             self.tilemap.load(CURRENT_MAP, load_entities=False)
         except FileNotFoundError:
@@ -59,6 +62,8 @@ class Editor:
 
         self.font = pygame.font.Font(None, 10)
 
+        self.km = KeyboardManager(self, editor=self)
+        
     def run(self):
         while True:
             self.display.blit(self.background, (0, 0))
@@ -121,92 +126,7 @@ class Editor:
             name_surface = self.font.render(tile_name, True, (0, 0, 0))
             self.display.blit(name_surface, (30, 5))
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-
-                # Object placement
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        self.clicking = True
-                    if event.button == 3:
-                        self.right_clicking = True
-                    if self.shift:
-                        if event.button == 4:
-                            self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
-                        if event.button == 5:
-                            self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
-                    else:
-                        if event.button == 4:
-                            self.tile_group = (self.tile_group - 1) % len(self.tile_list)
-                            self.tile_variant = 0
-                        if event.button == 5:
-                            self.tile_group = (self.tile_group + 1) % len(self.tile_list)
-                            self.tile_variant = 0
-
-                if event.type == pygame.MOUSEBUTTONUP:
-                    if event.button == 1:
-                        self.clicking = False
-                    if event.button == 3:
-                        self.right_clicking = False
-
-                # Movement and other controls
-                if event.type == pygame.KEYDOWN:
-                    # w, a, s, d
-                    if event.key == pygame.K_a:
-                        self.movement[0] = True
-                    if event.key == pygame.K_d:
-                        self.movement[1] = True
-                    if event.key == pygame.K_w:
-                        self.movement[2] = True
-                    if event.key == pygame.K_s:
-                        self.movement[3] = True
-                   
-                    if event.key == pygame.K_LEFT:
-                        self.movement[0] = True
-                    if event.key == pygame.K_RIGHT:
-                        self.movement[1] = True
-                    if event.key == pygame.K_UP:
-                        self.movement[2] = True
-                    if event.key == pygame.K_DOWN:
-                        self.movement[3] = True
-
-                    if event.key == pygame.K_g:
-                        self.ongrid = not self.ongrid
-                    if event.key == pygame.K_LSHIFT:
-                        self.shift = True
-                    if event.key == pygame.K_o:
-                        self.tilemap.save(CURRENT_MAP)
-                    if event.key == pygame.K_t:
-                        self.tilemap.autotile()
-                
-                    if event.key == pygame.K_ESCAPE:
-                        self.tilemap.save(CURRENT_MAP)
-                        pygame.quit()
-                        sys.exit()
-
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_a:
-                        self.movement[0] = False
-                    if event.key == pygame.K_d:
-                        self.movement[1] = False
-                    if event.key == pygame.K_w:
-                        self.movement[2] = False
-                    if event.key == pygame.K_s:
-                        self.movement[3] = False
-
-                    if event.key == pygame.K_LEFT:
-                        self.movement[0] = False
-                    if event.key == pygame.K_RIGHT:
-                        self.movement[1] = False
-                    if event.key == pygame.K_UP:
-                        self.movement[2] = False
-                    if event.key == pygame.K_DOWN:
-                        self.movement[3] = False
-
-                    if event.key == pygame.K_LSHIFT:
-                        self.shift = False
+            self.km.handle_keydown()
 
             position = str(int(self.scroll[0])) + ', ' + str(int(self.scroll[1]))
             position_surface = self.font.render(position, True, (0, 0, 0))
