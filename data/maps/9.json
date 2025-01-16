@@ -72771,6 +72771,14 @@
                     17,
                     8
                 ]
+            },
+            "6;9": {
+                "type": "flag",
+                "variant": 0,
+                "pos": [
+                    6,
+                    9
+                ]
             }
         },
         "tile_size": 16,
@@ -74021,94 +74029,6 @@
                 "pos": [
                     110.0,
                     145.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    101.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    91.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    91.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    91.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    91.5,
-                    144.0
-                ]
-            },
-            {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    91.5,
-                    144.0
                 ]
             },
             {

@@ -59,6 +59,7 @@ class Game:
             'particle/leaf': Animation(load_images('particles/leaf'), img_dur=20, loop=False),
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'coin': Animation(load_images('collectables/coin'), img_dur=6),
+            'flag': load_images('tiles/collectables/flag'),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
         }
@@ -112,10 +113,18 @@ class Game:
         self.timer.reset()
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
         
+        # Extract flags
+        self.flags = []
+        flag_tiles = self.tilemap.extract([("flag", 0)], keep=True)
+        for tile in flag_tiles:
+            flag_rect = pygame.Rect(tile['pos'][0], tile['pos'][1], 16, 16)
+            self.flags.append(flag_rect)
+
         self.leaf_spawners = []
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
+        ###### START LOAD LEVEL
         if respawn:
             self.enemies = []
             enemy_id = 0
@@ -139,6 +148,7 @@ class Game:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
             self.saves = 1
+        ###### END LOAD LEVEL
 
         self.projectiles = []
         self.particles = []
@@ -171,6 +181,13 @@ class Game:
                 self.screenshake = max(0, self.screenshake - 1)
 
                 #### START COMPUTE GAME FLAGS
+
+                self.end = False
+                player_rect = self.player.rect()
+                for flag_rect in self.flags:
+                    if player_rect.colliderect(flag_rect):
+                        print("You reached the flag!")
+                        # Here we can add a transition to the next level
 
                 if not len(self.enemies):
                     self.transition += 1

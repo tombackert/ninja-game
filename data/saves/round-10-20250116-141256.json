@@ -2,13 +2,47 @@
     "meta_data": {
         "map": 10,
         "timer": {
-            "current_time": "00:00:00",
-            "start_time": "00:00:00"
+            "current_time": "00:12.94",
+            "start_time": 672
         }
     },
     "entities_data": {
-        "players": [],
-        "enemies": []
+        "players": [
+            {
+                "id": 0,
+                "pos": [
+                    194.1,
+                    81.3
+                ],
+                "velocity": [
+                    0,
+                    0.30000000000000004
+                ],
+                "air_time": 3,
+                "action": "idle",
+                "flip": true,
+                "alive": true,
+                "lifes": 3,
+                "respawn_pos": [
+                    160,
+                    80
+                ]
+            }
+        ],
+        "enemies": [
+            {
+                "id": 0,
+                "pos": [
+                    350.0,
+                    33.1
+                ],
+                "velocity": [
+                    0,
+                    0.2
+                ],
+                "alive": true
+            }
+        ]
     },
     "map_data": {
         "tilemap": {
@@ -114,14 +148,6 @@
                 "pos": [
                     11,
                     6
-                ]
-            },
-            "10;5": {
-                "type": "spawners",
-                "variant": 0,
-                "pos": [
-                    10,
-                    5
                 ]
             },
             "12;6": {
@@ -402,14 +428,6 @@
                 "pos": [
                     19,
                     3
-                ]
-            },
-            "21;2": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    21,
-                    2
                 ]
             }
         },

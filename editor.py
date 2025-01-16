@@ -9,7 +9,7 @@ from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '7'
+MAP_NAME = '9'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
@@ -28,7 +28,8 @@ class Editor:
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'spawners': load_images('tiles/spawners'),
-            'coin': load_images('tiles/collectables'),
+            'coin': load_images('tiles/collectables/coin'),
+            'flag': load_images('tiles/collectables/flag'),
         }
 
         self.background = load_image('background.png')
