@@ -2579,6 +2579,94 @@
                     -5,
                     -3
                 ]
+            },
+            "37;-13": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    37,
+                    -13
+                ]
+            },
+            "38;-13": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    38,
+                    -13
+                ]
+            },
+            "39;-13": {
+                "type": "grass",
+                "variant": 1,
+                "pos": [
+                    39,
+                    -13
+                ]
+            },
+            "40;-13": {
+                "type": "grass",
+                "variant": 2,
+                "pos": [
+                    40,
+                    -13
+                ]
+            },
+            "40;-12": {
+                "type": "grass",
+                "variant": 4,
+                "pos": [
+                    40,
+                    -12
+                ]
+            },
+            "39;-12": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    39,
+                    -12
+                ]
+            },
+            "38;-12": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    38,
+                    -12
+                ]
+            },
+            "37;-12": {
+                "type": "grass",
+                "variant": 5,
+                "pos": [
+                    37,
+                    -12
+                ]
+            },
+            "36;-13": {
+                "type": "grass",
+                "variant": 0,
+                "pos": [
+                    36,
+                    -13
+                ]
+            },
+            "36;-12": {
+                "type": "grass",
+                "variant": 6,
+                "pos": [
+                    36,
+                    -12
+                ]
+            },
+            "37;-14": {
+                "type": "flag",
+                "variant": 0,
+                "pos": [
+                    37,
+                    -14
+                ]
             }
         },
         "tile_size": 16,
@@ -2781,6 +2869,62 @@
                 "pos": [
                     279.5,
                     -11.0
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    627.0,
+                    -248.5
                 ]
             }
         ]

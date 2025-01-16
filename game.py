@@ -158,6 +158,7 @@ class Game:
         self.dead = 0
         self.player.lifes = lifes
         self.transition = -30
+        self.endpoint = False
 
         self.collectable_manager.load_coins_from_tilemap(self.tilemap)
 
@@ -182,14 +183,13 @@ class Game:
 
                 #### START COMPUTE GAME FLAGS
 
-                self.end = False
-                player_rect = self.player.rect()
+                # Flaggen-Kollision abfragen
                 for flag_rect in self.flags:
-                    if player_rect.colliderect(flag_rect):
-                        print("You reached the flag!")
-                        # Here we can add a transition to the next level
+                    if self.player.rect().colliderect(flag_rect):
+                        # print("You reached the flag!")
+                        self.endpoint = True
 
-                if not len(self.enemies):
+                if self.endpoint:
                     self.transition += 1
                     if self.transition > 30:
                         self.timer.update_best_time()
