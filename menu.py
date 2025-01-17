@@ -6,6 +6,7 @@ from scripts.button import Button
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.collectableManager import CollectableManager
+from scripts.ui import UI
 
 class Menu:
 
@@ -459,11 +460,8 @@ class Menu:
         message = ""
         message_timer = 0
 
-        current_time = game.timer.text
-        best_time = game.timer.best_time_text
-
-        selector_color = "#DD6E42"
-        base_color = "#172A3A"
+        START_Y = 250
+        SPACING = 40
 
         while pause:
             for event in pygame.event.get():
@@ -520,67 +518,15 @@ class Menu:
 
             mouse_pos = pygame.mouse.get_pos()
 
-            # Render the background
-            game.display_3.blit(game.assets['background'], (0, 0))
-            scaled_display = pygame.transform.scale(game.display_3, game.screen.get_size())
-            game.screen.blit(scaled_display, (0, 0))
-
-            # Title
-            title_text = game.get_font(40).render("Paused", True, base_color)
-            title_rect = title_text.get_rect(center=(320, 50))
-            game.screen.blit(title_text, title_rect)
+            option_rects = UI.render_pm_ui(game, options, selected_option, START_Y, SPACING)
 
             # Display message if timer is active
             if message_timer > 0:
-                message_text = game.get_font(15).render(message, True, base_color)
+                message_text = game.get_font(15).render(message, True, UI.COLOR)
                 message_rect = message_text.get_rect(center=(320, 400))
                 game.screen.blit(message_text, message_rect)
                 message_timer -= 1
 
-            START_Y = 100
-            SPACING = 20
-
-            # Level info
-            info_text = f"Level: {game.level}"
-            info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, START_Y + SPACING))
-            game.screen.blit(info_surface, info_rect)
-
-            # Current time info
-            info_text = f"Current Time: {current_time}"
-            info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, START_Y + 2 * SPACING))
-            game.screen.blit(info_surface, info_rect)
-
-            # Best time info
-            info_text = f"Best Time: {best_time}"
-            info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, START_Y + 3 * SPACING))
-            game.screen.blit(info_surface, info_rect)
-
-            # coins
-            info_text = f"Coins: {game.cm.coin_count}"
-            info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, START_Y + 4 * SPACING))
-            game.screen.blit(info_surface, info_rect)
-
-            # Menu options
-            option_rects = []
-            START_Y = 250
-            SPACING = 40
-
-            for i, option in enumerate(options):
-                temp_rect = pygame.Rect(320 - 100, START_Y + i * SPACING - 15, 200, 30)
-                if i == selected_option or temp_rect.collidepoint(mouse_pos):
-                    button_color = selector_color
-                else:
-                    button_color = base_color
-
-                # Render menu elements
-                option_text_surface = game.get_font(30).render(option, True, button_color)
-                option_rect = option_text_surface.get_rect(center=(320, START_Y + i * SPACING))
-                game.screen.blit(option_text_surface, option_rect)
-                option_rects.append(option_rect)
 
             pygame.display.update()
             game.clock.tick(60)

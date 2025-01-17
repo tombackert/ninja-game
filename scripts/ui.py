@@ -9,6 +9,8 @@ from scripts.settings import Settings
 class UI:
 
     COLOR = "#137547"
+    PM_COLOR = "#449DD1"
+    SELECTOR_COLOR = "#DD6E42"
 
     @staticmethod
     def get_font(size):
@@ -185,3 +187,121 @@ class UI:
                 particle.pos[0] += math.sin(particle.animation.frame * 0.035) * 0.3
             if kill:
                 game.particles.remove(particle)
+
+    # Display pause menu
+    @staticmethod
+    def render_pm_ui(game, options, selected_option, O_START_Y, O_SPACING):
+        
+        current_time = game.timer.text
+        best_time = game.timer.best_time_text
+
+        START_Y = 100
+        SPACING = 20
+
+        O_START_Y = O_START_Y
+        O_SPACING = O_SPACING
+
+        options = options
+        selected_option = selected_option
+
+        # Render the background
+        game.display_3.blit(game.assets['background'], (0, 0))
+        scaled_display = pygame.transform.scale(game.display_3, game.screen.get_size())
+        game.screen.blit(scaled_display, (0, 0))
+
+        # Title
+        font_40 = UI.get_font(40)
+        UI.draw_text_with_outline(
+            surface=game.screen,
+            font=font_40,
+            text="Pause Menu",
+            x=320,
+            y=50,
+            text_color=UI.PM_COLOR,
+            outline_color="black",
+            center=True
+        )
+
+        # Level info
+        font_15 = UI.get_font(15)
+        info_text = f"Level: {game.level}"
+        UI.draw_text_with_outline(
+            surface=game.screen,
+            font=font_15,
+            text=info_text,
+            x=320,
+            y=START_Y + SPACING * 0,
+            text_color=UI.PM_COLOR,
+            center=True
+        )
+
+        # Timer
+        timer_text = f"Time: {current_time}"
+        UI.draw_text_with_outline(
+            surface=game.screen,
+            font=font_15,
+            text=timer_text,
+            x=320,
+            y=START_Y + SPACING * 1,
+            text_color=UI.PM_COLOR,
+            center=True
+        )
+
+        # Best time
+        best_time_text = f"Best time: {best_time}"
+        UI.draw_text_with_outline(
+            surface=game.screen,
+            font=font_15,
+            text=best_time_text,
+            x=320,
+            y=START_Y + SPACING * 2,
+            text_color=UI.PM_COLOR,
+            center=True
+        )
+
+        # Coins
+        coin_text = f"Coins: {game.cm.coins}"
+        UI.draw_text_with_outline(
+            surface=game.screen,
+            font=font_15,
+            text=coin_text,
+            x=320,
+            y=START_Y + SPACING * 3,
+            text_color=UI.PM_COLOR,
+            center=True
+        )
+
+
+        # Render pause menu box
+        option_rects = UI.render_options_box(game, options, selected_option, O_START_Y, O_SPACING)
+        
+        return option_rects
+
+            
+    @staticmethod
+    def render_options_box(game, options, selected_option, START_Y, SPACING):
+        
+        option_rects = []
+        START_Y = START_Y
+        SPACING = SPACING
+        font_30 = UI.get_font(30)
+
+        for i, option in enumerate(options):
+            temp_rect = pygame.Rect(320 - 100, START_Y + i * SPACING - 15, 200, 30)
+            if i == selected_option:
+                button_color = UI.SELECTOR_COLOR
+            else:
+                button_color = UI.PM_COLOR
+            
+            button_text = f"{option}"
+            UI.draw_text_with_outline(
+                surface=game.screen,
+                font=font_30,
+                text=button_text,
+                x=320,
+                y=START_Y + i * SPACING,
+                text_color=button_color,
+                center=True
+            )
+
+        return option_rects
