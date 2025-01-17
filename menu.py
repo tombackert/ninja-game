@@ -273,11 +273,16 @@ class Menu:
             self.clock.tick(60)
 
     def options(self):
-        options = ["Music Volume", "Sound Volume", "Back"]
+        title = "Options"
         selected_option = 0
 
         while True:
-            # Event handling
+            
+            options = [
+                f"Music Volume:{int(settings.music_volume * 100):3d}%", 
+                f"Sound Volume:{int(settings.sound_volume * 100):3d}%"
+            ]
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -289,70 +294,22 @@ class Menu:
                         selected_option = (selected_option - 1) % len(options)
                     elif event.key in (pygame.K_DOWN, pygame.K_s):
                         selected_option = (selected_option + 1) % len(options)
-                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        if options[selected_option] == "Back":
-                            self.menu()
                     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                        if options[selected_option] == "Music Volume":
+                        if options[selected_option] == options[0]:
                             settings.music_volume = max(0.0, settings.music_volume - 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
-                        elif options[selected_option] == "Sound Volume":
+                        elif options[selected_option] == options[1]:
                             settings.sound_volume = max(0.0, settings.sound_volume - 0.1)
                     elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                        if options[selected_option] == "Music Volume":
+                        if options[selected_option] == options[0]:
                             settings.music_volume = min(1.0, settings.music_volume + 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
-                        elif options[selected_option] == "Sound Volume":
+                        elif options[selected_option] == options[1]:
                             settings.sound_volume = min(1.0, settings.sound_volume + 0.1)
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left click
-                        mouse_pos = pygame.mouse.get_pos()
-                        for i, rect in enumerate(option_rects):
-                            if rect.collidepoint(mouse_pos):
-                                selected_option = i
-                                if options[selected_option] == "Back":
-                                    self.menu()
-
-            # Get mouse position for highlighting
-            mouse_pos = pygame.mouse.get_pos()
-
-            # Render the background
-            self.display.blit(self.bg, (0, 0))
-            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
-            self.screen.blit(scaled_display, (0, 0))
-
-            # Draw the options menu
-            title_text = self.get_font(40).render("Options", True, self.base_color)
-            title_rect = title_text.get_rect(center=(320, 50))
-            self.screen.blit(title_text, title_rect)
-
-            # Position settings
-            START_Y = 150
-            SPACING = 50
-
-            option_rects = []
-
-            for i, option in enumerate(options):
-                if i == selected_option:
-                    base_color = self.selector_color
-                else:
-                    base_color = self.base_color
-
-                if option == "Music Volume":
-                    text = f"Music Volume: {int(settings.music_volume * 100)}%"
-                elif option == "Sound Volume":
-                    text = f"Sound Volume: {int(settings.sound_volume * 100)}%"
-                else:
-                    text = option
-
-                option_text = self.get_font(30).render(text, True, base_color)
-                option_rect = option_text.get_rect(center=(320, START_Y + i * SPACING))
-                self.screen.blit(option_text, option_rect)
-                option_rects.append(option_rect)
-
-                # Highlighting with mouse hover
-                if option_rect.collidepoint(mouse_pos):
-                    selected_option = i
+            
+            UI.render_menu_bg(self.screen, self.display, self.bg)
+            UI.render_menu_title(self.screen, title, 320, 50)
+            UI.render_o_box(self.screen, options, selected_option, 320, 150, 50)
 
             pygame.display.update()
             self.clock.tick(60)
