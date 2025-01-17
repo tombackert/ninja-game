@@ -26,7 +26,7 @@ class CollectableManager:
     }
 
     def __init__(self, game):
-        self.coins = []
+        self.coin_list = []
         self.game = game
         self.coin_count = self.load_collectable_count()
         self.coins = 0
@@ -59,38 +59,38 @@ class CollectableManager:
         with open(DATA_FILE, 'w') as f:
             json.dump({"coin_count": self.coin_count}, f, indent=4)
 
-    def load_coins_from_tilemap(self, tilemap):
-        self.coins = []
+    def load_collectables_from_tilemap(self, tilemap):
+        self.coin_list = []
         self.ammo_pickups = []
         
         # Lade Münzen
-        coin_tiles = tilemap.extract([('coin', 0)], keep=True)
+        coin_tiles = tilemap.extract([('coin', 0)], keep=False)
         for tile in coin_tiles:
-            self.coins.append(Collectables(self.game, tile['pos'], self.game.assets['coin']))
+            self.coin_list.append(Collectables(self.game, tile['pos'], self.game.assets['coin']))
         
         # Lade Munition
-        ammo_tiles = tilemap.extract([('ammo', 0)], keep=True)
+        ammo_tiles = tilemap.extract([('ammo', 0)], keep=False)
         for tile in ammo_tiles:
             self.ammo_pickups.append(Collectables(self.game, tile['pos'], self.game.assets['ammo']))
 
     def update(self, player_rect):
         # Update Münzen
-        for coin in self.coins[:]:
+        for coin in self.coin_list[:]:
             if coin.update(player_rect):
-                self.coins.remove(coin)
+                self.coin_list.remove(coin)
                 self.coin_count += 1
-                settings.coins += 1
+                self.coins += 1
                 self.game.sfx['collect'].play()
         
         # Update Munition
         for ammo in self.ammo_pickups[:]:
             if ammo.update(player_rect):
                 self.ammo_pickups.remove(ammo)
-                settings.ammo += 5
+                self.ammo += 5
                 self.game.sfx['collect'].play()
 
     def render(self, surf, offset=(0,0)):
-        for coin in self.coins:
+        for coin in self.coin_list:
             coin.render(surf, offset=offset)
 
 

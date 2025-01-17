@@ -40,7 +40,7 @@ class UI:
         game.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
 
         # Coins
-        coins_str = 'COINS:' + str(game.collectable_manager.coin_count)
+        coins_str = 'COINS:' + str(game.cm.coin_count)
         COIN_TEXT = game.get_font(10).render(coins_str, True, UI.COLOR)
         COIN_RECT = COIN_TEXT.get_rect(center=(50, 25))
         #game.display_2.blit(COIN_TEXT, COIN_RECT)
@@ -106,8 +106,8 @@ class UI:
                 game.sparks.remove(spark)
         
         # Collectables updaten & rendern
-        game.collectable_manager.update(game.player.rect())
-        game.collectable_manager.render(game.display, offset=render_scroll)
+        game.cm.update(game.player.rect())
+        game.cm.render(game.display, offset=render_scroll)
 
         display_mask = pygame.mask.from_surface(game.display)
         display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))

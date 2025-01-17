@@ -88,7 +88,7 @@ class Game:
         self.timer = Timer(self.level)
 
         # Collectable Manager
-        self.collectable_manager = CollectableManager(self)
+        self.cm = CollectableManager(self)
 
         # Load the selected level
         self.load_level(self.level)
@@ -160,7 +160,7 @@ class Game:
         self.transition = -30
         self.endpoint = False
 
-        self.collectable_manager.load_coins_from_tilemap(self.tilemap)
+        self.cm.load_collectables_from_tilemap(self.tilemap)
 
     def get_font(self, size):
         return pygame.font.Font("data/font.ttf", size)
