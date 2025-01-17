@@ -25,7 +25,7 @@ class UI:
         best_time = game.timer.best_time_text
         BEST_TIME_TEXT = game.get_font(10).render(f"{best_time}", True, UI.COLOR)
         BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
-        game.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
+        #game.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
 
         # Display lifes
         lifes = 'LIFES:' + str(game.player.lifes)

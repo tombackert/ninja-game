@@ -160,7 +160,7 @@ class Menu:
 
     def store(self):
         options = ["Gun", "Ammo", "Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"]
-        prices = [2500, 100, 100, 5000, 500, 1000, 5000, 1000, 1000, 1000]
+        # prices = [2500, 100, 100, 5000, 500, 1000, 5000, 1000, 1000, 1000]
         selected_option = 0
 
         option_index = options.index(self.selected_option) if self.selected_option in options else 0
@@ -192,18 +192,9 @@ class Menu:
                         if options[selected_option] == "Back":
                             self.menu()
                         elif options[selected_option] != "Back":
-                            if self.cm.is_purchaseable(options[selected_option]):
-                                self.cm.load_collectables()
-                                if self.cm.coins >= prices[selected_option]:
-                                    self.cm.coins -= prices[selected_option]
-                                    print(f"{options[selected_option]} purchased!")
-                                    print(f"Coins remaining: {self.cm.coins}")
-                                    self.cm.save_collectables()
-                                else :
-                                    print("Not enough coins!")
-                            else:
+                            buy_item = self.cm.buy_collectable(options[selected_option])
+                            if buy_item == "not purchaseable":
                                 not_purchaseable_item_selected = True
-                                print("Item is not purchaseable!")
                                 
 
 
@@ -222,7 +213,7 @@ class Menu:
 
             # Draw warning text
             if not_purchaseable_item_selected:
-                p = getattr(self, 'warning_timer', 120)  # 120 frames = 2 seconds at 60 FPS
+                p = getattr(self, 'warning_timer', 60)
                 if p > 0:
                     warning_text = self.get_font(20).render("Item is not purchaseable!", True, self.warning_color)
                     warning_rect = warning_text.get_rect(center=(320, 80))
@@ -269,7 +260,7 @@ class Menu:
                 self.screen.blit(option_text_surface, option_text_rect)
 
                 # Render the price
-                price_text_surface = self.get_font(30).render(f"${prices[i]}", True, base_color)
+                price_text_surface = self.get_font(30).render(f"${self.cm.get_price(option)}", True, base_color)
                 price_text_rect = price_text_surface.get_rect()
                 price_text_rect.midright = (PRICE_X, option_text_rect.centery)
                 self.screen.blit(price_text_surface, price_text_rect)

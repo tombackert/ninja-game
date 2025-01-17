@@ -12,6 +12,18 @@ class CollectableManager:
 
     PURCHASEABLES = {"Gun", "Ammo"}
     NOT_PURCHASEABLES = {"Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"}
+    PRICES = {
+        "Gun": 2500,
+        "Ammo": 100,
+        "Shield": 100,
+        "Moon Boots": 5000,
+        "Ninja Stars": 500,
+        "Sword": 1000,
+        "Grapple Hook": 5000,
+        "Red Ninja": 1000,
+        "Blue Ninja": 1000,
+        "Green Ninja": 1000
+    }
 
     def __init__(self, game):
         self.coins = []
@@ -126,3 +138,44 @@ class CollectableManager:
 
     def is_purchaseable(self, item):
         return item in self.PURCHASEABLES
+    
+    def buy_collectable(self, item):
+
+        if self.is_purchaseable(item):
+            self.load_collectables()
+            if self.coins > self.PRICES[item]:
+                if item == "Gun":
+                    self.gun += 1
+                elif item == "Ammo":
+                    self.ammo += 25
+                elif item == "Shield":
+                    self.shield += 1
+                elif item == "Moon Boots":
+                    self.moon_boots += 1
+                elif item == "Ninja Stars":
+                    self.ninja_stars += 3
+                elif item == "Sword":
+                    self.sword += 1
+                elif item == "Grapple Hook":
+                    self.grapple_hook += 1
+                elif item == "Red Ninja":
+                    self.red_ninja += 1
+                elif item == "Blue Ninja":
+                    self.blue_ninja += 1
+                elif item == "Green Ninja":
+                    self.green_ninja += 1
+                
+                self.coins -= self.PRICES[item]
+                print(f"{item} purchased!")
+                print(f"Coins remaining: {self.coins}")
+                self.save_collectables()
+                return "success"
+            else:
+                print("Not enough coins!")
+                return "not enough coins"
+        else:
+            print(f"{item} is not purchaseable!")
+            return "not purchaseable"
+
+    def get_price(self, item):
+        return self.PRICES[item]
