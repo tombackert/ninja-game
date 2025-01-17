@@ -10,6 +10,7 @@ class Settings:
         self._sound_volume = 0.5
         self._selected_level = 0
         self.selected_editor_level = 0
+        
 
         self.load_settings()
 

@@ -2,51 +2,127 @@ import os
 import json
 from scripts.collectables import Collectables
 from scripts.utils import load_image
+from scripts import settings
 
 COIN_IMAGE_PATH = 'collectables/coin.png'
 DATA_FILE = 'data/collectables.json'
 
 
 class CollectableManager:
-    def __init__(self, game, coin_image_path=COIN_IMAGE_PATH, data_file=DATA_FILE):
+
+    PURCHASEABLES = {"Gun", "Ammo"}
+    NOT_PURCHASEABLES = {"Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"}
+
+    def __init__(self, game):
         self.coins = []
         self.game = game
-        self.data_file = data_file
-        self.coin_image_path = coin_image_path
         self.coin_count = self.load_collectable_count()
+        self.coins = 0
+        self.gun = 0
+        self.ammo = 0
+        self.shield = 0
+        self.moon_boots = 0
+        self.ninja_stars = 0
+        self.sword = 0
+        self.grapple_hook = 0
+        self.red_ninja = 0
+        self.blue_ninja = 0
+        self.green_ninja = 0
 
+
+
+    ### DEPRECATED ###
     def load_collectable_count(self):
-        if os.path.exists(self.data_file):
-            with open(self.data_file, 'r') as f:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
                 return data.get('coin_count', 0)
         else:
-            with open(self.data_file, 'w') as f:
+            with open(DATA_FILE, 'w') as f:
                 json.dump({"coin_count": 0}, f, indent=4)
             return 0
 
+    ### DEPRECATED ###
     def save_collectable_count(self):
-        with open(self.data_file, 'w') as f:
+        with open(DATA_FILE, 'w') as f:
             json.dump({"coin_count": self.coin_count}, f, indent=4)
 
-    def load_coins_from_tilemap(self, tilemap, coin_id_pairs=[('coin', 0)]):
-        self.coins.clear()
-        coin_tiles = tilemap.extract(coin_id_pairs)
-        for coin_tile in coin_tiles:
-            c = Collectables(self.game, coin_tile['pos'], self.game.assets['coin'])
-            self.coins.append(c)
+    def load_coins_from_tilemap(self, tilemap):
+        self.coins = []
+        self.ammo_pickups = []
+        
+        # Lade Münzen
+        coin_tiles = tilemap.extract([('coin', 0)], keep=True)
+        for tile in coin_tiles:
+            self.coins.append(Collectables(self.game, tile['pos'], self.game.assets['coin']))
+        
+        # Lade Munition
+        ammo_tiles = tilemap.extract([('ammo', 0)], keep=True)
+        for tile in ammo_tiles:
+            self.ammo_pickups.append(Collectables(self.game, tile['pos'], self.game.assets['ammo']))
 
     def update(self, player_rect):
-        removed = 0
-        for coin in self.coins.copy():
+        # Update Münzen
+        for coin in self.coins[:]:
             if coin.update(player_rect):
                 self.coins.remove(coin)
                 self.coin_count += 1
-                removed += 1
-        if removed > 0:
-            self.game.sfx['collect'].play()
-            self.save_collectable_count()
+                settings.coins += 1
+                self.game.sfx['collect'].play()
+        
+        # Update Munition
+        for ammo in self.ammo_pickups[:]:
+            if ammo.update(player_rect):
+                self.ammo_pickups.remove(ammo)
+                settings.ammo += 5
+                self.game.sfx['collect'].play()
 
     def render(self, surf, offset=(0,0)):
         for coin in self.coins:
             coin.render(surf, offset=offset)
+
+
+    def load_collectables(self):
+        if os.path.exists(DATA_FILE):
+            try:
+                with open(DATA_FILE, "r") as f:
+                    data = json.load(f)
+                    self.coins = data.get("coin_count", 0)
+                    self.gun = data.get("gun", 0)
+                    self.ammo = data.get("ammo", 0)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading collectable: {e}")
+        
+        ###### DEBUG ######
+        print("+---------------------+")
+        print("Collectables loaded:")
+        print(f"Coins: {self.coins}")
+        print(f"Ammo: {self.ammo}")
+        print(f"Gun: {self.gun}")
+        print("+---------------------+")
+        ###### DEBUG ######
+    
+    def save_collectables(self):
+        data = {
+            "coin_count": self.coins,
+            "gun": self.gun,
+            "ammo": self.ammo
+        }
+        try:
+            os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+            with open(DATA_FILE, "w") as f:
+                json.dump(data, f, indent=4)
+        except IOError as e:
+            print(f"Error saving collectable: {e}")
+
+        ###### DEBUG ######
+        print("+---------------------+")
+        print("Collectables updated:")
+        print(f"Coins: {self.coins}")
+        print(f"Ammo: {self.ammo}")
+        print(f"Gun: {self.gun}")
+        print("+---------------------+")
+        ###### DEBUG ######
+
+    def is_purchaseable(self, item):
+        return item in self.PURCHASEABLES

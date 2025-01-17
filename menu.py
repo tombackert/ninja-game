@@ -5,6 +5,7 @@ from datetime import datetime
 from scripts.button import Button
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
+from scripts.collectableManager import CollectableManager
 
 class Menu:
 
@@ -25,6 +26,13 @@ class Menu:
         self.selected_level = settings.selected_level
 
         self.paused = False
+
+        self.cm = CollectableManager(None)
+        self.cm.load_collectables()
+
+        self.selector_color = "#DD6E42"
+        self.base_color = "#172A3A"
+        self.warning_color = "#EF2917"
 
         self.menu()
 
@@ -62,14 +70,12 @@ class Menu:
                         self.menu()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         level_index = (level_index - 1) % len(levels)
-                        # Adjust start_index if necessary
                         if level_index < start_index:
                             start_index = level_index
                         elif level_index >= start_index + levels_per_page:
                             start_index = level_index - levels_per_page + 1
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         level_index = (level_index + 1) % len(levels)
-                        # Adjust start_index if necessary
                         if level_index >= start_index + levels_per_page:
                             start_index = level_index - levels_per_page + 1
                         elif level_index < start_index:
@@ -95,13 +101,14 @@ class Menu:
             self.screen.blit(scaled_display, (0, 0))
 
             # Draw the levels list on the main screen
-            title_text = self.get_font(40).render("Select Level", True, "Black")
+            title_text = self.get_font(40).render("Select Level", True, self.base_color)
             title_rect = title_text.get_rect(center=(320, 50))
             self.screen.blit(title_text, title_rect)
 
             # Position settings
-            start_y = 120
-            spacing = 40
+            START_Y = 120
+            SPACING = 40
+            SELECTED_OFFSET = -20
 
             level_rects = []
 
@@ -114,18 +121,18 @@ class Menu:
                 is_selected = level == self.selected_level
 
                 # Determine if this level is highlighted (by keyboard or mouse)
-                temp_rect = pygame.Rect(320 - 100, start_y + (i - start_index) * spacing - 15, 200, 30)
+                temp_rect = pygame.Rect(320 - 100, START_Y + (i - start_index) * SPACING - 15, 200, 30)
                 if idx == level_index or temp_rect.collidepoint(mouse_pos):
-                    base_color = "Red"
+                    base_color = self.selector_color
                 else:
-                    base_color = "Black"
+                    base_color = self.base_color
 
                 # Fixed x position for all level texts
                 level_text_x = 200  # Adjust as needed
-                level_text_y = start_y + (i - start_index) * spacing
+                level_text_y = START_Y + (i - start_index) * SPACING
 
                 # Shift selected level to the left
-                shift_amount = -20 if is_selected else 0
+                shift_amount = SELECTED_OFFSET if is_selected else 0
                 text_pos_x = level_text_x + shift_amount
 
                 # Render the level text
@@ -152,11 +159,16 @@ class Menu:
             self.clock.tick(60)
 
     def store(self):
-        options = ["Back"]
+        options = ["Gun", "Ammo", "Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"]
+        prices = [2500, 100, 100, 5000, 500, 1000, 5000, 1000, 1000, 1000]
         selected_option = 0
 
+        option_index = options.index(self.selected_option) if self.selected_option in options else 0
+        start_index = 0
+        options_per_page = 5
+        not_purchaseable_item_selected = False
+
         while True:
-            # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -166,19 +178,34 @@ class Menu:
                         self.menu()
                     elif event.key in (pygame.K_UP, pygame.K_w):
                         selected_option = (selected_option - 1) % len(options)
+                        if selected_option < start_index:
+                            start_index = selected_option
+                        elif selected_option >= start_index + options_per_page:
+                            start_index = selected_option - options_per_page + 1
                     elif event.key in (pygame.K_DOWN, pygame.K_s):
                         selected_option = (selected_option + 1) % len(options)
+                        if selected_option >= start_index + options_per_page:
+                            start_index = selected_option - options_per_page + 1
+                        elif selected_option < start_index:
+                            start_index = selected_option
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                         if options[selected_option] == "Back":
                             self.menu()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left click
-                        mouse_pos = pygame.mouse.get_pos()
-                        for i, rect in enumerate(option_rects):
-                            if rect.collidepoint(mouse_pos):
-                                selected_option = i
-                                if options[selected_option] == "Back":
-                                    self.menu()
+                        elif options[selected_option] != "Back":
+                            if self.cm.is_purchaseable(options[selected_option]):
+                                self.cm.load_collectables()
+                                if self.cm.coins >= prices[selected_option]:
+                                    self.cm.coins -= prices[selected_option]
+                                    print(f"{options[selected_option]} purchased!")
+                                    print(f"Coins remaining: {self.cm.coins}")
+                                    self.cm.save_collectables()
+                                else :
+                                    print("Not enough coins!")
+                            else:
+                                not_purchaseable_item_selected = True
+                                print("Item is not purchaseable!")
+                                
+
 
             # Get mouse position for highlighting
             mouse_pos = pygame.mouse.get_pos()
@@ -188,30 +215,67 @@ class Menu:
             scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
             self.screen.blit(scaled_display, (0, 0))
 
-            # Draw the store menu
-            title_text = self.get_font(40).render("Store", True, "Black")
+            # Draw the store item list
+            title_text = self.get_font(40).render("Store", True, self.base_color)
             title_rect = title_text.get_rect(center=(320, 50))
             self.screen.blit(title_text, title_rect)
 
+            # Draw warning text
+            if not_purchaseable_item_selected:
+                p = getattr(self, 'warning_timer', 120)  # 120 frames = 2 seconds at 60 FPS
+                if p > 0:
+                    warning_text = self.get_font(20).render("Item is not purchaseable!", True, self.warning_color)
+                    warning_rect = warning_text.get_rect(center=(320, 80))
+                    self.screen.blit(warning_text, warning_rect)
+                    self.warning_timer = p - 1
+                else:
+                    not_purchaseable_item_selected = False
+                    self.warning_timer = 120
+
             # Position settings
-            start_y = 200
+            START_Y = 120
+            START_X = 50
+            SPACING = 50
+            SELECTED_OFFSET = 0
+            PRICE_X = 600
 
             option_rects = []
 
-            for i, option in enumerate(options):
-                if i == selected_option:
-                    base_color = "Red"
+            end_index = min(start_index + options_per_page, len(options))
+
+            for i in range(start_index, end_index):
+                option = options[i]
+                index = i
+                is_selected = option == self.selected_option
+
+                # Determine if this option is highlighted (by keyboard or mouse)
+                temp_rect = pygame.Rect(320 - 100, START_Y + (i - start_index) * SPACING - 15, 200, 30)
+                if index == selected_option or temp_rect.collidepoint(mouse_pos):
+                    base_color = self.selector_color
                 else:
-                    base_color = "Black"
+                    base_color = self.base_color
 
-                option_text = self.get_font(30).render(option, True, base_color)
-                option_rect = option_text.get_rect(center=(320, start_y))
-                self.screen.blit(option_text, option_rect)
-                option_rects.append(option_rect)
+                # Fixed x position for all option texts
+                option_text_x = START_X  # Adjust as needed
+                option_text_y = START_Y + (i - start_index) * SPACING
 
-                # Highlighting with mouse hover
-                if option_rect.collidepoint(mouse_pos):
-                    selected_option = i
+                # Shift selected level to the left
+                shift_amount = SELECTED_OFFSET if is_selected else 0
+                option_pos_x = option_text_x + shift_amount
+
+                # Render the option text
+                option_text_surface = self.get_font(30).render(option, True, base_color)
+                option_text_rect = option_text_surface.get_rect(topleft=(option_pos_x, option_text_y))
+                self.screen.blit(option_text_surface, option_text_rect)
+
+                # Render the price
+                price_text_surface = self.get_font(30).render(f"${prices[i]}", True, base_color)
+                price_text_rect = price_text_surface.get_rect()
+                price_text_rect.midright = (PRICE_X, option_text_rect.centery)
+                self.screen.blit(price_text_surface, price_text_rect)
+
+                # Store the option_rect and index for interaction
+                option_rects.append((option_text_rect, index))
 
             pygame.display.update()
             self.clock.tick(60)
@@ -266,21 +330,21 @@ class Menu:
             self.screen.blit(scaled_display, (0, 0))
 
             # Draw the options menu
-            title_text = self.get_font(40).render("Options", True, "Black")
+            title_text = self.get_font(40).render("Options", True, self.base_color)
             title_rect = title_text.get_rect(center=(320, 50))
             self.screen.blit(title_text, title_rect)
 
             # Position settings
-            start_y = 150
-            spacing = 50
+            START_Y = 150
+            SPACING = 50
 
             option_rects = []
 
             for i, option in enumerate(options):
                 if i == selected_option:
-                    base_color = "Red"
+                    base_color = self.selector_color
                 else:
-                    base_color = "Black"
+                    base_color = self.base_color
 
                 if option == "Music Volume":
                     text = f"Music Volume: {int(settings.music_volume * 100)}%"
@@ -290,7 +354,7 @@ class Menu:
                     text = option
 
                 option_text = self.get_font(30).render(text, True, base_color)
-                option_rect = option_text.get_rect(center=(320, start_y + i * spacing))
+                option_rect = option_text.get_rect(center=(320, START_Y + i * SPACING))
                 self.screen.blit(option_text, option_rect)
                 option_rects.append(option_rect)
 
@@ -315,13 +379,13 @@ class Menu:
             self.screen.blit(scaled_display, (0, 0))
 
             # Draw the menu text directly on the main screen
-            MENU_TEXT = self.get_font(50).render("MENU", True, "Black")
+            MENU_TEXT = self.get_font(50).render("MENU", True, self.base_color)
             MENU_RECT = MENU_TEXT.get_rect(center=(320, 50))
             self.screen.blit(MENU_TEXT, MENU_RECT)
 
             # Position of the buttons
-            spacing = 50
-            button_positions = [x for x in range(180, 480, spacing)]
+            SPACING = 50
+            button_positions = [x for x in range(180, 480, SPACING)]
 
             # Event-Handling
             for event in pygame.event.get():
@@ -368,9 +432,9 @@ class Menu:
 
             for i, option in enumerate(menu_options):
                 if i == self.selected_option:
-                    base_color = "Red"
+                    base_color = self.selector_color
                 else:
-                    base_color = "Black"
+                    base_color = self.base_color
 
                 # Check if the mouse is hovering over the button
                 button_rect = pygame.Rect(320 - 100, button_positions[i] - 25, 200, 50)
@@ -406,6 +470,9 @@ class Menu:
 
         current_time = game.timer.text
         best_time = game.timer.best_time_text
+
+        selector_color = "#DD6E42"
+        base_color = "#172A3A"
 
         while pause:
             for event in pygame.event.get():
@@ -462,8 +529,6 @@ class Menu:
 
             mouse_pos = pygame.mouse.get_pos()
 
-            base_color = "Black"
-
             # Render the background
             game.display_3.blit(game.assets['background'], (0, 0))
             scaled_display = pygame.transform.scale(game.display_3, game.screen.get_size())
@@ -481,48 +546,48 @@ class Menu:
                 game.screen.blit(message_text, message_rect)
                 message_timer -= 1
 
-            start_y = 100
-            spacing = 20
+            START_Y = 100
+            SPACING = 20
 
             # Level info
             info_text = f"Level: {game.level}"
             info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, start_y + spacing))
+            info_rect = info_surface.get_rect(center=(320, START_Y + SPACING))
             game.screen.blit(info_surface, info_rect)
 
             # Current time info
             info_text = f"Current Time: {current_time}"
             info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, start_y + 2 * spacing))
+            info_rect = info_surface.get_rect(center=(320, START_Y + 2 * SPACING))
             game.screen.blit(info_surface, info_rect)
 
             # Best time info
             info_text = f"Best Time: {best_time}"
             info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, start_y + 3 * spacing))
+            info_rect = info_surface.get_rect(center=(320, START_Y + 3 * SPACING))
             game.screen.blit(info_surface, info_rect)
 
             # coins
             info_text = f"Coins: {game.collectable_manager.coin_count}"
             info_surface = game.get_font(15).render(info_text, True, base_color)
-            info_rect = info_surface.get_rect(center=(320, start_y + 4 * spacing))
+            info_rect = info_surface.get_rect(center=(320, START_Y + 4 * SPACING))
             game.screen.blit(info_surface, info_rect)
 
             # Menu options
             option_rects = []
-            start_y = 250
-            spacing = 40
+            START_Y = 250
+            SPACING = 40
 
             for i, option in enumerate(options):
-                temp_rect = pygame.Rect(320 - 100, start_y + i * spacing - 15, 200, 30)
+                temp_rect = pygame.Rect(320 - 100, START_Y + i * SPACING - 15, 200, 30)
                 if i == selected_option or temp_rect.collidepoint(mouse_pos):
-                    button_color = "Red"
+                    button_color = selector_color
                 else:
                     button_color = base_color
 
                 # Render menu elements
                 option_text_surface = game.get_font(30).render(option, True, button_color)
-                option_rect = option_text_surface.get_rect(center=(320, start_y + i * spacing))
+                option_rect = option_text_surface.get_rect(center=(320, START_Y + i * SPACING))
                 game.screen.blit(option_text_surface, option_rect)
                 option_rects.append(option_rect)
 
