@@ -189,7 +189,7 @@ class UI:
                 game.particles.remove(particle)
             
     @staticmethod
-    def render_o_box(game, options, selected_option, x, y, spacing):
+    def render_o_box(screen, options, selected_option, x, y, spacing):
         
         option_rects = []
         font_30 = UI.get_font(30)
@@ -202,7 +202,7 @@ class UI:
             
             button_text = f"{option}"
             UI.draw_text_with_outline(
-                surface=game.screen,
+                surface=screen,
                 font=font_30,
                 text=button_text,
                 x=x,
@@ -214,11 +214,11 @@ class UI:
         return option_rects
 
     @staticmethod
-    def render_info_box(game, info, y, spacing):
+    def render_info_box(screen, info, y, spacing):
         font_15 = UI.get_font(15)
         for i, text in enumerate(info):
             UI.draw_text_with_outline(
-                surface=game.screen,
+                surface=screen,
                 font=font_15,
                 text=text,
                 x=320,
@@ -228,10 +228,10 @@ class UI:
             )
     
     @staticmethod
-    def render_menu_title(game, title, x, y):
+    def render_menu_title(screen, title, x, y):
         font_40 = UI.get_font(40)
         UI.draw_text_with_outline(
-            surface=game.screen,
+            surface=screen,
             font=font_40,
             text=title,
             x=x,
@@ -241,16 +241,16 @@ class UI:
         )
 
     @staticmethod
-    def render_menu_bg(game):
-        game.display_3.blit(game.assets['background'], (0, 0))
-        scaled_display = pygame.transform.scale(game.display_3, game.screen.get_size())
-        game.screen.blit(scaled_display, (0, 0))
+    def render_menu_bg(screen, display, bg):
+        display.blit(bg, (0, 0))
+        scaled_display = pygame.transform.scale(display, screen.get_size())
+        screen.blit(scaled_display, (0, 0))
 
     @staticmethod
-    def render_menu_msg(game, msg, x, y):
+    def render_menu_msg(screen, msg, x, y):
         font_15 = UI.get_font(15)
         UI.draw_text_with_outline(
-            surface=game.screen,
+            surface=screen,
             font=font_15,
             text=msg,
             x=x,

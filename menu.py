@@ -358,28 +358,17 @@ class Menu:
             self.clock.tick(60)
 
     def menu(self):
-        # List of menu options
-        menu_options = ["PLAY", "LEVELS", "STORE", "OPTIONS", "QUIT"]
+
+        title = "Menu"
+        options = ["PLAY", "LEVELS", "STORE", "OPTIONS", "QUIT"]
         self.selected_option = 0 
 
         while True:
-            # Render the background on the scaled display
-            self.display.blit(self.bg, (0, 0))
 
-            # Scale up the display and blit onto the screen
-            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
-            self.screen.blit(scaled_display, (0, 0))
+            UI.render_menu_bg(self.screen, self.display, self.bg)
+            UI.render_menu_title(self.screen, title, 320, 50)
+            UI.render_o_box(self.screen, options, self.selected_option, 320, 200, 50)
 
-            # Draw the menu text directly on the main screen
-            MENU_TEXT = self.get_font(50).render("MENU", True, self.base_color)
-            MENU_RECT = MENU_TEXT.get_rect(center=(320, 50))
-            self.screen.blit(MENU_TEXT, MENU_RECT)
-
-            # Position of the buttons
-            SPACING = 50
-            button_positions = [x for x in range(180, 480, SPACING)]
-
-            # Event-Handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -389,66 +378,21 @@ class Menu:
                         pygame.quit()
                         sys.exit()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
-                        self.selected_option = (self.selected_option - 1) % len(menu_options)
+                        self.selected_option = (self.selected_option - 1) % len(options)
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                        self.selected_option = (self.selected_option + 1) % len(menu_options)
+                        self.selected_option = (self.selected_option + 1) % len(options)
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        if menu_options[self.selected_option] == "PLAY":
+                        if options[self.selected_option] == options[0]:
                             self.play()
-                        if menu_options[self.selected_option] == "LEVELS":
+                        if options[self.selected_option] == options[1]:
                             self.levels()
-                        if menu_options[self.selected_option] == "STORE":
+                        if options[self.selected_option] == options[2]:
                             self.store()
-                        if menu_options[self.selected_option] == "OPTIONS":
+                        if options[self.selected_option] == options[3]:
                             self.options()
-                        if menu_options[self.selected_option] == "QUIT":
+                        if options[self.selected_option] == options[4]:
                             pygame.quit()
                             sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    for i, pos in enumerate(button_positions):
-                        button_rect = pygame.Rect(320 - 100, pos - 25, 200, 50)
-                        if button_rect.collidepoint(event.pos):
-                            if menu_options[i] == "PLAY":
-                                self.play()
-                            if menu_options[i] == "LEVELS":
-                                self.levels()
-                            if menu_options[i] == "STORE":
-                                self.store()
-                            if menu_options[i] == "OPTIONS":
-                                self.options()
-                            if menu_options[i] == "QUIT":
-                                pygame.quit()
-                                sys.exit()
-
-            MENU_MOUSE_POS = pygame.mouse.get_pos()
-
-            for i, option in enumerate(menu_options):
-                if i == self.selected_option:
-                    base_color = self.selector_color
-                else:
-                    base_color = self.base_color
-
-                # Check if the mouse is hovering over the button
-                button_rect = pygame.Rect(320 - 100, button_positions[i] - 25, 200, 50)
-                if button_rect.collidepoint(MENU_MOUSE_POS):
-                    base_color = "#b68f40"
-                    if pygame.mouse.get_pressed()[0]:
-                        if option == "PLAY":
-                            self.play()
-                        if option == "LEVELS":
-                            self.levels()
-                        if option == "STORE":
-                            self.store()
-                        if option == "OPTIONS":
-                            self.options()
-                        if option == "QUIT":
-                            pygame.quit()
-                            sys.exit()
-
-                button = Button(image=None, pos=(320, button_positions[i]),
-                                text_input=option, font=self.get_font(30),
-                                base_color=base_color, hovering_color="#b68f40")
-                button.update(self.screen)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -502,16 +446,18 @@ class Menu:
                             pause = False
                             Menu().menu()
                             return
-
-            UI.render_menu_bg(game)
-            UI.render_menu_title(game, title, 320, 50)
-            UI.render_info_box(game, info, 100, 20)
-            UI.render_o_box(game, options, selected_option, 320, 250, 40)
             
+            screen = game.screen
+            display = game.display_3
+            bg = game.assets['background']
 
-            # Display message if timer is active
+            UI.render_menu_bg(screen, display, bg)
+            UI.render_menu_title(screen, title, 320, 50)
+            UI.render_info_box(screen, info, 100, 20)
+            UI.render_o_box(screen, options, selected_option, 320, 250, 40)
+            
             if message_timer > 0:
-                UI.render_menu_msg(game, message, 320, 400)
+                UI.render_menu_msg(screen, message, 320, 400)
                 message_timer -= 1
 
             pygame.display.update()
