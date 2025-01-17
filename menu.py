@@ -454,14 +454,18 @@ class Menu:
             self.clock.tick(60)
 
     def pause_menu(game):
+        title = "Pause Menu"
+        info = [
+            f"Level: {game.level}", 
+            f"Time: {game.timer.text}", 
+            f"Best Time: {game.timer.best_time_text}", 
+            f"Coins: {game.cm.coins}"
+        ]
         options = ["Continue", "Save Game", "Menu"]
         selected_option = 0
         pause = True
         message = ""
         message_timer = 0
-
-        START_Y = 250
-        SPACING = 40
 
         while pause:
             for event in pygame.event.get():
@@ -491,42 +495,24 @@ class Menu:
                                 message = f"Game saved as {filename}"
                             else:
                                 message = "Failed to save game"
-                            message_timer = 180
+                            message_timer = 60
                         elif chosen == "Menu":
                             #game.tilemap.save_game()
                             game.running = False
                             pause = False
                             Menu().menu()
                             return
-                        
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        mouse_pos = pygame.mouse.get_pos()
-                        for i, rect in enumerate(option_rects):
-                            if rect.collidepoint(mouse_pos):
-                                selected_option = i
-                                if options[selected_option] == "Continue":
-                                    print("Continue")
-                                    game.paused = False
-                                    pause = False
-                                elif options[selected_option] == "Save Game":
-                                    print("Save Game feature not implemented yet.")
-                                elif options[selected_option] == "Menu":
-                                    print("Menu")
-                                    game.running = False
-                                    pause = False
 
-            mouse_pos = pygame.mouse.get_pos()
-
-            option_rects = UI.render_pm_ui(game, options, selected_option, START_Y, SPACING)
+            UI.render_menu_bg(game)
+            UI.render_menu_title(game, title, 320, 50)
+            UI.render_info_box(game, info, 100, 20)
+            UI.render_o_box(game, options, selected_option, 320, 250, 40)
+            
 
             # Display message if timer is active
             if message_timer > 0:
-                message_text = game.get_font(15).render(message, True, UI.COLOR)
-                message_rect = message_text.get_rect(center=(320, 400))
-                game.screen.blit(message_text, message_rect)
+                UI.render_menu_msg(game, message, 320, 400)
                 message_timer -= 1
-
 
             pygame.display.update()
             game.clock.tick(60)
