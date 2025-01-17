@@ -89,6 +89,7 @@ class Game:
 
         # Collectable Manager
         self.cm = CollectableManager(self)
+        self.cm.load_collectables()
 
         # Load the selected level
         self.load_level(self.level)

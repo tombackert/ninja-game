@@ -1,52 +1,111 @@
-
 import pygame
 import math
 import random
 from scripts.particle import Particle
-from scripts.spark import Spark 
+from scripts.spark import Spark
 from scripts.button import Button
 from scripts.settings import Settings
 
 class UI:
 
-    COLOR = "#172A3A"
+    COLOR = "#137547"
 
+    @staticmethod
     def get_font(size):
         return pygame.font.Font("data/font.ttf", size)
-    
+
+    @staticmethod
+    def draw_text_with_outline(surface, font, text, x, y,
+                               text_color=(255,255,255),
+                               outline_color=(0,0,0),
+                               center=False):
+
+        text_surf = font.render(text, True, text_color)
+
+        if center:
+            text_rect = text_surf.get_rect(center=(x, y))
+            x, y = text_rect.x, text_rect.y
+
+        offsets = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0,  -1),           (0,  1),
+            (1,  -1),  (1,  0),  (1,  1)
+        ]
+        for ox, oy in offsets:
+            outline_surf = font.render(text, True, outline_color)
+            surface.blit(outline_surf, (x + ox, y + oy))
+
+        surface.blit(text_surf, (x, y))
+
+    @staticmethod
     def render_game_ui(game):
-        # Current time
-        timer = game.timer.text
-        TIMER_TEXT = game.get_font(10).render(f"{timer}", True, UI.COLOR)
-        TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
-        game.display_2.blit(TIMER_TEXT, TIMER_RECT)
+        font_10 = UI.get_font(10)
+
+        # Timer
+        timer_text = f"{game.timer.text}"
+        UI.draw_text_with_outline(
+            surface=game.display_2,
+            font=font_10,
+            text=timer_text,
+            x=220,
+            y=5,
+            text_color=UI.COLOR,
+            outline_color="black",
+        )
 
         # Best time
-        best_time = game.timer.best_time_text
-        BEST_TIME_TEXT = game.get_font(10).render(f"{best_time}", True, UI.COLOR)
-        BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
-        #game.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
+        """
+        best_time = f"{game.timer.best_time_text}"
+        UI.draw_text_with_outline(
+            surface=game.display_2,
+            font=font_10,
+            text=best_time,
+            x=270,
+            y=25,
+            text_color=UI.COLOR,
+            outline_color="black",
+            center=True
+        )
+        """
 
         # Display lifes
-        lifes = 'LIFES:' + str(game.player.lifes)
-        LIFE_TEXT = game.get_font(10).render(lifes, True, UI.COLOR)
-        LIFE_RECT = LIFE_TEXT.get_rect(center=(45, 10))
-        game.display_2.blit(LIFE_TEXT, LIFE_RECT)
+        lifes = f"Lives: {game.player.lifes}"
+        UI.draw_text_with_outline(
+            surface=game.display_2,
+            font=font_10,
+            text=lifes,
+            x=5,
+            y=5,
+            text_color=UI.COLOR,
+            outline_color="black",
+        )
 
         # Display level
-        level = 'LEVEL:' + str(game.level)
-        LEVEL_TEXT = game.get_font(10).render(level, True, UI.COLOR)
-        LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
-        game.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
+        level_text = f"Level: {game.level}"
+        UI.draw_text_with_outline(
+            surface=game.display_2,
+            font=font_10,
+            text=level_text,
+            x=115,
+            y=5,
+            text_color=UI.COLOR,
+            outline_color="black",
+        )
 
         # Coins
-        coins_str = 'COINS:' + str(game.cm.coin_count)
-        COIN_TEXT = game.get_font(10).render(coins_str, True, UI.COLOR)
-        COIN_RECT = COIN_TEXT.get_rect(center=(50, 25))
-        #game.display_2.blit(COIN_TEXT, COIN_RECT)
+        coin_text = f"Coins: {game.cm.coins}"
+        UI.draw_text_with_outline(
+            surface=game.display_2,
+            font=font_10,
+            text=coin_text,
+            x=5,
+            y=20,
+            text_color=UI.COLOR,
+            outline_color="black",
+        )
 
+    @staticmethod
     def render_game_elements(game, render_scroll):
-        
         # Leaf particles
         for rect in game.leaf_spawners:
             if random.random() * 49999 < rect.width * rect.height:
@@ -94,7 +153,10 @@ class UI:
                         game.sparks.append(Spark(game.player.rect().center, angle, 2 + random.random()))
                         game.particles.append(Particle(
                             game, 'particle', game.player.rect().center,
-                            velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
+                            velocity=[
+                                math.cos(angle + math.pi) * speed * 0.5,
+                                math.sin(angle + math.pi) * speed * 0.5
+                            ],
                             frame=random.randint(0, 7)
                         ))
 
@@ -105,10 +167,11 @@ class UI:
             if kill:
                 game.sparks.remove(spark)
         
-        # Collectables updaten & rendern
+        # Collectables update & render
         game.cm.update(game.player.rect())
         game.cm.render(game.display, offset=render_scroll)
 
+        # Display sillhouette
         display_mask = pygame.mask.from_surface(game.display)
         display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
