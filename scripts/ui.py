@@ -9,6 +9,7 @@ from scripts.settings import Settings
 class UI:
 
     COLOR = "#137547"
+    GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
 
@@ -38,73 +39,6 @@ class UI:
             surface.blit(outline_surf, (x + ox, y + oy))
 
         surface.blit(text_surf, (x, y))
-
-    @staticmethod
-    def render_game_ui(game):
-        font_10 = UI.get_font(10)
-
-        # Timer
-        timer_text = f"{game.timer.text}"
-        UI.draw_text_with_outline(
-            surface=game.display_2,
-            font=font_10,
-            text=timer_text,
-            x=220,
-            y=5,
-            text_color=UI.COLOR,
-            outline_color="black",
-        )
-
-        # Best time
-        """
-        best_time = f"{game.timer.best_time_text}"
-        UI.draw_text_with_outline(
-            surface=game.display_2,
-            font=font_10,
-            text=best_time,
-            x=270,
-            y=25,
-            text_color=UI.COLOR,
-            outline_color="black",
-            center=True
-        )
-        """
-
-        # Display lifes
-        lifes = f"Lives: {game.player.lifes}"
-        UI.draw_text_with_outline(
-            surface=game.display_2,
-            font=font_10,
-            text=lifes,
-            x=5,
-            y=5,
-            text_color=UI.COLOR,
-            outline_color="black",
-        )
-
-        # Display level
-        level_text = f"Level: {game.level}"
-        UI.draw_text_with_outline(
-            surface=game.display_2,
-            font=font_10,
-            text=level_text,
-            x=115,
-            y=5,
-            text_color=UI.COLOR,
-            outline_color="black",
-        )
-
-        # Coins
-        coin_text = f"Coins: {game.cm.coins}"
-        UI.draw_text_with_outline(
-            surface=game.display_2,
-            font=font_10,
-            text=coin_text,
-            x=5,
-            y=20,
-            text_color=UI.COLOR,
-            outline_color="black",
-        )
 
     @staticmethod
     def render_game_elements(game, render_scroll):
@@ -257,4 +191,16 @@ class UI:
             y=y,
             text_color=UI.SELECTOR_COLOR,
             center=True
+        )
+
+    @staticmethod
+    def render_game_ui_element(display, text, x, y):
+        font_8 = UI.get_font(8)
+        UI.draw_text_with_outline(
+            surface=display,
+            font=font_8,
+            text=text,
+            x=x,
+            y=y,
+            text_color=UI.GAME_UI_COLOR,
         )
