@@ -31,13 +31,7 @@ class Menu:
         self.cm = CollectableManager(None)
         self.cm.load_collectables()
 
-        self.selector_color = "#DD6E42"
-        self.base_color = "#172A3A"
-        self.warning_color = "#EF2917"
-
         self.menu()
-
-    def get_font(self, size):
         return pygame.font.Font("data/font.ttf", size)
 
     def play(self):
@@ -47,21 +41,16 @@ class Menu:
 
     def levels(self):
 
-        # Get a list of all level files in the 'data/maps' directory
         level_files = [f for f in os.listdir('data/maps') if f.endswith('.json')]
-        level_files.sort()  # Ensure levels are in order
-
-        # Extract level numbers from filenames
+        level_files.sort()
         levels = [int(f.split('.')[0]) for f in level_files]
         levels.sort()
-
-        # Index of the currently highlighted level
+        
         level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
-        start_index = 0  # Index of the first level displayed
-        levels_per_page = 8  # Number of levels displayed at once
+        start_index = 0
+        levels_per_page = 6
 
         while True:
-            # Event handling
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -84,77 +73,18 @@ class Menu:
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                         self.selected_level = levels[level_index]
                         settings.selected_level = self.selected_level
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left click
-                        mouse_pos = pygame.mouse.get_pos()
-                        for level_rect, idx in level_rects:
-                            if level_rect.collidepoint(mouse_pos):
-                                level_index = idx
-                                self.selected_level = levels[level_index]
-                                settings.selected_level = self.selected_level
-
-            # Get mouse position for highlighting
-            mouse_pos = pygame.mouse.get_pos()
-
-            # Render the background on the scaled display
-            self.display.blit(self.bg, (0, 0))
-            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
-            self.screen.blit(scaled_display, (0, 0))
-
-            # Draw the levels list on the main screen
-            title_text = self.get_font(40).render("Select Level", True, self.base_color)
-            title_rect = title_text.get_rect(center=(320, 50))
-            self.screen.blit(title_text, title_rect)
-
-            # Position settings
-            START_Y = 120
-            SPACING = 40
-            SELECTED_OFFSET = -20
-
-            level_rects = []
-
-            # Only render levels from start_index to end_index
-            end_index = min(start_index + levels_per_page, len(levels))
-
-            for i in range(start_index, end_index):
-                level = levels[i]
-                idx = i  # Absolute index in levels list
-                is_selected = level == self.selected_level
-
-                # Determine if this level is highlighted (by keyboard or mouse)
-                temp_rect = pygame.Rect(320 - 100, START_Y + (i - start_index) * SPACING - 15, 200, 30)
-                if idx == level_index or temp_rect.collidepoint(mouse_pos):
-                    base_color = self.selector_color
+                
+            UI.render_menu_bg(self.screen, self.display, self.bg)
+            UI.render_menu_title(self.screen, "Select Level", 320, 50)
+            
+            level_options = []
+            for level in levels[start_index:start_index + levels_per_page]:
+                if level == self.selected_level:
+                    level_options.append(f"Level {level}*")
                 else:
-                    base_color = self.base_color
+                    level_options.append(f"Level {level}")
 
-                # Fixed x position for all level texts
-                level_text_x = 200  # Adjust as needed
-                level_text_y = START_Y + (i - start_index) * SPACING
-
-                # Shift selected level to the left
-                shift_amount = SELECTED_OFFSET if is_selected else 0
-                text_pos_x = level_text_x + shift_amount
-
-                # Render the level text
-                level_text_surface = self.get_font(30).render(f"Level {level}", True, base_color)
-                level_text_rect = level_text_surface.get_rect(topleft=(text_pos_x, level_text_y))
-                self.screen.blit(level_text_surface, level_text_rect)
-
-                # Render the star if this is the selected level
-                if is_selected:
-                    star_text_surface = self.get_font(30).render("*", True, base_color)
-                    star_text_rect = star_text_surface.get_rect()
-                    # Position the star to the right of the level text
-                    star_text_rect.midleft = (level_text_rect.right + 10, level_text_rect.centery)
-                    self.screen.blit(star_text_surface, star_text_rect)
-                    # Update the level_rect to include the star
-                    level_rect = level_text_rect.union(star_text_rect)
-                else:
-                    level_rect = level_text_rect
-
-                # Store the level_rect and index for interaction
-                level_rects.append((level_rect, idx))
+            UI.render_o_box(self.screen, level_options, level_index - start_index, 320, 150, 40)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -215,8 +145,6 @@ class Menu:
             pygame.display.update()
             self.clock.tick(60)
 
-
-
     def options(self):
         title = "Options"
         selected_option = 0
@@ -269,7 +197,7 @@ class Menu:
 
             UI.render_menu_bg(self.screen, self.display, self.bg)
             UI.render_menu_title(self.screen, title, 320, 50)
-            UI.render_o_box(self.screen, options, self.selected_option, 320, 200, 50)
+            UI.render_o_box(self.screen, options, self.selected_option, 320, 150, 50)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
