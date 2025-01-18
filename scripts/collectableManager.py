@@ -10,9 +10,23 @@ DATA_FILE = 'data/collectables.json'
 
 class CollectableManager:
 
-    PURCHASEABLES = {"Gun", "Ammo"}
-    NOT_PURCHASEABLES = {"Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"}
-    PRICES = {
+    PURCHASEABLES = {
+        "Gun", 
+        "Ammo"
+    }
+    NOT_PURCHASEABLES = {
+        "Shield", 
+        "Moon Boots", 
+        "Ninja Stars", 
+        "Sword", 
+        "Grapple Hook", 
+        "Red Ninja", 
+        "Blue Ninja", 
+        "Green Ninja"
+    }
+
+
+    ITEMS = {
         "Gun": 2500,
         "Ammo": 100,
         "Shield": 100,
@@ -63,18 +77,15 @@ class CollectableManager:
         self.coin_list = []
         self.ammo_pickups = []
         
-        # Lade Münzen
         coin_tiles = tilemap.extract([('coin', 0)], keep=False)
         for tile in coin_tiles:
             self.coin_list.append(Collectables(self.game, tile['pos'], self.game.assets['coin']))
         
-        # Lade Munition
         ammo_tiles = tilemap.extract([('ammo', 0)], keep=False)
         for tile in ammo_tiles:
             self.ammo_pickups.append(Collectables(self.game, tile['pos'], self.game.assets['ammo']))
 
     def update(self, player_rect):
-        # Update Münzen
         for coin in self.coin_list[:]:
             if coin.update(player_rect):
                 self.coin_list.remove(coin)
@@ -82,7 +93,6 @@ class CollectableManager:
                 self.coins += 1
                 self.game.sfx['collect'].play()
         
-        # Update Munition
         for ammo in self.ammo_pickups[:]:
             if ammo.update(player_rect):
                 self.ammo_pickups.remove(ammo)
@@ -143,7 +153,7 @@ class CollectableManager:
 
         if self.is_purchaseable(item):
             self.load_collectables()
-            if self.coins > self.PRICES[item]:
+            if self.coins > self.ITEMS[item]:
                 if item == "Gun":
                     self.gun += 1
                 elif item == "Ammo":
@@ -165,9 +175,13 @@ class CollectableManager:
                 elif item == "Green Ninja":
                     self.green_ninja += 1
                 
-                self.coins -= self.PRICES[item]
+                self.coins -= self.ITEMS[item]
+                
+                ###### DEBUG ######
                 print(f"{item} purchased!")
                 print(f"Coins remaining: {self.coins}")
+                ###### DEBUG ######
+                
                 self.save_collectables()
                 return "success"
             else:
@@ -178,4 +192,4 @@ class CollectableManager:
             return "not purchaseable"
 
     def get_price(self, item):
-        return self.PRICES[item]
+        return self.ITEMS[item]

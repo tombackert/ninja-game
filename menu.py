@@ -160,14 +160,18 @@ class Menu:
             self.clock.tick(60)
 
     def store(self):
-        options = ["Gun", "Ammo", "Shield", "Moon Boots", "Ninja Stars", "Sword", "Grapple Hook", "Red Ninja", "Blue Ninja", "Green Ninja"]
-        # prices = [2500, 100, 100, 5000, 500, 1000, 5000, 1000, 1000, 1000]
-        selected_option = 0
+        
+        options = list(self.cm.ITEMS.keys())
+        prices = list(self.cm.ITEMS.values())
 
-        option_index = options.index(self.selected_option) if self.selected_option in options else 0
+        max_option_length = max(len(option) for option in options)
+        options = [f"{options[i].ljust(max_option_length)}  ${prices[i]:<5}" for i in range(len(options))]
+
+        selected_option = 0
         start_index = 0
         options_per_page = 5
-        not_purchaseable_item_selected = False
+        msg = "Item is not purchaseable!"
+        msg_timer = 0
 
         while True:
             for event in pygame.event.get():
@@ -179,98 +183,39 @@ class Menu:
                         self.menu()
                     elif event.key in (pygame.K_UP, pygame.K_w):
                         selected_option = (selected_option - 1) % len(options)
-                        if selected_option < start_index:
-                            start_index = selected_option
-                        elif selected_option >= start_index + options_per_page:
-                            start_index = selected_option - options_per_page + 1
+                    if selected_option < start_index:
+                        start_index = selected_option
+                    elif selected_option >= start_index + options_per_page:
+                        start_index = selected_option - options_per_page + 1
                     elif event.key in (pygame.K_DOWN, pygame.K_s):
                         selected_option = (selected_option + 1) % len(options)
-                        if selected_option >= start_index + options_per_page:
-                            start_index = selected_option - options_per_page + 1
-                        elif selected_option < start_index:
-                            start_index = selected_option
+                    if selected_option >= start_index + options_per_page:
+                        start_index = selected_option - options_per_page + 1
+                    elif selected_option < start_index:
+                        start_index = selected_option
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                         if options[selected_option] == "Back":
                             self.menu()
-                        elif options[selected_option] != "Back":
-                            buy_item = self.cm.buy_collectable(options[selected_option])
+                        else:
+                            item_name = options[selected_option].split('$')[0].strip()
+                            buy_item = self.cm.buy_collectable(item_name)
                             if buy_item == "not purchaseable":
-                                not_purchaseable_item_selected = True
-                                
+                                msg_timer = 60
 
-
-            # Get mouse position for highlighting
-            mouse_pos = pygame.mouse.get_pos()
-
-            # Render the background
-            self.display.blit(self.bg, (0, 0))
-            scaled_display = pygame.transform.scale(self.display, self.screen.get_size())
-            self.screen.blit(scaled_display, (0, 0))
-
-            # Draw the store item list
-            title_text = self.get_font(40).render("Store", True, self.base_color)
-            title_rect = title_text.get_rect(center=(320, 50))
-            self.screen.blit(title_text, title_rect)
-
-            # Draw warning text
-            if not_purchaseable_item_selected:
-                p = getattr(self, 'warning_timer', 60)
-                if p > 0:
-                    warning_text = self.get_font(20).render("Item is not purchaseable!", True, self.warning_color)
-                    warning_rect = warning_text.get_rect(center=(320, 80))
-                    self.screen.blit(warning_text, warning_rect)
-                    self.warning_timer = p - 1
-                else:
-                    not_purchaseable_item_selected = False
-                    self.warning_timer = 120
-
-            # Position settings
-            START_Y = 120
-            START_X = 50
-            SPACING = 50
-            SELECTED_OFFSET = 0
-            PRICE_X = 600
-
-            option_rects = []
+            UI.render_menu_bg(self.screen, self.display, self.bg)
+            UI.render_menu_title(self.screen, "Store", 320, 50)
 
             end_index = min(start_index + options_per_page, len(options))
+            UI.render_o_box(self.screen, options[start_index:end_index], selected_option - start_index, 320, 120, 50)
 
-            for i in range(start_index, end_index):
-                option = options[i]
-                index = i
-                is_selected = option == self.selected_option
-
-                # Determine if this option is highlighted (by keyboard or mouse)
-                temp_rect = pygame.Rect(320 - 100, START_Y + (i - start_index) * SPACING - 15, 200, 30)
-                if index == selected_option or temp_rect.collidepoint(mouse_pos):
-                    base_color = self.selector_color
-                else:
-                    base_color = self.base_color
-
-                # Fixed x position for all option texts
-                option_text_x = START_X  # Adjust as needed
-                option_text_y = START_Y + (i - start_index) * SPACING
-
-                # Shift selected level to the left
-                shift_amount = SELECTED_OFFSET if is_selected else 0
-                option_pos_x = option_text_x + shift_amount
-
-                # Render the option text
-                option_text_surface = self.get_font(30).render(option, True, base_color)
-                option_text_rect = option_text_surface.get_rect(topleft=(option_pos_x, option_text_y))
-                self.screen.blit(option_text_surface, option_text_rect)
-
-                # Render the price
-                price_text_surface = self.get_font(30).render(f"${self.cm.get_price(option)}", True, base_color)
-                price_text_rect = price_text_surface.get_rect()
-                price_text_rect.midright = (PRICE_X, option_text_rect.centery)
-                self.screen.blit(price_text_surface, price_text_rect)
-
-                # Store the option_rect and index for interaction
-                option_rects.append((option_text_rect, index))
+            if msg_timer > 0:
+                UI.render_menu_msg(self.screen, msg, 320, 400)
+                msg_timer -= 1
 
             pygame.display.update()
             self.clock.tick(60)
+
+
 
     def options(self):
         title = "Options"
