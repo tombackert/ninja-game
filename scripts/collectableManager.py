@@ -55,8 +55,6 @@ class CollectableManager:
         self.blue_ninja = 0
         self.green_ninja = 0
 
-
-
     ### DEPRECATED ###
     def load_collectable_count(self):
         if os.path.exists(DATA_FILE):
@@ -114,15 +112,6 @@ class CollectableManager:
                     self.ammo = data.get("ammo", 0)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading collectable: {e}")
-        
-        ###### DEBUG ######
-        print("+---------------------+")
-        print("Collectables loaded:")
-        print(f"Coins: {self.coins}")
-        print(f"Ammo: {self.ammo}")
-        print(f"Gun: {self.gun}")
-        print("+---------------------+")
-        ###### DEBUG ######
     
     def save_collectables(self):
         data = {
@@ -136,15 +125,6 @@ class CollectableManager:
                 json.dump(data, f, indent=4)
         except IOError as e:
             print(f"Error saving collectable: {e}")
-
-        ###### DEBUG ######
-        print("+---------------------+")
-        print("Collectables updated:")
-        print(f"Coins: {self.coins}")
-        print(f"Ammo: {self.ammo}")
-        print(f"Gun: {self.gun}")
-        print("+---------------------+")
-        ###### DEBUG ######
 
     def is_purchaseable(self, item):
         return item in self.PURCHASEABLES
@@ -176,12 +156,6 @@ class CollectableManager:
                     self.green_ninja += 1
                 
                 self.coins -= self.ITEMS[item]
-                
-                ###### DEBUG ######
-                print(f"{item} purchased!")
-                print(f"Coins remaining: {self.coins}")
-                ###### DEBUG ######
-                
                 self.save_collectables()
                 return "success"
             else:
