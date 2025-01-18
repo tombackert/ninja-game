@@ -88,7 +88,8 @@ class Game:
         self.timer = Timer(self.level)
 
         # Collectable Manager
-        self.collectable_manager = CollectableManager(self)
+        self.cm = CollectableManager(self)
+        self.cm.load_collectables()
 
         # Load the selected level
         self.load_level(self.level)
@@ -160,7 +161,7 @@ class Game:
         self.transition = -30
         self.endpoint = False
 
-        self.collectable_manager.load_coins_from_tilemap(self.tilemap)
+        self.cm.load_collectables_from_tilemap(self.tilemap)
 
     def get_font(self, size):
         return pygame.font.Font("data/font.ttf", size)
@@ -231,8 +232,13 @@ class Game:
                 self.display_2.blit(self.display, (0, 0))
 
                 # UI 
-                UI.render_game_ui(self)
-
+                UI.render_game_ui_element(self.display_2, f"{self.timer.text}", 250, 5)
+                UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", 250, 15)
+                UI.render_game_ui_element(self.display_2, f"Level: {self.level}", 130, 5)
+                UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
+                UI.render_game_ui_element(self.display_2, f"Coins: ${self.cm.coins}", 5, 15)
+                UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
+                
                 # Screen shake
                 Effects.screenshake(self)
 

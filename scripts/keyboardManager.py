@@ -36,9 +36,13 @@ class KeyboardManager:
                     if self.game.player.jump():
                         self.game.sfx['jump'].play()
 
-                # Space
+                # Space for dash
                 if event.key == pygame.K_SPACE:
                     self.game.player.dash()
+
+                # X for shooting
+                if event.key == pygame.K_x:
+                    self.game.player.shoot()
 
                 # Respawn
                 if event.key == pygame.K_r:

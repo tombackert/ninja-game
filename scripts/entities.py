@@ -6,6 +6,7 @@ import pygame.font
 
 from scripts.particle import Particle
 from scripts.spark import Spark
+from scripts.settings import Settings
 
 
 class PhysicsEntity:
@@ -169,9 +170,32 @@ class Player(PhysicsEntity):
         self.dashing = 0
         self.lifes = lifes
         self.respawn_pos = respawn_pos
+        self.shoot_cooldown = 0
+        
+    def shoot(self):
+        if Settings.has_gun and Settings.ammo > 0 and self.shoot_cooldown == 0:
+            self.game.sfx['shoot'].play()
+            direction = -1.5 if self.flip else 1.5
+            self.game.projectiles.append([
+                [self.rect().centerx + (7 * (-1 if self.flip else 1)), 
+                 self.rect().centery], 
+                direction, 
+                0
+            ])
+            Settings.ammo -= 1
+            self.shoot_cooldown = 30
+            
+            # Funkeneffekt beim Schießen
+            for i in range(4):
+                self.game.sparks.append(
+                    Spark(self.game.projectiles[-1][0], 
+                          random.random() - 0.5 + (math.pi if direction < 0 else 0), 
+                          2 + random.random()))
     
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
         
         self.air_time += 1
         

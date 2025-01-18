@@ -1,50 +1,47 @@
-
 import pygame
 import math
 import random
 from scripts.particle import Particle
-from scripts.spark import Spark 
+from scripts.spark import Spark
 from scripts.button import Button
-
+from scripts.settings import Settings
 
 class UI:
 
+    COLOR = "#137547"
+    GAME_UI_COLOR = "#2C8C99"
+    PM_COLOR = "#449DD1"
+    SELECTOR_COLOR = "#DD6E42"
+
+    @staticmethod
     def get_font(size):
         return pygame.font.Font("data/font.ttf", size)
-    
-    def render_game_ui(game):
-        # Current time
-        timer = game.timer.text
-        TIMER_TEXT = game.get_font(10).render(f"{timer}", True, "black")
-        TIMER_RECT = TIMER_TEXT.get_rect(center=(270, 10))
-        game.display_2.blit(TIMER_TEXT, TIMER_RECT)
 
-        # Best time
-        best_time = game.timer.best_time_text
-        BEST_TIME_TEXT = game.get_font(10).render(f"{best_time}", True, "black")
-        BEST_TIME_RECT = BEST_TIME_TEXT.get_rect(center=(270, 25))
-        game.display_2.blit(BEST_TIME_TEXT, BEST_TIME_RECT)
+    @staticmethod
+    def draw_text_with_outline(surface, font, text, x, y,
+                               text_color=(255,255,255),
+                               outline_color=(0,0,0),
+                               center=False):
 
-        # Display lifes
-        lifes = 'LIFES:' + str(game.player.lifes)
-        LIFE_TEXT = game.get_font(10).render(lifes, True, "black")
-        LIFE_RECT = LIFE_TEXT.get_rect(center=(45, 10))
-        game.display_2.blit(LIFE_TEXT, LIFE_RECT)
+        text_surf = font.render(text, True, text_color)
 
-        # Display level
-        level = 'LEVEL:' + str(game.level)
-        LEVEL_TEXT = game.get_font(10).render(level, True, "black")
-        LEVEL_RECT = LEVEL_TEXT.get_rect(center=(165, 10))
-        game.display_2.blit(LEVEL_TEXT, LEVEL_RECT)
+        if center:
+            text_rect = text_surf.get_rect(center=(x, y))
+            x, y = text_rect.x, text_rect.y
 
-        # Coins
-        coins_str = 'COINS:' + str(game.collectable_manager.coin_count)
-        COIN_TEXT = game.get_font(10).render(coins_str, True, "black")
-        COIN_RECT = COIN_TEXT.get_rect(center=(50, 25))
-        #game.display_2.blit(COIN_TEXT, COIN_RECT)
+        offsets = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0,  -1),           (0,  1),
+            (1,  -1),  (1,  0),  (1,  1)
+        ]
+        for ox, oy in offsets:
+            outline_surf = font.render(text, True, outline_color)
+            surface.blit(outline_surf, (x + ox, y + oy))
 
+        surface.blit(text_surf, (x, y))
+
+    @staticmethod
     def render_game_elements(game, render_scroll):
-        
         # Leaf particles
         for rect in game.leaf_spawners:
             if random.random() * 49999 < rect.width * rect.height:
@@ -92,7 +89,10 @@ class UI:
                         game.sparks.append(Spark(game.player.rect().center, angle, 2 + random.random()))
                         game.particles.append(Particle(
                             game, 'particle', game.player.rect().center,
-                            velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
+                            velocity=[
+                                math.cos(angle + math.pi) * speed * 0.5,
+                                math.sin(angle + math.pi) * speed * 0.5
+                            ],
                             frame=random.randint(0, 7)
                         ))
 
@@ -103,10 +103,11 @@ class UI:
             if kill:
                 game.sparks.remove(spark)
         
-        # Collectables updaten & rendern
-        game.collectable_manager.update(game.player.rect())
-        game.collectable_manager.render(game.display, offset=render_scroll)
+        # Collectables update & render
+        game.cm.update(game.player.rect())
+        game.cm.render(game.display, offset=render_scroll)
 
+        # Display sillhouette
         display_mask = pygame.mask.from_surface(game.display)
         display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -120,3 +121,89 @@ class UI:
                 particle.pos[0] += math.sin(particle.animation.frame * 0.035) * 0.3
             if kill:
                 game.particles.remove(particle)
+            
+    @staticmethod
+    def render_o_box(screen, options, selected_option, x, y, spacing):
+        
+        option_rects = []
+        font_30 = UI.get_font(30)
+
+        for i, option in enumerate(options):
+            if i == selected_option:
+                button_color = UI.SELECTOR_COLOR
+            else:
+                button_color = UI.PM_COLOR
+            
+            button_text = f"{option}"
+            UI.draw_text_with_outline(
+                surface=screen,
+                font=font_30,
+                text=button_text,
+                x=x,
+                y=y + i * spacing,
+                text_color=button_color,
+                center=True
+            )
+
+        return option_rects
+
+    @staticmethod
+    def render_info_box(screen, info, y, spacing):
+        font_15 = UI.get_font(15)
+        for i, text in enumerate(info):
+            UI.draw_text_with_outline(
+                surface=screen,
+                font=font_15,
+                text=text,
+                x=320,
+                y=y + i * spacing,
+                text_color=UI.PM_COLOR,
+                center=True
+            )
+    
+    @staticmethod
+    def render_menu_title(screen, title, x, y):
+        font_40 = UI.get_font(40)
+        UI.draw_text_with_outline(
+            surface=screen,
+            font=font_40,
+            text=title,
+            x=x,
+            y=y,
+            text_color=UI.PM_COLOR,
+            center=True
+        )
+
+    @staticmethod
+    def render_menu_bg(screen, display, bg):
+        display.blit(bg, (0, 0))
+        scaled_display = pygame.transform.scale(display, screen.get_size())
+        screen.blit(scaled_display, (0, 0))
+
+    @staticmethod
+    def render_menu_msg(screen, msg, x, y):
+        font_15 = UI.get_font(15)
+        UI.draw_text_with_outline(
+            surface=screen,
+            font=font_15,
+            text=msg,
+            x=x,
+            y=y,
+            text_color=UI.SELECTOR_COLOR,
+            center=True
+        )
+
+    @staticmethod
+    def render_game_ui_element(display, text, x, y, align='left'):
+        font_8 = UI.get_font(8)
+        if align == 'right':
+            text_surface = font_8.render(text, True, UI.GAME_UI_COLOR)
+            x = x - text_surface.get_width()
+        UI.draw_text_with_outline(
+            surface=display,
+            font=font_8,
+            text=text,
+            x=x,
+            y=y,
+            text_color=UI.GAME_UI_COLOR,
+        )
