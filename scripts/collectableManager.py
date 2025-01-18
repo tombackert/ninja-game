@@ -167,3 +167,27 @@ class CollectableManager:
 
     def get_price(self, item):
         return self.ITEMS[item]
+    
+    def get_amount(self, item):
+        if item == "Gun":
+            return self.gun
+        elif item == "Ammo":
+            return self.ammo
+        elif item == "Shield":
+            return self.shield
+        elif item == "Moon Boots":
+            return self.moon_boots
+        elif item == "Ninja Stars":
+            return self.ninja_stars
+        elif item == "Sword":
+            return self.sword
+        elif item == "Grapple Hook":
+            return self.grapple_hook
+        elif item == "Red Ninja":
+            return self.red_ninja
+        elif item == "Blue Ninja":
+            return self.blue_ninja
+        elif item == "Green Ninja":
+            return self.green_ninja
+        else:
+            return 0

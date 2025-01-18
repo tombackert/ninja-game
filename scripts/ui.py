@@ -194,8 +194,11 @@ class UI:
         )
 
     @staticmethod
-    def render_game_ui_element(display, text, x, y):
+    def render_game_ui_element(display, text, x, y, align='left'):
         font_8 = UI.get_font(8)
+        if align == 'right':
+            text_surface = font_8.render(text, True, UI.GAME_UI_COLOR)
+            x = x - text_surface.get_width()
         UI.draw_text_with_outline(
             surface=display,
             font=font_8,

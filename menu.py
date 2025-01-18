@@ -100,8 +100,8 @@ class Menu:
         selected_option = 0
         start_index = 0
         options_per_page = 5
-        msg = "Item is not purchaseable!"
         msg_timer = 0
+        w_msg_timer = 0
 
         while True:
             for event in pygame.event.get():
@@ -130,17 +130,23 @@ class Menu:
                             item_name = options[selected_option].split('$')[0].strip()
                             buy_item = self.cm.buy_collectable(item_name)
                             if buy_item == "not purchaseable":
-                                msg_timer = 60
+                                w_msg = "Item is not purchaseable!"
+                                w_msg_timer = 60
 
             UI.render_menu_bg(self.screen, self.display, self.bg)
             UI.render_menu_title(self.screen, "Store", 320, 50)
+            UI.render_game_ui_element(self.screen, f"${self.cm.coins}", 5, 5)
 
             end_index = min(start_index + options_per_page, len(options))
             UI.render_o_box(self.screen, options[start_index:end_index], selected_option - start_index, 320, 120, 50)
 
-            if msg_timer > 0:
+            item_name = options[selected_option].split('$')[0].strip()
+            msg = f"{item_name}: {str(self.cm.get_amount(item_name)):<4}"
+            UI.render_game_ui_element(self.screen, msg, 635, 5, "right")
+            
+            if w_msg_timer > 0:
                 UI.render_menu_msg(self.screen, msg, 320, 400)
-                msg_timer -= 1
+                w_msg_timer -= 1
 
             pygame.display.update()
             self.clock.tick(60)
