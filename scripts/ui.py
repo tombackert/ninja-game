@@ -123,10 +123,10 @@ class UI:
                 game.particles.remove(particle)
             
     @staticmethod
-    def render_o_box(screen, options, selected_option, x, y, spacing):
+    def render_o_box(screen, options, selected_option, x, y, spacing, font_size=30):
         
         option_rects = []
-        font_30 = UI.get_font(30)
+        font = UI.get_font(font_size)
 
         for i, option in enumerate(options):
             if i == selected_option:
@@ -137,7 +137,7 @@ class UI:
             button_text = f"{option}"
             UI.draw_text_with_outline(
                 surface=screen,
-                font=font_30,
+                font=font,
                 text=button_text,
                 x=x,
                 y=y + i * spacing,
@@ -189,7 +189,7 @@ class UI:
             text=msg,
             x=x,
             y=y,
-            text_color=UI.SELECTOR_COLOR,
+            text_color=UI.GAME_UI_COLOR,
             center=True
         )
 

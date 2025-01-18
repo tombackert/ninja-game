@@ -35,8 +35,11 @@ class CollectableManager:
         "Sword": 1000,
         "Grapple Hook": 5000,
         "Red Ninja": 1000,
-        "Blue Ninja": 1000,
-        "Green Ninja": 1000
+        "Gold Ninja": 2000,
+        "Platinum Ninja": 3000,
+        "Diamond Ninja": 5000,
+        "Assassin": 7000,
+        "Berzerker": 10000,
     }
 
     def __init__(self, game):
@@ -133,7 +136,7 @@ class CollectableManager:
 
         if self.is_purchaseable(item):
             self.load_collectables()
-            if self.coins > self.ITEMS[item]:
+            if self.coins >= self.ITEMS[item]:
                 if item == "Gun":
                     self.gun += 1
                 elif item == "Ammo":

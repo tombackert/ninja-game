@@ -9,7 +9,7 @@ from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '10t'
+MAP_NAME = '10'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:

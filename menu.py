@@ -48,7 +48,7 @@ class Menu:
         
         level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
         start_index = 0
-        levels_per_page = 6
+        levels_per_page = 5
 
         while True:
             for event in pygame.event.get():
@@ -80,11 +80,13 @@ class Menu:
             level_options = []
             for level in levels[start_index:start_index + levels_per_page]:
                 if level == self.selected_level:
-                    level_options.append(f"Level {level}*")
+                    level_options.append(f"*Level {level:<2}")
                 else:
-                    level_options.append(f"Level {level}")
+                    level_options.append(f"Level {level:<2}")
 
-            UI.render_o_box(self.screen, level_options, level_index - start_index, 320, 150, 40)
+            UI.render_o_box(self.screen, level_options, level_index - start_index, 320, 150, 40, 25)
+            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
+            UI.render_game_ui_element(self.screen, f"Level: {self.selected_level}", 5, 5)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -95,7 +97,7 @@ class Menu:
         prices = list(self.cm.ITEMS.values())
 
         max_option_length = max(len(option) for option in options)
-        options = [f"{options[i].ljust(max_option_length)}  ${prices[i]:<5}" for i in range(len(options))]
+        options = [f"{options[i].ljust(max_option_length)}  ${prices[i]:<6}" for i in range(len(options))]
 
         selected_option = 0
         start_index = 0
@@ -132,21 +134,29 @@ class Menu:
                             if buy_item == "not purchaseable":
                                 w_msg = "Item is not purchaseable!"
                                 w_msg_timer = 60
+                            elif buy_item == "not enough coins":
+                                w_msg = "Not enough coins!"
+                                w_msg_timer = 60
+                            else:
+                                w_msg = f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
+                                w_msg_timer = 60
 
             UI.render_menu_bg(self.screen, self.display, self.bg)
             UI.render_menu_title(self.screen, "Store", 320, 50)
             UI.render_game_ui_element(self.screen, f"${self.cm.coins}", 5, 5)
 
             end_index = min(start_index + options_per_page, len(options))
-            UI.render_o_box(self.screen, options[start_index:end_index], selected_option - start_index, 320, 120, 50)
+            UI.render_o_box(self.screen, options[start_index:end_index], selected_option - start_index, 320, 130, 40, 25)
 
             item_name = options[selected_option].split('$')[0].strip()
             msg = f"{item_name}: {str(self.cm.get_amount(item_name)):<4}"
             UI.render_game_ui_element(self.screen, msg, 635, 5, "right")
             
             if w_msg_timer > 0:
-                UI.render_menu_msg(self.screen, msg, 320, 400)
+                UI.render_menu_msg(self.screen, w_msg, 320, 400)
                 w_msg_timer -= 1
+
+            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -189,6 +199,7 @@ class Menu:
             UI.render_menu_bg(self.screen, self.display, self.bg)
             UI.render_menu_title(self.screen, title, 320, 50)
             UI.render_o_box(self.screen, options, selected_option, 320, 150, 50)
+            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -196,7 +207,7 @@ class Menu:
     def menu(self):
 
         title = "Menu"
-        options = ["PLAY", "LEVELS", "STORE", "OPTIONS", "QUIT"]
+        options = ["Play", "Levels", "Store", "Options", "Quit"]
         self.selected_option = 0 
 
         while True:
