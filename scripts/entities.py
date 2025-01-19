@@ -6,7 +6,7 @@ import pygame.font
 
 from scripts.particle import Particle
 from scripts.spark import Spark
-from scripts.settings import Settings
+from scripts.settings import settings
 
 
 class PhysicsEntity:
@@ -103,7 +103,7 @@ class Enemy(PhysicsEntity):
             if not self.walking:
                 dis = (self.game.player.pos[0] - self.pos[0], 
                        self.game.player.pos[1] - self.pos[1])
-                if (abs(dis[1]) < 16):
+                if (abs(dis[1]) < 10):
                     if (self.flip and dis[0] < 0):
                         self.game.sfx['shoot'].play()
                         self.game.projectiles.append([[self.rect().centerx - 7, 
@@ -149,6 +149,24 @@ class Enemy(PhysicsEntity):
                 self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + random.random()))
                 return True
             
+        rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
+        for projectile in self.game.projectiles.copy():
+            projectile_rect = pygame.Rect(projectile[0][0], projectile[0][1], 4, 4)
+            if rect.colliderect(projectile_rect):
+                self.game.projectiles.remove(projectile)
+                self.game.screenshake = max(16, self.game.screenshake)
+                self.game.sfx['hit'].play()
+                for i in range(30):
+                    angle = random.random() * math.pi * 2
+                    speed = random.random() * 5
+                    self.game.sparks.append(Spark(self.rect().center, angle, 2 + random.random()))
+                    self.game.particles.append(Particle(
+                        self.game, 'particle', self.rect().center,
+                        velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5],
+                        frame=random.randint(0, 7)))
+                return True
+
+
     def render(self, surf, offset=(0, 0)):
         super().render(surf, offset=offset)
         
@@ -173,7 +191,7 @@ class Player(PhysicsEntity):
         self.shoot_cooldown = 0
         
     def shoot(self):
-        if Settings.has_gun and Settings.ammo > 0 and self.shoot_cooldown == 0:
+        if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0:
             self.game.sfx['shoot'].play()
             direction = -1.5 if self.flip else 1.5
             self.game.projectiles.append([
@@ -182,10 +200,9 @@ class Player(PhysicsEntity):
                 direction, 
                 0
             ])
-            Settings.ammo -= 1
-            self.shoot_cooldown = 30
+            self.game.cm.ammo -= 1
+            self.shoot_cooldown = 10
             
-            # Funkeneffekt beim Schießen
             for i in range(4):
                 self.game.sparks.append(
                     Spark(self.game.projectiles[-1][0], 
@@ -255,6 +272,16 @@ class Player(PhysicsEntity):
     def render(self, surf, offset=(0, 0)):
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
+
+        if self.game.cm.gun:
+            if self.flip:
+                surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False), 
+                        (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0], 
+                        self.rect().centery - offset[1]))
+            else:
+                surf.blit(self.game.assets['gun'], 
+                        (self.rect().centerx + 4 - offset[0], 
+                        self.rect().centery - offset[1]))
 
             
     def jump(self):

@@ -5,7 +5,7 @@ class KeyboardManager:
     def __init__(self, game):
         self.game = game
 
-    def handle_keydown(self):
+    def handle_keyboard_input(self):
         for event in pygame.event.get():
             
             if event.type == pygame.QUIT:
@@ -68,3 +68,10 @@ class KeyboardManager:
                     self.game.movement[0] = False
                 if event.key == pygame.K_RIGHT:
                     self.game.movement[1] = False
+
+    def handle_mouse_input(self):
+        mouse_buttons = pygame.mouse.get_pressed()
+        if mouse_buttons[0]:  # Left mouse button
+            self.game.player.shoot()
+        if mouse_buttons[2]:  # Right mouse button
+            self.game.player.dash()
