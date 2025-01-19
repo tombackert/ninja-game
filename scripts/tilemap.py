@@ -114,7 +114,7 @@ class Tilemap:
         try:
             with open(path, 'w') as f:
                 json.dump(game_state, f, indent=4)
-            print(f"Game saved under {path}")
+            #print(f"Game saved under {path}")
             return True
         except Exception as e:
             print(f"Error saving tilemap: {e}")
