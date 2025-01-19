@@ -9,7 +9,7 @@ from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '7'
+MAP_NAME = '9'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
@@ -53,6 +53,10 @@ class Editor:
         self.right_clicking = False
         self.shift = False
         self.ongrid = True
+        self.multi_tile = False
+
+        self.multi_tile_size = 3
+        self.m_offset = self.multi_tile_size // 2
 
         settings.load_settings()
         settings.set_editor_level(int(MAP_NAME))
@@ -84,26 +88,47 @@ class Editor:
                 self.display.blit(current_tile_img, mpos)
 
             # Object placement
-            if self.clicking and self.ongrid:
-                tile_type = self.tile_list[self.tile_group]
-                variant = self.tile_variant
-                pos = tile_pos
+            if not self.multi_tile:
+                if self.clicking and self.ongrid:
+                    tile_type = self.tile_list[self.tile_group]
+                    variant = self.tile_variant
+                    pos = tile_pos
+                    
+                    self.tilemap.tilemap[str(pos[0]) + ';' + str(pos[1])] = {
+                        'type': tile_type, 
+                        'variant': variant, 
+                        'pos': pos
+                    }
+                    #print('Tile added of type: ', tile_type)
                 
-                self.tilemap.tilemap[str(pos[0]) + ';' + str(pos[1])] = {
-                    'type': tile_type, 
-                    'variant': variant, 
-                    'pos': pos
-                }
-                #print('Tile added of type: ', tile_type)
+                # Offgrid tiles
+                elif self.clicking and not self.ongrid:
+                    self.tilemap.offgrid_tiles.append({
+                        'type': self.tile_list[self.tile_group], 
+                        'variant': self.tile_variant, 
+                        'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
+                    })
+                    #print('Offgrid tile added of type: ', self.tile_list[self.tile_group])
+            
+            if self.multi_tile:
+                for x in range(-self.m_offset, self.m_offset + 1):
+                    for y in range(-self.m_offset, self.m_offset + 1):
+                        pos = (tile_pos[0] + x, tile_pos[1] + y)
+                        self.display.blit(current_tile_img, (
+                            pos[0] * self.tilemap.tile_size - self.scroll[0],
+                            pos[1] * self.tilemap.tile_size - self.scroll[1]
+                        ))
+                        if self.clicking:
+                            self.tilemap.tilemap[f"{pos[0]};{pos[1]}"] = {
+                                'type': self.tile_list[self.tile_group],
+                                'variant': self.tile_variant,
+                                'pos': pos
+                            }
 
-            # Offgrid tiles
-            elif self.clicking and not self.ongrid:
-                self.tilemap.offgrid_tiles.append({
-                    'type': self.tile_list[self.tile_group], 
-                    'variant': self.tile_variant, 
-                    'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
-                })
-                #print('Offgrid tile added of type: ', self.tile_list[self.tile_group])
+            
+            
+            
+            
 
             # Tile removal
             if self.right_clicking:
@@ -117,6 +142,16 @@ class Editor:
                     tile_r = pygame.Rect(tile['pos'][0] - self.scroll[0], tile['pos'][1] - self.scroll[1], tile_img.get_width(), tile_img.get_height())
                     if tile_r.collidepoint(mpos):
                         self.tilemap.offgrid_tiles.remove(tile)
+
+                if self.multi_tile:
+                    for x in range(-self.m_offset, self.m_offset + 1):
+                        for y in range(-self.m_offset, self.m_offset + 1):
+                            pos = (tile_pos[0] + x, tile_pos[1] + y)
+                            tile_loc = f"{pos[0]};{pos[1]}"
+                            if tile_loc in self.tilemap.tilemap:
+                                del self.tilemap.tilemap[tile_loc]
+
+
             self.display.blit(current_tile_img, (5, 5))
             tile_name = f"{self.tile_list[self.tile_group]}/{self.tile_variant}"
             name_surface = self.font.render(tile_name, True, (0, 0, 0))
@@ -133,18 +168,26 @@ class Editor:
                         self.clicking = True
                     if event.button == 3:
                         self.right_clicking = True
-                    if self.shift:
+                    if not pygame.key.get_pressed()[pygame.K_SPACE]:
+                        if self.shift and not pygame.key.get_pressed():
+                            if event.button == 4:
+                                self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
+                            if event.button == 5:
+                                self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
+                        else:
+                            if event.button == 4:
+                                self.tile_group = (self.tile_group - 1) % len(self.tile_list)
+                                self.tile_variant = 0
+                            if event.button == 5:
+                                self.tile_group = (self.tile_group + 1) % len(self.tile_list)
+                                self.tile_variant = 0
+                    if pygame.key.get_pressed()[pygame.K_SPACE]:
                         if event.button == 4:
-                            self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
+                            self.multi_tile_size = max(1, self.multi_tile_size - 1)
+                            self.m_offset = self.multi_tile_size // 2
                         if event.button == 5:
-                            self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
-                    else:
-                        if event.button == 4:
-                            self.tile_group = (self.tile_group - 1) % len(self.tile_list)
-                            self.tile_variant = 0
-                        if event.button == 5:
-                            self.tile_group = (self.tile_group + 1) % len(self.tile_list)
-                            self.tile_variant = 0
+                            self.multi_tile_size += 1
+                            self.m_offset = self.multi_tile_size // 2
 
                 if event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -181,6 +224,8 @@ class Editor:
                         self.tilemap.save(CURRENT_MAP)
                     if event.key == pygame.K_t:
                         self.tilemap.autotile()
+                    if event.key == pygame.K_m:
+                        self.multi_tile = not self.multi_tile
                 
                     if event.key == pygame.K_ESCAPE:
                         self.tilemap.save(CURRENT_MAP)
