@@ -50,6 +50,8 @@ class Menu:
         start_index = 0
         levels_per_page = 5
 
+        msg_timer = 0
+
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -71,11 +73,18 @@ class Menu:
                         elif level_index < start_index:
                             start_index = level_index
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        self.selected_level = levels[level_index]
-                        settings.selected_level = self.selected_level
+                        if settings.is_level_playable(levels[level_index]):
+                            self.selected_level = levels[level_index]
+                            settings.selected_level = self.selected_level
+                        else:
+                            msg_timer = 60
                 
             UI.render_menu_bg(self.screen, self.display, self.bg)
             UI.render_menu_title(self.screen, "Select Level", 320, 50)
+
+            if msg_timer > 0:
+                UI.render_menu_msg(self.screen, "Level not unlocked!", 320, 400)
+                msg_timer -= 1
             
             level_options = []
             for level in levels[start_index:start_index + levels_per_page]:
@@ -87,6 +96,13 @@ class Menu:
             UI.render_o_box(self.screen, level_options, level_index - start_index, 320, 150, 40, 25)
             UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
             UI.render_game_ui_element(self.screen, f"Level: {self.selected_level}", 5, 5)
+
+            for i, level in enumerate(level_options):
+                current_level = levels[start_index + i]
+                if settings.is_level_playable(current_level):
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", 450, 150 + (i * 40), 0.15)
+                else:
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", 450, 150 + (i * 40), 0.15)
 
             pygame.display.update()
             self.clock.tick(60)

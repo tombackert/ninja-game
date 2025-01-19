@@ -1,6 +1,18 @@
 {
     "music_volume": 0.0,
-    "sound_volume": 0.0,
-    "selected_level": 3,
-    "selected_editor_level": 10
+    "sound_volume": 0.3,
+    "selected_editor_level": 10,
+    "playable_levels": {
+        "0": true,
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": false,
+        "6": false,
+        "7": false,
+        "8": false,
+        "9": false,
+        "10": true
+    }
 }

@@ -184,10 +184,9 @@ class Game:
 
                 #### START COMPUTE GAME FLAGS
 
-                # Flaggen-Kollision abfragen
                 for flag_rect in self.flags:
                     if self.player.rect().colliderect(flag_rect):
-                        # print("You reached the flag!")
+                        #print("You reached the flag!")
                         self.endpoint = True
 
                 if self.endpoint:
@@ -195,6 +194,7 @@ class Game:
                     if self.transition > 30:
                         self.timer.update_best_time()
                         self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
+                        settings.set_level_to_playable(self.level)
                         settings.selected_level = self.level
                         self.load_level(self.level)
 
