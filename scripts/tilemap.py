@@ -156,7 +156,7 @@ class Tilemap:
                     enemy.alive = enemy_data['alive']
                     self.enemies.append(enemy)
 
-            print(f"Tilemap loaded from {path}")
+            #print(f"Tilemap loaded from {path}")
         except Exception as e:
             traceback.print_exc()
             print(f"Error while loading Tilemap: {e}")

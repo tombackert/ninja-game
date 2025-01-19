@@ -14508,20 +14508,236 @@
                     4
                 ]
             },
-            "31;3": {
-                "type": "flag",
-                "variant": 0,
-                "pos": [
-                    31,
-                    3
-                ]
-            },
             "-89;-39": {
                 "type": "flag",
                 "variant": 0,
                 "pos": [
                     -89,
                     -39
+                ]
+            },
+            "29;3": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    29,
+                    3
+                ]
+            },
+            "32;3": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    32,
+                    3
+                ]
+            },
+            "4;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    4,
+                    1
+                ]
+            },
+            "29;2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    29,
+                    2
+                ]
+            },
+            "30;2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    30,
+                    2
+                ]
+            },
+            "31;2": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    31,
+                    2
+                ]
+            },
+            "29;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    29,
+                    1
+                ]
+            },
+            "30;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    30,
+                    1
+                ]
+            },
+            "31;1": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    31,
+                    1
+                ]
+            },
+            "44;-27": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    44,
+                    -27
+                ]
+            },
+            "46;-28": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    46,
+                    -28
+                ]
+            },
+            "48;-27": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    48,
+                    -27
+                ]
+            },
+            "50;-28": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    50,
+                    -28
+                ]
+            },
+            "69;-39": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    69,
+                    -39
+                ]
+            },
+            "56;-52": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    56,
+                    -52
+                ]
+            },
+            "55;-52": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    55,
+                    -52
+                ]
+            },
+            "56;-56": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    56,
+                    -56
+                ]
+            },
+            "55;-56": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    55,
+                    -56
+                ]
+            },
+            "14;-51": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    14,
+                    -51
+                ]
+            },
+            "4;-49": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    4,
+                    -49
+                ]
+            },
+            "-7;-45": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -7,
+                    -45
+                ]
+            },
+            "-17;-44": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -17,
+                    -44
+                ]
+            },
+            "-1;-77": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -1,
+                    -77
+                ]
+            },
+            "-2;-77": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -2,
+                    -77
+                ]
+            },
+            "-13;-82": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -13,
+                    -82
+                ]
+            },
+            "-14;-82": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -14,
+                    -82
+                ]
+            },
+            "-25;-78": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -25,
+                    -78
+                ]
+            },
+            "-26;-78": {
+                "type": "coin",
+                "variant": 0,
+                "pos": [
+                    -26,
+                    -78
                 ]
             }
         },
@@ -16413,6 +16629,262 @@
                 "pos": [
                     14.0,
                     -6.5
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    544.0,
+                    22.0
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    544.0,
+                    22.0
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    544.0,
+                    22.0
+                ]
+            },
+            {
+                "type": "large_decor",
+                "variant": 2,
+                "pos": [
+                    544.0,
+                    22.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    486.5,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    486.5,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    486.5,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    486.5,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    486.5,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    523.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    523.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    523.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    523.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    523.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    431.0,
+                    49.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    431.0,
+                    49.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    431.0,
+                    49.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    431.0,
+                    49.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    431.0,
+                    49.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    539.5,
+                    112.0
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
+                ]
+            },
+            {
+                "type": "decor",
+                "variant": 0,
+                "pos": [
+                    341.0,
+                    48.5
                 ]
             }
         ]
