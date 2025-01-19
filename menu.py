@@ -146,7 +146,16 @@ class Menu:
             UI.render_game_ui_element(self.screen, f"${self.cm.coins}", 5, 5)
 
             end_index = min(start_index + options_per_page, len(options))
-            UI.render_o_box(self.screen, options[start_index:end_index], selected_option - start_index, 320, 130, 40, 25)
+            visible_options = options[start_index:end_index]
+            UI.render_o_box(self.screen, visible_options, selected_option - start_index, 320, 130, 40, 25)
+            
+            for i, option in enumerate(visible_options):
+                item_name = option.split('$')[0].strip()
+                y_pos = 130 + (i * 40)
+                if not self.cm.is_purchaseable(item_name):
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", 600, y_pos, 0.15)
+                else:
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", 600, y_pos, 0.15)
 
             item_name = options[selected_option].split('$')[0].strip()
             msg = f"{item_name}: {str(self.cm.get_amount(item_name)):<4}"

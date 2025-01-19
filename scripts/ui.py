@@ -12,6 +12,7 @@ class UI:
     GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
+    LOCK_IMG = pygame.image.load("data/images/gun.png")
 
     @staticmethod
     def get_font(size):
@@ -207,3 +208,29 @@ class UI:
             y=y,
             text_color=UI.GAME_UI_COLOR,
         )
+
+    @staticmethod
+    def draw_img_outline(surface, img, x, y, outline_color=(0,0,0)):
+        
+        mask = pygame.mask.from_surface(img)
+        outline_surf = mask.to_surface(setcolor=outline_color, unsetcolor=(0,0,0,0))
+
+        offsets = [
+            (-1, -1), (-1, 0), (-1, 1),
+            (0,  -1),          (0,  1),
+            (1,  -1),  (1, 0),  (1,  1)
+        ]
+        for ox, oy in offsets:
+            surface.blit(outline_surf, (x + ox, y + oy))
+
+        surface.blit(img, (x, y))
+    
+    @staticmethod
+    def render_ui_img(display, p, x, y, scale=1):
+        img = pygame.image.load(p)
+        img = pygame.transform.scale(img, (int(img.get_width() * scale), int(img.get_height() * scale)))
+        display.blit(img, (x - img.get_width() / 2, y - img.get_height() / 2))
+        UI.draw_img_outline(display, img, x - img.get_width() / 2, y - img.get_height() / 2)
+
+
+    

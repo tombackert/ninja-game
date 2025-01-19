@@ -162,10 +162,10 @@ class CollectableManager:
                 self.save_collectables()
                 return "success"
             else:
-                print("Not enough coins!")
+                #print("Not enough coins!")
                 return "not enough coins"
         else:
-            print(f"{item} is not purchaseable!")
+            #print(f"{item} is not purchaseable!")
             return "not purchaseable"
 
     def get_price(self, item):
