@@ -7,6 +7,7 @@ import pygame.font
 import json
 from datetime import datetime
 
+from scripts.displayManager import DisplayManager
 from scripts.entities import PhysicsEntity, Player, Enemy
 from scripts.utils import load_image, load_images, Animation
 from scripts.tilemap import Tilemap
@@ -27,12 +28,18 @@ class Game:
         
         pygame.init()
 
-        # Screen setup
-        pygame.display.set_caption('Ninja Game')
-        self.screen = pygame.display.set_mode((640, 480))
-        self.display = pygame.Surface((320, 240), pygame.SRCALPHA)
-        self.display_2 = pygame.Surface((320, 240))
-        self.display_3 = pygame.Surface((320, 240))
+        dm = DisplayManager()
+        self.BASE_W = dm.BASE_W
+        self.BASE_H = dm.BASE_H
+        self.WIN_W = dm.WIN_W
+        self.WIN_H = dm.WIN_H
+
+        pygame.display.set_caption("Ninja Game")
+        self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
+
+        self.display = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
+        self.display_2 = pygame.Surface((self.BASE_W, self.BASE_H))
+        self.display_3 = pygame.Surface((self.BASE_W, self.BASE_H))
 
         # Clock
         self.clock = pygame.time.Clock()
@@ -47,7 +54,7 @@ class Game:
             'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'player': load_image('entities/player.png'),
-            'background': load_image('background.png'),
+            'background': load_image('background-big.png'),
             'clouds': load_images('clouds'),
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
@@ -234,9 +241,9 @@ class Game:
                 self.display_2.blit(self.display, (0, 0))
 
                 # UI 
-                UI.render_game_ui_element(self.display_2, f"{self.timer.text}", 250, 5)
-                UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", 250, 15)
-                UI.render_game_ui_element(self.display_2, f"Level: {self.level}", 130, 5)
+                UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
+                UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
+                UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
                 UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
                 UI.render_game_ui_element(self.display_2, f"Coins: ${self.cm.coins}", 5, 15)
                 UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)

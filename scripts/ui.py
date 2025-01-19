@@ -22,7 +22,8 @@ class UI:
     def draw_text_with_outline(surface, font, text, x, y,
                                text_color=(255,255,255),
                                outline_color=(0,0,0),
-                               center=False):
+                               center=False,
+                               scale=1):
 
         text_surf = font.render(text, True, text_color)
 
@@ -31,9 +32,9 @@ class UI:
             x, y = text_rect.x, text_rect.y
 
         offsets = [
-            (-1, -1), (-1, 0), (-1, 1),
-            (0,  -1),           (0,  1),
-            (1,  -1),  (1,  0),  (1,  1)
+            (-1*scale, -1*scale), (-1*scale, 0), (-1*scale, 1*scale),
+            (0*scale,  -1*scale),                 (0*scale,  1*scale),
+            (1*scale,  -1*scale),  (1*scale,  0),  (1*scale,  1*scale)
         ]
         for ox, oy in offsets:
             outline_surf = font.render(text, True, outline_color)
@@ -143,7 +144,8 @@ class UI:
                 x=x,
                 y=y + i * spacing,
                 text_color=button_color,
-                center=True
+                center=True,
+                scale=3
             )
 
         return option_rects
@@ -159,20 +161,22 @@ class UI:
                 x=320,
                 y=y + i * spacing,
                 text_color=UI.PM_COLOR,
-                center=True
+                center=True,
+                scale=3
             )
     
     @staticmethod
     def render_menu_title(screen, title, x, y):
-        font_40 = UI.get_font(40)
+        font = UI.get_font(50)
         UI.draw_text_with_outline(
             surface=screen,
-            font=font_40,
+            font=font,
             text=title,
             x=x,
             y=y,
             text_color=UI.PM_COLOR,
-            center=True
+            center=True,
+            scale=3
         )
 
     @staticmethod
@@ -183,7 +187,7 @@ class UI:
 
     @staticmethod
     def render_menu_msg(screen, msg, x, y):
-        font_15 = UI.get_font(15)
+        font_15 = UI.get_font(30)
         UI.draw_text_with_outline(
             surface=screen,
             font=font_15,
@@ -191,18 +195,35 @@ class UI:
             x=x,
             y=y,
             text_color=UI.GAME_UI_COLOR,
-            center=True
+            center=True,
+            scale=3
+        )
+    
+    @staticmethod
+    def render_menu_ui_element(display, text, x, y, align='left'):
+        font = UI.get_font(15)
+        if align == 'right':
+            text_surface = font.render(text, True, UI.GAME_UI_COLOR)
+            x = x - text_surface.get_width()
+        UI.draw_text_with_outline(
+            surface=display,
+            font=font,
+            text=text,
+            x=x,
+            y=y,
+            text_color=UI.GAME_UI_COLOR,
+            scale=2
         )
 
     @staticmethod
     def render_game_ui_element(display, text, x, y, align='left'):
-        font_8 = UI.get_font(8)
+        font = UI.get_font(8)
         if align == 'right':
-            text_surface = font_8.render(text, True, UI.GAME_UI_COLOR)
+            text_surface = font.render(text, True, UI.GAME_UI_COLOR)
             x = x - text_surface.get_width()
         UI.draw_text_with_outline(
             surface=display,
-            font=font_8,
+            font=font,
             text=text,
             x=x,
             y=y,
@@ -210,15 +231,15 @@ class UI:
         )
 
     @staticmethod
-    def draw_img_outline(surface, img, x, y, outline_color=(0,0,0)):
+    def draw_img_outline(surface, img, x, y, outline_color=(0,0,0), scale=2):
         
         mask = pygame.mask.from_surface(img)
         outline_surf = mask.to_surface(setcolor=outline_color, unsetcolor=(0,0,0,0))
 
         offsets = [
-            (-1, -1), (-1, 0), (-1, 1),
-            (0,  -1),          (0,  1),
-            (1,  -1),  (1, 0),  (1,  1)
+            (-1*scale, -1*scale), (-1*scale, 0), (-1*scale, 1*scale),
+            (0*scale,  -1*scale),                 (0*scale,  1*scale),
+            (1*scale,  -1*scale),  (1*scale,  0),  (1*scale,  1*scale)
         ]
         for ox, oy in offsets:
             surface.blit(outline_surf, (x + ox, y + oy))

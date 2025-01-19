@@ -3,6 +3,7 @@ import sys
 import os
 from datetime import datetime
 from scripts.button import Button
+from scripts.displayManager import DisplayManager
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.collectableManager import CollectableManager
@@ -11,13 +12,20 @@ from scripts.ui import UI
 class Menu:
 
     def __init__(self):
+
         pygame.init()
-        # Initialize screen and display surfaces
-        self.screen = pygame.display.set_mode((640, 480))
+
+        dm = DisplayManager()
+        self.BASE_W = dm.BASE_W
+        self.BASE_H = dm.BASE_H
+        self.WIN_W = dm.WIN_W
+        self.WIN_H = dm.WIN_H
+
         pygame.display.set_caption("Ninja Game")
-        self.display = pygame.Surface((320, 240))
+        self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
+        self.display_1 = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
-        self.bg = pygame.image.load("data/images/background.png")
+        self.bg = pygame.image.load("data/images/background-big.png")
 
         # Load music
         pygame.mixer.music.load('data/music.wav')
@@ -30,6 +38,11 @@ class Menu:
 
         self.cm = CollectableManager(None)
         self.cm.load_collectables()
+
+        self.pl = 10
+        self.pr = 10
+        self.pt = 10
+        self.pb = 25
 
         self.menu()
         return pygame.font.Font("data/font.ttf", size)
@@ -79,11 +92,11 @@ class Menu:
                         else:
                             msg_timer = 60
                 
-            UI.render_menu_bg(self.screen, self.display, self.bg)
-            UI.render_menu_title(self.screen, "Select Level", 320, 50)
+            UI.render_menu_bg(self.screen, self.display_1, self.bg)
+            UI.render_menu_title(self.screen, "Select Level", self.WIN_W // 2, 200)
 
             if msg_timer > 0:
-                UI.render_menu_msg(self.screen, "Level not unlocked!", 320, 400)
+                UI.render_menu_msg(self.screen, "Level not unlocked!", self.WIN_W // 2, 500)
                 msg_timer -= 1
             
             level_options = []
@@ -93,16 +106,17 @@ class Menu:
                 else:
                     level_options.append(f"Level {level:<2}")
 
-            UI.render_o_box(self.screen, level_options, level_index - start_index, 320, 150, 40, 25)
-            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
-            UI.render_game_ui_element(self.screen, f"Level: {self.selected_level}", 5, 5)
+            UI.render_o_box(self.screen, level_options, level_index - start_index, self.WIN_W // 2, 300, 50, 30)
+            UI.render_menu_ui_element(self.screen, f"Level: {self.selected_level}", self.pl, self.pt)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "w/a to navigate", self.WIN_W // 2 - 100, self.WIN_H - self.pb)
 
             for i, level in enumerate(level_options):
                 current_level = levels[start_index + i]
                 if settings.is_level_playable(current_level):
-                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", 450, 150 + (i * 40), 0.15)
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", self.WIN_W // 2 + 150, 300 + (i * 50), 0.15)
                 else:
-                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", 450, 150 + (i * 40), 0.15)
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", self.WIN_W // 2 + 150, 300 + (i * 50), 0.15)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -157,31 +171,32 @@ class Menu:
                                 w_msg = f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
                                 w_msg_timer = 60
 
-            UI.render_menu_bg(self.screen, self.display, self.bg)
-            UI.render_menu_title(self.screen, "Store", 320, 50)
-            UI.render_game_ui_element(self.screen, f"${self.cm.coins}", 5, 5)
+            UI.render_menu_bg(self.screen, self.display_1, self.bg)
+            UI.render_menu_title(self.screen, "Store", self.WIN_W // 2, 200)
+            UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
 
             end_index = min(start_index + options_per_page, len(options))
             visible_options = options[start_index:end_index]
-            UI.render_o_box(self.screen, visible_options, selected_option - start_index, 320, 130, 40, 25)
+            UI.render_o_box(self.screen, visible_options, selected_option - start_index, self.WIN_W // 2, 300, 50, 30)
             
             for i, option in enumerate(visible_options):
                 item_name = option.split('$')[0].strip()
-                y_pos = 130 + (i * 40)
+                y_pos = 300 + (i * 50)
                 if not self.cm.is_purchaseable(item_name):
-                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", 600, y_pos, 0.15)
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", self.WIN_W // 2 + 350, y_pos, 0.15)
                 else:
-                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", 600, y_pos, 0.15)
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png", self.WIN_W // 2 + 350, y_pos, 0.15)
 
             item_name = options[selected_option].split('$')[0].strip()
             msg = f"{item_name}: {str(self.cm.get_amount(item_name)):<4}"
-            UI.render_game_ui_element(self.screen, msg, 635, 5, "right")
+            UI.render_menu_ui_element(self.screen, msg, self.WIN_W - self.pr, self.pt, "right")
             
             if w_msg_timer > 0:
-                UI.render_menu_msg(self.screen, w_msg, 320, 400)
+                UI.render_menu_msg(self.screen, w_msg, self.WIN_W // 2, 800)
                 w_msg_timer -= 1
 
-            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "w/a to navigate", self.WIN_W // 2 - 100, self.WIN_H - self.pb)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -221,10 +236,11 @@ class Menu:
                         elif options[selected_option] == options[1]:
                             settings.sound_volume = min(1.0, settings.sound_volume + 0.1)
             
-            UI.render_menu_bg(self.screen, self.display, self.bg)
-            UI.render_menu_title(self.screen, title, 320, 50)
-            UI.render_o_box(self.screen, options, selected_option, 320, 150, 50)
-            UI.render_game_ui_element(self.screen, "backspace to menu", 5, 465)
+            UI.render_menu_bg(self.screen, self.display_1, self.bg)
+            UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
+            UI.render_o_box(self.screen, options, selected_option, self.WIN_W // 2, 300, 50)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "w/a to navigate", self.WIN_W // 2 - 100, self.WIN_H - self.pb)
 
             pygame.display.update()
             self.clock.tick(60)
@@ -237,9 +253,10 @@ class Menu:
 
         while True:
 
-            UI.render_menu_bg(self.screen, self.display, self.bg)
-            UI.render_menu_title(self.screen, title, 320, 50)
-            UI.render_o_box(self.screen, options, self.selected_option, 320, 150, 50)
+            UI.render_menu_bg(self.screen, self.display_1, self.bg)
+            UI.render_menu_title(self.screen, title, self.WIN_W // 2 , 200)
+            UI.render_o_box(self.screen, options, self.selected_option, self.WIN_W // 2, 300, 50)
+            UI.render_menu_ui_element(self.screen, "w/a to navigate", self.WIN_W // 2 - 100, self.WIN_H - self.pb)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -272,12 +289,6 @@ class Menu:
 
     def pause_menu(game):
         title = "Pause Menu"
-        info = [
-            f"Level: {game.level}", 
-            f"Time: {game.timer.text}", 
-            f"Best Time: {game.timer.best_time_text}", 
-            f"Coins: {game.cm.coins}"
-        ]
         options = ["Continue", "Save Game", "Menu"]
         selected_option = 0
         pause = True
@@ -325,12 +336,18 @@ class Menu:
             bg = game.assets['background']
 
             UI.render_menu_bg(screen, display, bg)
-            UI.render_menu_title(screen, title, 320, 50)
-            UI.render_info_box(screen, info, 100, 20)
-            UI.render_o_box(screen, options, selected_option, 320, 250, 40)
+            UI.render_menu_title(screen, title, game.WIN_W // 2, 200)
+            UI.render_menu_ui_element(screen, f"{game.timer.text}", game.WIN_W - 130, 5)
+            UI.render_menu_ui_element(screen, f"{game.timer.best_time_text}", game.WIN_W - 130, 25)
+            UI.render_menu_ui_element(screen, f"Level: {game.level}", game.WIN_W // 2 - 40, 5)
+            UI.render_menu_ui_element(screen, f"Lives: {game.player.lifes}", 5, 5)
+            UI.render_menu_ui_element(screen, f"Coins: ${game.cm.coins}", 5, 25)
+            UI.render_menu_ui_element(screen, f"Ammo:  {game.cm.ammo}", 5, 45)
+            UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 300, 50)
+            UI.render_menu_ui_element(screen, "w/a to navigate", game.WIN_W // 2 - 100, game.WIN_H - 25)
             
             if message_timer > 0:
-                UI.render_menu_msg(screen, message, 320, 400)
+                UI.render_menu_msg(screen, message, game.WIN_W // 2, 500)
                 message_timer -= 1
 
             pygame.display.update()
