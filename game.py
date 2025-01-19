@@ -173,6 +173,7 @@ class Game:
         self.sfx['ambience'].play(-1)
 
         while self.running:
+            self.cm.load_collectables()
 
             while not self.paused:
 
@@ -247,6 +248,7 @@ class Game:
                 pygame.display.update()
                 self.clock.tick(60)  # 60fps
 
+            self.cm.save_collectables()
             Menu.pause_menu(self)
 
         print("Game Over")

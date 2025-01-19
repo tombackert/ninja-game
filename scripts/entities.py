@@ -135,6 +135,7 @@ class Enemy(PhysicsEntity):
             if self.rect().colliderect(self.game.player.rect()):
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx['hit'].play()
+                self.game.cm.coins += 1
                 for i in range(30):
                     angle = random.random() * math.pi * 2
                     speed = random.random() * 5
@@ -156,6 +157,7 @@ class Enemy(PhysicsEntity):
                 self.game.projectiles.remove(projectile)
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx['hit'].play()
+                self.game.cm.coins += 1
                 for i in range(30):
                     angle = random.random() * math.pi * 2
                     speed = random.random() * 5

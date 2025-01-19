@@ -27,10 +27,10 @@ class CollectableManager:
 
 
     ITEMS = {
-        "Gun": 2500,
-        "Ammo": 100,
+        "Gun": 500,
+        "Ammo": 50,
         "Shield": 100,
-        "Moon Boots": 5000,
+        "Moon Boots": 2500,
         "Ninja Stars": 500,
         "Sword": 1000,
         "Grapple Hook": 5000,

@@ -247,8 +247,9 @@ class Menu:
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_BACKSPACE:
-                        pygame.quit()
-                        sys.exit()
+                        pass
+                        #pygame.quit()
+                        #sys.exit()
                     if event.key == pygame.K_UP or event.key == pygame.K_w:
                         self.selected_option = (self.selected_option - 1) % len(options)
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
