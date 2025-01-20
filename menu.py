@@ -96,7 +96,7 @@ class Menu:
             UI.render_menu_title(self.screen, "Select Level", self.WIN_W // 2, 200)
 
             if msg_timer > 0:
-                UI.render_menu_msg(self.screen, "Level not unlocked!", self.WIN_W // 2, 500)
+                UI.render_menu_msg(self.screen, "Level not unlocked!", self.WIN_W // 2, 600)
                 msg_timer -= 1
             
             level_options = []
@@ -343,11 +343,11 @@ class Menu:
             UI.render_menu_ui_element(screen, f"Lives: {game.player.lifes}", 5, 5)
             UI.render_menu_ui_element(screen, f"Coins: ${game.cm.coins}", 5, 25)
             UI.render_menu_ui_element(screen, f"Ammo:  {game.cm.ammo}", 5, 45)
-            UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 300, 50)
+            UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 400, 50)
             UI.render_menu_ui_element(screen, "w/a to navigate", game.WIN_W // 2 - 100, game.WIN_H - 25)
             
             if message_timer > 0:
-                UI.render_menu_msg(screen, message, game.WIN_W // 2, 500)
+                UI.render_menu_msg(screen, message, game.WIN_W // 2, 700)
                 message_timer -= 1
 
             pygame.display.update()

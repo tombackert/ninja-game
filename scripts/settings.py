@@ -22,6 +22,7 @@ class Settings:
             8: False,
             9: False,
             10: False,
+            15: False,
         }
 
         self.load_settings()
@@ -94,7 +95,7 @@ class Settings:
         data = {
             "music_volume": self._music_volume,
             "sound_volume": self._sound_volume,
-            #"selected_level": self._selected_level,
+            "selected_level": self._selected_level,
             "selected_editor_level": self.selected_editor_level,
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()}
         }

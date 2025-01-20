@@ -86,7 +86,8 @@ class Game:
         # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
         self.players = [Player(self, (100, 100), (8, 15), 0, lifes=3, respawn_pos=(100, 100))]
-        self.player = self.players[0]
+        self.playerID = 0
+        self.player = self.players[self.playerID]
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Global variables
@@ -201,11 +202,18 @@ class Game:
                     self.transition += 1
                     if self.transition > 30:
                         self.timer.update_best_time()
-                        self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
+                        levels = [int(f.split('.')[0]) for f in os.listdir('data/maps') if f.endswith('.json')]
+                        levels.sort()
+                        current_level_index = levels.index(self.level)
+                        print(current_level_index)
+                        if current_level_index == len(levels) - 1:
+                            self.load_level(self.level)
+                        else:
+                            next_level = levels[current_level_index + 1]
+                            self.level = next_level
                         settings.set_level_to_playable(self.level)
                         settings.selected_level = self.level
                         self.load_level(self.level)
-
                 if self.transition < 0:
                     self.transition += 1
 

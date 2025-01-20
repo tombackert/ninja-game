@@ -1,14 +1,60 @@
 {
     "meta_data": {
-        "map": 10,
+        "map": 15,
         "timer": {
-            "current_time": "00:00:00",
-            "start_time": "00:00:00"
+            "current_time": "00:00.41",
+            "start_time": 3360
         }
     },
     "entities_data": {
-        "players": [],
-        "enemies": []
+        "players": [
+            {
+                "id": 0,
+                "pos": [
+                    160,
+                    81
+                ],
+                "velocity": [
+                    0,
+                    0.1
+                ],
+                "air_time": 1,
+                "action": "idle",
+                "flip": false,
+                "alive": true,
+                "lifes": 3,
+                "respawn_pos": [
+                    160,
+                    80
+                ]
+            }
+        ],
+        "enemies": [
+            {
+                "id": 0,
+                "pos": [
+                    336,
+                    33.6
+                ],
+                "velocity": [
+                    0,
+                    0.4
+                ],
+                "alive": true
+            },
+            {
+                "id": 1,
+                "pos": [
+                    336,
+                    129.6
+                ],
+                "velocity": [
+                    0,
+                    0.4
+                ],
+                "alive": true
+            }
+        ]
     },
     "map_data": {
         "tilemap": {
@@ -114,14 +160,6 @@
                 "pos": [
                     11,
                     6
-                ]
-            },
-            "10;5": {
-                "type": "spawners",
-                "variant": 0,
-                "pos": [
-                    10,
-                    5
                 ]
             },
             "12;6": {
@@ -402,22 +440,6 @@
                 "pos": [
                     19,
                     3
-                ]
-            },
-            "21;2": {
-                "type": "spawners",
-                "variant": 1,
-                "pos": [
-                    21,
-                    2
-                ]
-            },
-            "21;8": {
-                "type": "spawners",
-                "variant": 0,
-                "pos": [
-                    21,
-                    8
                 ]
             }
         },
