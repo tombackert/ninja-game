@@ -99,7 +99,7 @@ class Game:
         # Keyboard Manager
         self.km = KeyboardManager(self)
 
-        self.playerID = 1
+        self.playerID = 0
 
         # Load the selected level
         self.load_level(self.level)
@@ -183,7 +183,6 @@ class Game:
         pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
 
-        print(self.players)
 
         while self.running:
             self.cm.load_collectables()
@@ -200,7 +199,6 @@ class Game:
 
                 for flag_rect in self.flags:
                     if self.player.rect().colliderect(flag_rect):
-                        #print("You reached the flag!")
                         self.endpoint = True
 
                 if self.endpoint:
@@ -210,7 +208,6 @@ class Game:
                         levels = [int(f.split('.')[0]) for f in os.listdir('data/maps') if f.endswith('.json')]
                         levels.sort()
                         current_level_index = levels.index(self.level)
-                        print(current_level_index)
                         if current_level_index == len(levels) - 1:
                             self.load_level(self.level)
                         else:

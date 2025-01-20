@@ -257,6 +257,7 @@ class Menu:
             UI.render_menu_title(self.screen, title, self.WIN_W // 2 , 200)
             UI.render_o_box(self.screen, options, self.selected_option, self.WIN_W // 2, 300, 50)
             UI.render_menu_ui_element(self.screen, "w/a to navigate", self.WIN_W // 2 - 100, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "esc to quit", self.pl, self.WIN_H - self.pb)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -283,6 +284,9 @@ class Menu:
                         if options[self.selected_option] == options[4]:
                             pygame.quit()
                             sys.exit()
+                    if event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
 
             pygame.display.update()
             self.clock.tick(60)
