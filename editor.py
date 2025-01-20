@@ -53,6 +53,7 @@ class Editor:
         self.right_clicking = False
         self.shift = False
         self.ongrid = True
+        self.space = False
         self.multi_tile = False
 
         self.multi_tile_size = 3
@@ -83,52 +84,48 @@ class Editor:
                         int((mpos[1] + self.scroll[1]) // self.tilemap.tile_size))
 
             if self.ongrid:
-                self.display.blit(current_tile_img, (tile_pos[0] * self.tilemap.tile_size - self.scroll[0], tile_pos[1] * self.tilemap.tile_size - self.scroll[1]))
-            else:
+                if not self.multi_tile:
+                    self.display.blit(current_tile_img, (tile_pos[0] * self.tilemap.tile_size - self.scroll[0], tile_pos[1] * self.tilemap.tile_size - self.scroll[1]))
+                elif self.multi_tile:
+                    for x in range(-self.m_offset, self.m_offset + 1):
+                        for y in range(-self.m_offset, self.m_offset + 1):
+                            pos = (tile_pos[0] + x, tile_pos[1] + y)
+                            self.display.blit(current_tile_img, (
+                                pos[0] * self.tilemap.tile_size - self.scroll[0],
+                                pos[1] * self.tilemap.tile_size - self.scroll[1]
+                            ))
+            elif not self.ongrid:
                 self.display.blit(current_tile_img, mpos)
 
             # Object placement
-            if not self.multi_tile:
-                if self.clicking and self.ongrid:
-                    tile_type = self.tile_list[self.tile_group]
-                    variant = self.tile_variant
-                    pos = tile_pos
-                    
-                    self.tilemap.tilemap[str(pos[0]) + ';' + str(pos[1])] = {
-                        'type': tile_type, 
-                        'variant': variant, 
-                        'pos': pos
-                    }
-                    #print('Tile added of type: ', tile_type)
+            if self.clicking:
+                if self.ongrid:
+                    if not self.multi_tile:
+                        tile_type = self.tile_list[self.tile_group]
+                        variant = self.tile_variant
+                        pos = tile_pos
+                        self.tilemap.tilemap[str(pos[0]) + ';' + str(pos[1])] = {
+                            'type': tile_type, 
+                            'variant': variant, 
+                            'pos': pos
+                        }
+                    elif self.multi_tile:
+                        for x in range(-self.m_offset, self.m_offset + 1):
+                            for y in range(-self.m_offset, self.m_offset + 1):
+                                pos = (tile_pos[0] + x, tile_pos[1] + y)
+                                self.tilemap.tilemap[f"{pos[0]};{pos[1]}"] = {
+                                    'type': self.tile_list[self.tile_group],
+                                    'variant': self.tile_variant,
+                                    'pos': pos
+                                }
+                elif not self.ongrid:
+                    if not self.multi_tile:
+                        self.tilemap.offgrid_tiles.append({
+                            'type': self.tile_list[self.tile_group], 
+                            'variant': self.tile_variant, 
+                            'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
+                        })
                 
-                # Offgrid tiles
-                elif self.clicking and not self.ongrid:
-                    self.tilemap.offgrid_tiles.append({
-                        'type': self.tile_list[self.tile_group], 
-                        'variant': self.tile_variant, 
-                        'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
-                    })
-                    #print('Offgrid tile added of type: ', self.tile_list[self.tile_group])
-            
-            if self.multi_tile:
-                for x in range(-self.m_offset, self.m_offset + 1):
-                    for y in range(-self.m_offset, self.m_offset + 1):
-                        pos = (tile_pos[0] + x, tile_pos[1] + y)
-                        self.display.blit(current_tile_img, (
-                            pos[0] * self.tilemap.tile_size - self.scroll[0],
-                            pos[1] * self.tilemap.tile_size - self.scroll[1]
-                        ))
-                        if self.clicking:
-                            self.tilemap.tilemap[f"{pos[0]};{pos[1]}"] = {
-                                'type': self.tile_list[self.tile_group],
-                                'variant': self.tile_variant,
-                                'pos': pos
-                            }
-
-            
-            
-            
-            
 
             # Tile removal
             if self.right_clicking:
@@ -168,26 +165,25 @@ class Editor:
                         self.clicking = True
                     if event.button == 3:
                         self.right_clicking = True
-                    if not pygame.key.get_pressed()[pygame.K_SPACE]:
-                        if self.shift and not pygame.key.get_pressed():
-                            if event.button == 4:
-                                self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
-                            if event.button == 5:
-                                self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
-                        else:
-                            if event.button == 4:
-                                self.tile_group = (self.tile_group - 1) % len(self.tile_list)
-                                self.tile_variant = 0
-                            if event.button == 5:
-                                self.tile_group = (self.tile_group + 1) % len(self.tile_list)
-                                self.tile_variant = 0
-                    if pygame.key.get_pressed()[pygame.K_SPACE]:
+                    if self.shift:
+                        if event.button == 4:
+                            self.tile_variant = (self.tile_variant - 1) % len(self.assets[self.tile_list[self.tile_group]])
+                        if event.button == 5:
+                            self.tile_variant = (self.tile_variant + 1) % len(self.assets[self.tile_list[self.tile_group]])
+                    elif self.space and self.multi_tile:
                         if event.button == 4:
                             self.multi_tile_size = max(1, self.multi_tile_size - 1)
                             self.m_offset = self.multi_tile_size // 2
                         if event.button == 5:
                             self.multi_tile_size += 1
                             self.m_offset = self.multi_tile_size // 2
+                    elif not self.shift:
+                        if event.button == 4:
+                            self.tile_group = (self.tile_group - 1) % len(self.tile_list)
+                            self.tile_variant = 0
+                        if event.button == 5:
+                            self.tile_group = (self.tile_group + 1) % len(self.tile_list)
+                            self.tile_variant = 0
 
                 if event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
@@ -226,6 +222,8 @@ class Editor:
                         self.tilemap.autotile()
                     if event.key == pygame.K_m:
                         self.multi_tile = not self.multi_tile
+                    if event.key == pygame.K_SPACE:
+                        self.space = True
                 
                     if event.key == pygame.K_ESCAPE:
                         self.tilemap.save(CURRENT_MAP)
@@ -253,6 +251,8 @@ class Editor:
 
                     if event.key == pygame.K_LSHIFT:
                         self.shift = False
+                    if event.key == pygame.K_SPACE:
+                        self.space = False
 
             position = str(int(self.scroll[0])) + ', ' + str(int(self.scroll[1]))
             position_surface = self.font.render(position, True, (0, 0, 0))
