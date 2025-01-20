@@ -64,7 +64,10 @@ class UI:
 
         if not game.dead:
             for player in game.players:
-                player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
+                if player.id == game.playerID:
+                    player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
+                else:
+                    player.update(game.tilemap, (0, 0))  # Other players don't move
                 player.render(game.display, offset=render_scroll)
 
         # Projectiles

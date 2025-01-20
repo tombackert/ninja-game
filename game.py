@@ -85,9 +85,6 @@ class Game:
 
         # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
-        self.players = [Player(self, (100, 100), (8, 15), 0, lifes=3, respawn_pos=(100, 100))]
-        self.playerID = 0
-        self.player = self.players[self.playerID]
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Global variables
@@ -99,15 +96,17 @@ class Game:
         self.cm = CollectableManager(self)
         self.cm.load_collectables()
 
+        # Keyboard Manager
+        self.km = KeyboardManager(self)
+
+        self.playerID = 1
+
         # Load the selected level
         self.load_level(self.level)
 
         # Game state
         self.running = True
         self.paused = False
-
-        # Keyboard Manager
-        self.km = KeyboardManager(self)
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -134,51 +133,57 @@ class Game:
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
         ###### START LOAD LEVEL
+        self.enemies = []
+        self.players = []
+
         if respawn:
-            self.enemies = []
             enemy_id = 0
-            self.player.pos = self.player.respawn_pos
-            self.player.air_time = 0
+            for player in self.players:
+                player.pos = player.respawn_pos
+                player.air_time = 0
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
                 if spawner['variant'] == 1:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
         else:
-            self.enemies = []
             enemy_id = 0
-            player_spawned = False
+            player_id = 0
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
-                if spawner['variant'] == 0 and not player_spawned:
-                    self.player.pos = spawner['pos']
-                    self.player.respawn_pos = list(self.player.pos)
-                    self.player.air_time = 0
-                    player_spawned = True
+                if spawner['variant'] == 0:
+                    player = Player(self, spawner['pos'], (8, 15), player_id, lifes=lifes, respawn_pos=list(spawner['pos']))
+                    player.air_time = 0
+                    self.players.append(player)
+                    player_id += 1
                 else:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
             self.saves = 1
+            
+            # Set the current player if there are any players
+            if self.players:
+                self.player = self.players[self.playerID]
         ###### END LOAD LEVEL
-
+        
         self.projectiles = []
         self.particles = []
         self.sparks = []
 
         self.scroll = [0, 0]
         self.dead = 0
-        self.player.lifes = lifes
+        if self.players:
+            self.player.lifes = lifes
         self.transition = -30
         self.endpoint = False
 
         self.cm.load_collectables_from_tilemap(self.tilemap)
-
-    def get_font(self, size):
-        return pygame.font.Font("data/font.ttf", size)
 
     def run(self):
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
+
+        print(self.players)
 
         while self.running:
             self.cm.load_collectables()
