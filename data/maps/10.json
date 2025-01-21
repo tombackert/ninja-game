@@ -8,7 +8,452 @@
     },
     "entities_data": {
         "players": [],
-        "enemies": []
+        "enemies": [
+            {
+                "id": 0,
+                "pos": [
+                    -4,
+                    9
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 1,
+                "pos": [
+                    -9,
+                    18
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 2,
+                "pos": [
+                    -16,
+                    30
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 3,
+                "pos": [
+                    -14,
+                    30
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 4,
+                "pos": [
+                    -6,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 5,
+                "pos": [
+                    3,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 6,
+                "pos": [
+                    11,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 7,
+                "pos": [
+                    17,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 8,
+                "pos": [
+                    31,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 9,
+                "pos": [
+                    36,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 10,
+                "pos": [
+                    43,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 11,
+                "pos": [
+                    67,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 12,
+                "pos": [
+                    89,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 13,
+                "pos": [
+                    111,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 14,
+                "pos": [
+                    124,
+                    57
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 15,
+                "pos": [
+                    126,
+                    11
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 16,
+                "pos": [
+                    112,
+                    8
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 17,
+                "pos": [
+                    119,
+                    24
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 18,
+                "pos": [
+                    108,
+                    32
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 19,
+                "pos": [
+                    116,
+                    39
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 20,
+                "pos": [
+                    109,
+                    51
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 21,
+                "pos": [
+                    103,
+                    50
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 22,
+                "pos": [
+                    79,
+                    49
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 23,
+                "pos": [
+                    73,
+                    48
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 24,
+                "pos": [
+                    67,
+                    46
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 25,
+                "pos": [
+                    56,
+                    23
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 26,
+                "pos": [
+                    59,
+                    19
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 27,
+                "pos": [
+                    57,
+                    15
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 28,
+                "pos": [
+                    60,
+                    11
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 29,
+                "pos": [
+                    58,
+                    7
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 30,
+                "pos": [
+                    63,
+                    3
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 31,
+                "pos": [
+                    64,
+                    -1
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 32,
+                "pos": [
+                    76,
+                    11
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 33,
+                "pos": [
+                    79,
+                    19
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 34,
+                "pos": [
+                    49,
+                    21
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 35,
+                "pos": [
+                    24,
+                    21
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            },
+            {
+                "id": 36,
+                "pos": [
+                    2,
+                    12
+                ],
+                "velocity": [
+                    0,
+                    0
+                ],
+                "alive": true
+            }
+        ]
     },
     "map_data": {
         "tilemap": {
@@ -165594,6 +166039,302 @@
                 "pos": [
                     9,
                     25
+                ]
+            },
+            "-4;9": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -4,
+                    9
+                ]
+            },
+            "-9;18": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -9,
+                    18
+                ]
+            },
+            "-16;30": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -16,
+                    30
+                ]
+            },
+            "-14;30": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -14,
+                    30
+                ]
+            },
+            "-6;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    -6,
+                    57
+                ]
+            },
+            "3;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    3,
+                    57
+                ]
+            },
+            "11;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    11,
+                    57
+                ]
+            },
+            "17;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    17,
+                    57
+                ]
+            },
+            "31;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    31,
+                    57
+                ]
+            },
+            "36;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    36,
+                    57
+                ]
+            },
+            "43;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    43,
+                    57
+                ]
+            },
+            "67;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    67,
+                    57
+                ]
+            },
+            "89;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    89,
+                    57
+                ]
+            },
+            "111;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    111,
+                    57
+                ]
+            },
+            "124;57": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    124,
+                    57
+                ]
+            },
+            "126;11": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    126,
+                    11
+                ]
+            },
+            "112;8": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    112,
+                    8
+                ]
+            },
+            "119;24": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    119,
+                    24
+                ]
+            },
+            "108;32": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    108,
+                    32
+                ]
+            },
+            "116;39": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    116,
+                    39
+                ]
+            },
+            "109;51": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    109,
+                    51
+                ]
+            },
+            "103;50": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    103,
+                    50
+                ]
+            },
+            "79;49": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    79,
+                    49
+                ]
+            },
+            "73;48": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    73,
+                    48
+                ]
+            },
+            "67;46": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    67,
+                    46
+                ]
+            },
+            "56;23": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    56,
+                    23
+                ]
+            },
+            "59;19": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    59,
+                    19
+                ]
+            },
+            "57;15": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    57,
+                    15
+                ]
+            },
+            "60;11": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    60,
+                    11
+                ]
+            },
+            "58;7": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    58,
+                    7
+                ]
+            },
+            "63;3": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    63,
+                    3
+                ]
+            },
+            "64;-1": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    64,
+                    -1
+                ]
+            },
+            "76;11": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    76,
+                    11
+                ]
+            },
+            "79;19": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    79,
+                    19
+                ]
+            },
+            "49;21": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    49,
+                    21
+                ]
+            },
+            "24;21": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    24,
+                    21
+                ]
+            },
+            "2;12": {
+                "type": "spawners",
+                "variant": 1,
+                "pos": [
+                    2,
+                    12
                 ]
             }
         },

@@ -114,7 +114,7 @@ class Tilemap:
         try:
             with open(path, 'w') as f:
                 json.dump(game_state, f, indent=4)
-            #print(f"Game saved under {path}")
+            print(f"Game saved under {path}")
             return True
         except Exception as e:
             print(f"Error saving tilemap: {e}")
@@ -140,7 +140,7 @@ class Tilemap:
                 entities_data = data.get('entities_data', {})
 
                 for player_data in entities_data.get('players', []):
-                    player = Player(self.game, player_data['pos'], (8, 15), e_id=player_data['id'],
+                    player = Player(self.game, player_data['pos'], (8, 15), player_data['id'],
                                     lifes=player_data['lifes'], respawn_pos=player_data['respawn_pos'])
                     player.velocity = player_data['velocity']
                     player.air_time = player_data['air_time']
@@ -151,7 +151,7 @@ class Tilemap:
                     self.players.append(player)
 
                 for enemy_data in entities_data.get('enemies', []):
-                    enemy = Enemy(self.game, enemy_data['pos'], (8, 15), e_id=enemy_data['id'])
+                    enemy = Enemy(self.game, enemy_data['pos'], (8, 15), enemy_data['id'])
                     enemy.velocity = enemy_data['velocity']
                     enemy.alive = enemy_data['alive']
                     self.enemies.append(enemy)
@@ -257,4 +257,13 @@ class Tilemap:
             return False, ''
 
     def load_game(self, game_state):
+        pass
+
+    def get_player_count(self):
+        return len(self.players)
+
+    def get_enemy_count(self):
+        return len(self.enemies)
+
+    def extract_entities(self):
         pass

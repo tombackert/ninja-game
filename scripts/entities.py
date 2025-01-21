@@ -10,12 +10,12 @@ from scripts.settings import settings
 
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size, e_id):
+    def __init__(self, game, e_type, pos, size, id):
         self.game = game
         self.type = e_type
         self.pos = list(pos)
         self.size = size
-        self.id = e_id
+        self.id = id
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         
@@ -86,8 +86,8 @@ class PhysicsEntity:
              self.pos[1] - offset[1] + self.anim_offset[1]))
         
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size, e_id):
-        super().__init__(game, 'enemy', pos, size, e_id)
+    def __init__(self, game, pos, size=(15, 8), id=0):
+        super().__init__(game, 'enemy', pos, size, id)
         self.walking = 0
         
     def update(self, tilemap, movement=(0, 0)):
@@ -182,8 +182,8 @@ class Enemy(PhysicsEntity):
                        self.rect().centery - offset[1]))
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size, e_id, lifes, respawn_pos):
-        super().__init__(game, 'player', pos, size, e_id)
+    def __init__(self, game, pos, size, id, lifes, respawn_pos):
+        super().__init__(game, 'player', pos, size, id)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False

@@ -99,10 +99,17 @@ class Game:
         # Keyboard Manager
         self.km = KeyboardManager(self)
 
+        
+        
+        
         self.playerID = 0
 
         # Load the selected level
         self.load_level(self.level)
+        
+        print(f"id: {self.players[self.playerID].id}")
+        print(f"size: {self.players[self.playerID].size}")
+    
 
         # Game state
         self.running = True
