@@ -252,6 +252,8 @@ class Menu:
             UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
             UI.render_menu_ui_element(self.screen, f"Skin: {self.cm.SKINS[settings.selected_skin]}", self.pl, self.pt + 20)
             UI.render_menu_ui_element(self.screen, f"Weapon: {self.cm.WEAPONS[settings.selected_weapon]}", self.pl, self.pt + 20*2)
+            UI.render_menu_ui_element(self.screen, "TAB to switch between weapons/skins", self.WIN_W // 2 - 270, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
 
 
             for event in pygame.event.get():
@@ -350,11 +352,6 @@ class Menu:
             UI.render_o_box(self.screen, skin_options, 
                           (selected_skin - skin_start) if selected_option == 1 else -1,
                           self.WIN_W // 2 + 350, 430, 50, 30)
-
-            UI.render_menu_ui_element(self.screen, "TAB to switch between weapons/skins", 
-                                    self.WIN_W // 2 - 200, self.WIN_H - self.pb)
-            UI.render_menu_ui_element(self.screen, "backspace to menu", 
-                                    self.pl, self.WIN_H - self.pb)
 
 
             pygame.display.update()

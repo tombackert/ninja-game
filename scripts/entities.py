@@ -195,11 +195,11 @@ class Player(PhysicsEntity):
         self.dashing = 0
         self.lifes = lifes
         self.respawn_pos = respawn_pos
-        self.shoot_cooldown = 0
+        self.shoot_cooldown = 10
         
         
     def shoot(self):
-        if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0:
+        if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0 and settings.selected_weapon == 1:
             self.game.sfx['shoot'].play()
             direction = -1.5 if self.flip else 1.5
             self.game.projectiles.append([
