@@ -65,6 +65,8 @@ class Menu:
 
         msg_timer = 0
 
+        enter = False
+
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -86,11 +88,19 @@ class Menu:
                         elif level_index < start_index:
                             start_index = level_index
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        if settings.is_level_playable(levels[level_index]):
+                        enter = True
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    enter = True
+                if enter:
+                    if settings.is_level_playable(levels[level_index]):
                             self.selected_level = levels[level_index]
                             settings.selected_level = self.selected_level
-                        else:
-                            msg_timer = 60
+                    else:
+                        msg_timer = 60
+                if event.type == pygame.KEYUP:
+                    enter = False
+                if event.type == pygame.MOUSEBUTTONUP:
+                    enter = False
                 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, "Select Level", self.WIN_W // 2, 200)
@@ -134,6 +144,7 @@ class Menu:
         options_per_page = 5
         msg_timer = 0
         w_msg_timer = 0
+        enter = False
 
         while True:
             for event in pygame.event.get():
@@ -156,20 +167,29 @@ class Menu:
                     elif selected_option < start_index:
                         start_index = selected_option
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        if options[selected_option] == "Back":
+                        enter = True
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    enter = True
+                if enter:
+                    if options[selected_option] == "Back":
                             self.menu()
+                    else:
+                        item_name = options[selected_option].split('$')[0].strip()
+                        buy_item = self.cm.buy_collectable(item_name)
+                        if buy_item == "not purchaseable":
+                            w_msg = "Item is not purchaseable!"
+                            w_msg_timer = 60
+                        elif buy_item == "not enough coins":
+                            w_msg = "Not enough coins!"
+                            w_msg_timer = 60
                         else:
-                            item_name = options[selected_option].split('$')[0].strip()
-                            buy_item = self.cm.buy_collectable(item_name)
-                            if buy_item == "not purchaseable":
-                                w_msg = "Item is not purchaseable!"
-                                w_msg_timer = 60
-                            elif buy_item == "not enough coins":
-                                w_msg = "Not enough coins!"
-                                w_msg_timer = 60
-                            else:
-                                w_msg = f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
-                                w_msg_timer = 60
+                            w_msg = f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
+                            w_msg_timer = 60
+                
+                if event.type == pygame.KEYUP:
+                    enter = False
+                if event.type == pygame.MOUSEBUTTONUP:
+                    enter = False
 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, "Store", self.WIN_W // 2, 200)
@@ -212,7 +232,7 @@ class Menu:
         weapons = [f"{weapons[i].ljust(max_option_length):<12}" for i in range(len(weapons))]
 
         max_wappon_length = max(len(skins) for s in skins)
-        skins = [f"{skins[i].ljust(max_wappon_length):<12}" for i in range(len(skins))]
+        skins = [f"{skins[i].ljust(max_wappon_length):<15}" for i in range(len(skins))]
 
         selected_option = 0
         selected_weapon = 0
@@ -221,11 +241,14 @@ class Menu:
         options_per_page = 2
         msg_timer = 0
         w_msg_timer = 0
+        enter = False
 
         while True:
 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
+            UI.render_menu_subtitle(self.screen, "Weapons", self.WIN_W // 2 - 350, 320)
+            UI.render_menu_subtitle(self.screen, "Skins", self.WIN_W // 2 + 350, 320)
             UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
             UI.render_menu_ui_element(self.screen, f"Skin: {self.cm.SKINS[settings.selected_skin]}", self.pl, self.pt + 20)
             UI.render_menu_ui_element(self.screen, f"Weapon: {self.cm.WEAPONS[settings.selected_weapon]}", self.pl, self.pt + 20*2)
@@ -253,56 +276,83 @@ class Menu:
                         selected_weapon = 0
                         selected_skin = 0
                     if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        if selected_option == 0:
+                        enter = True
+                    
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    enter = True
+                if enter:
+                    if selected_option == 0:
                             selected_weapon_name = weapons[selected_weapon].strip()
                             if self.cm.is_purchaseable(selected_weapon_name):
                                 settings.selected_weapon = selected_weapon
+                    else: 
+                        selected_skin_name = skins[selected_skin].strip()
+                        if self.cm.is_purchaseable(selected_skin_name):
+                            settings.selected_skin = selected_skin
 
-                        else: 
-                            selected_skin_name = skins[selected_skin].strip()
-                            if self.cm.is_purchaseable(selected_skin_name):
-                                settings.selected_skin = selected_skin
+                if event.type == pygame.KEYUP:
+                    enter = False
+                if event.type == pygame.MOUSEBUTTONUP:
+                    enter = False
 
+            options_per_page = 4
+            weapon_start = 0
+            skin_start = 0
+
+            # Handle scrolling for weapons
+            if selected_option == 0:
+                if selected_weapon >= weapon_start + options_per_page:
+                    weapon_start = selected_weapon - options_per_page + 1
+                elif selected_weapon < weapon_start:
+                    weapon_start = selected_weapon
+
+            # Handle scrolling for skins
+            if selected_option == 1:
+                if selected_skin >= skin_start + options_per_page:
+                    skin_start = selected_skin - options_per_page + 1
+                elif selected_skin < skin_start:
+                    skin_start = selected_skin
 
             weapon_options = []
-            for i, weapon in enumerate(weapons):
+            for i in range(weapon_start, min(weapon_start + options_per_page, len(weapons))):
                 if i == settings.selected_weapon:
                     weapon_options.append(f"*{weapons[i]}")
                 else:
                     weapon_options.append(f" {weapons[i]}")
 
-                weapon = weapon.strip()
+                weapon = weapons[i].strip()
                 if not self.cm.is_purchaseable(weapon):
                     UI.render_ui_img(self.screen, "data/images/padlock-c.png", 
-                                   self.WIN_W // 2 - 150, 300 + (i * 50), 0.15)
+                                   self.WIN_W // 2 - 150, 430 + ((i - weapon_start) * 50), 0.15)
                 else:
                     UI.render_ui_img(self.screen, "data/images/padlock-o.png",
-                                   self.WIN_W // 2 - 150, 300 + (i * 50), 0.15)
+                                   self.WIN_W // 2 - 150, 430 + ((i - weapon_start) * 50), 0.15)
 
             skin_options = []
-            for i, skin in enumerate(skins):
+            for i in range(skin_start, min(skin_start + options_per_page, len(skins))):
                 if i == settings.selected_skin:
                     skin_options.append(f"*{skins[i]}")
                 else:
                     skin_options.append(f" {skins[i]}")
 
-                skin = skin.strip()
+                skin = skins[i].strip()
                 if not self.cm.is_purchaseable(skin):
                     UI.render_ui_img(self.screen, "data/images/padlock-c.png",
-                                   self.WIN_W // 2 + 550, 300 + (i * 50), 0.15)
+                                   self.WIN_W // 2 + 600, 430 + ((i - skin_start) * 50), 0.15)
                 else:
                     UI.render_ui_img(self.screen, "data/images/padlock-o.png",
-                                   self.WIN_W // 2 + 550, 300 + (i * 50), 0.15)
+                                   self.WIN_W // 2 + 600, 430 + ((i - skin_start) * 50), 0.15)
 
-            UI.render_o_box(self.screen, weapon_options, selected_weapon if selected_option == 0 else -1, 
-                           self.WIN_W // 2 - 350, 300, 50, 30)
+            UI.render_o_box(self.screen, weapon_options, 
+                          (selected_weapon - weapon_start) if selected_option == 0 else -1, 
+                          self.WIN_W // 2 - 350, 430, 50, 30)
 
-            UI.render_o_box(self.screen, skin_options, selected_skin if selected_option == 1 else -1,
-                           self.WIN_W // 2 + 350, 300, 50, 30)
-
+            UI.render_o_box(self.screen, skin_options, 
+                          (selected_skin - skin_start) if selected_option == 1 else -1,
+                          self.WIN_W // 2 + 350, 430, 50, 30)
 
             UI.render_menu_ui_element(self.screen, "TAB to switch between weapons/skins", 
-                                    self.WIN_W // 2 - 100, self.WIN_H - self.pb)
+                                    self.WIN_W // 2 - 200, self.WIN_H - self.pb)
             UI.render_menu_ui_element(self.screen, "backspace to menu", 
                                     self.pl, self.WIN_H - self.pb)
 
@@ -361,6 +411,7 @@ class Menu:
         title = "Menu"
         options = ["Play", "Levels", "Store", "Accessoires", "Options", "Quit"]
         self.selected_option = 0 
+        enter = False
 
         while True:
 
@@ -384,24 +435,35 @@ class Menu:
                     if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                         self.selected_option = (self.selected_option + 1) % len(options)
                     if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                        if options[self.selected_option] == options[0]:
-                            self.play()
-                        if options[self.selected_option] == options[1]:
-                            self.levels()
-                        if options[self.selected_option] == options[2]:
-                            self.store()
-                        if options[self.selected_option] == options[3]:
-                            self.accessoires()
-                        if options[self.selected_option] == options[4]:
-                            self.options()
-                        if options[self.selected_option] == options[5]:
-                            pygame.quit()
-                            sys.exit()
+                        enter = True
                     if event.key == pygame.K_ESCAPE:
                         self.cm.save_collectables()
                         settings.save_settings()
                         pygame.quit()
                         sys.exit()
+                
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    enter = True
+                
+                if enter:
+                    if options[self.selected_option] == options[0]:
+                            self.play()
+                    if options[self.selected_option] == options[1]:
+                        self.levels()
+                    if options[self.selected_option] == options[2]:
+                        self.store()
+                    if options[self.selected_option] == options[3]:
+                        self.accessoires()
+                    if options[self.selected_option] == options[4]:
+                        self.options()
+                    if options[self.selected_option] == options[5]:
+                        pygame.quit()
+                        sys.exit()
+                
+                if event.type == pygame.KEYUP:
+                    enter = False
+                if event.type == pygame.MOUSEBUTTONUP:
+                    enter = False
 
             pygame.display.update()
             self.clock.tick(60)
@@ -413,6 +475,7 @@ class Menu:
         pause = True
         message = ""
         message_timer = 0
+        enter = False
 
         while pause:
             for event in pygame.event.get():
@@ -432,23 +495,32 @@ class Menu:
                     elif event.key in (pygame.K_DOWN, pygame.K_s):
                         selected_option = (selected_option + 1) % len(options)
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        chosen = options[selected_option]
-                        if chosen == "Continue":
-                            game.paused = False
-                            pause = False
-                        elif chosen == "Save Game":
-                            success, filename = game.tilemap.save_game()
-                            if success:
-                                message = f"Game saved as {filename}"
-                            else:
-                                message = "Failed to save game"
-                            message_timer = 60
-                        elif chosen == "Menu":
-                            #game.tilemap.save_game()
-                            game.running = False
-                            pause = False
-                            Menu().menu()
-                            return
+                        enter = True
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        enter = True
+                if enter:
+                    chosen = options[selected_option]
+                    if chosen == "Continue":
+                        game.paused = False
+                        pause = False
+                    elif chosen == "Save Game":
+                        success, filename = game.tilemap.save_game()
+                        if success:
+                            message = f"Game saved as {filename}"
+                        else:
+                            message = "Failed to save game"
+                        message_timer = 60
+                    elif chosen == "Menu":
+                        #game.tilemap.save_game()
+                        game.running = False
+                        pause = False
+                        Menu().menu()
+                        return
+                if event.type == pygame.KEYUP:
+                    enter = False
+                if event.type == pygame.MOUSEBUTTONUP:
+                    enter = False
             
             screen = game.screen
             display = game.display_3

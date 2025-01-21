@@ -185,6 +185,20 @@ class UI:
         )
 
     @staticmethod
+    def render_menu_subtitle(screen, subtitle, x, y):
+        font = UI.get_font(40)
+        UI.draw_text_with_outline(
+            surface=screen,
+            font=font,
+            text=subtitle,
+            x=x,
+            y=y,
+            text_color=UI.PM_COLOR,
+            center=True,
+            scale=3
+        )
+
+    @staticmethod
     def render_menu_bg(screen, display, bg):
         display.blit(bg, (0, 0))
         scaled_display = pygame.transform.scale(display, screen.get_size())
