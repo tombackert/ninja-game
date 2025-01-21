@@ -252,8 +252,8 @@ class Menu:
             UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
             UI.render_menu_ui_element(self.screen, f"Skin: {self.cm.SKINS[settings.selected_skin]}", self.pl, self.pt + 20)
             UI.render_menu_ui_element(self.screen, f"Weapon: {self.cm.WEAPONS[settings.selected_weapon]}", self.pl, self.pt + 20*2)
-            UI.render_menu_ui_element(self.screen, "TAB to switch between weapons/skins", self.WIN_W // 2 - 270, self.WIN_H - self.pb)
-            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "tab to switch between weapons/skins", self.WIN_W // 2 - 270, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "esc to menu", self.pl, self.WIN_H - self.pb)
 
 
             for event in pygame.event.get():
@@ -501,6 +501,7 @@ class Menu:
                     if chosen == "Continue":
                         game.paused = False
                         pause = False
+                        game.player.shoot_cooldown = 10
                     elif chosen == "Save Game":
                         success, filename = game.tilemap.save_game()
                         if success:

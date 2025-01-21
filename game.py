@@ -270,7 +270,7 @@ class Game:
                 UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
                 UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
                 UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
-                UI.render_game_ui_element(self.display_2, f"Coins: ${self.cm.coins}", 5, 15)
+                UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
                 UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
                 
                 # Screen shake
