@@ -7,6 +7,7 @@ import pygame.font
 from scripts.particle import Particle
 from scripts.spark import Spark
 from scripts.settings import settings
+from scripts.collectableManager import CollectableManager as cm
 
 
 class PhysicsEntity:
@@ -36,7 +37,7 @@ class PhysicsEntity:
             if self.type == 'enemy':
                 self.animation = self.game.assets[self.type + '/' + self.action].copy()
             if self.type == 'player':
-                self.animation = self.game.assets[self.type + '/' + settings.SKINS[self.skin] + '/' + self.action].copy()
+                self.animation = self.game.assets[self.type + '/' + cm.SKIN_PATHS[self.skin] + '/' + self.action].copy()
         
     def update(self, tilemap, movement=(0, 0)):
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
@@ -280,7 +281,7 @@ class Player(PhysicsEntity):
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
 
-        if self.game.cm.gun:
+        if self.game.cm.gun and settings.selected_weapon == 1:
             if self.flip:
                 surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False), 
                         (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0], 

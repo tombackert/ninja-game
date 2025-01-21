@@ -12,7 +12,7 @@ class UI:
     GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
-    LOCK_IMG = pygame.image.load("data/images/gun.png")
+    #LOCK_IMG = pygame.image.load("data/images/gun.png")
 
     @staticmethod
     def get_font(size):

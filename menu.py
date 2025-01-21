@@ -262,10 +262,6 @@ class Menu:
                             selected_skin_name = skins[selected_skin].strip()
                             if self.cm.is_purchaseable(selected_skin_name):
                                 settings.selected_skin = selected_skin
-                            
-                    print("selected_option ", selected_option)
-                    print("selected_weapon ", selected_weapon)
-                    print("selected_skin ", selected_skin)
 
 
             weapon_options = []
@@ -402,6 +398,8 @@ class Menu:
                             pygame.quit()
                             sys.exit()
                     if event.key == pygame.K_ESCAPE:
+                        self.cm.save_collectables()
+                        settings.save_settings()
                         pygame.quit()
                         sys.exit()
 
@@ -464,7 +462,7 @@ class Menu:
             UI.render_menu_ui_element(screen, f"Lives: {game.player.lifes}", 5, 5)
             UI.render_menu_ui_element(screen, f"Coins: ${game.cm.coins}", 5, 25)
             UI.render_menu_ui_element(screen, f"Ammo:  {game.cm.ammo}", 5, 45)
-            UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 400, 50)
+            UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 450, 50)
             UI.render_menu_ui_element(screen, "w/a to navigate", game.WIN_W // 2 - 100, game.WIN_H - 25)
             
             if message_timer > 0:

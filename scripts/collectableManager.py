@@ -30,6 +30,8 @@ class CollectableManager:
     }
 
     SKINS = ["Default", "Red Ninja", "Gold Ninja", "Platinum Ninja", "Diamond Ninja", "Assassin", "Berserker"]
+    SKIN_PATHS = ["default", "red", "gold", "platinum", "diamond", "assassin", "berserker"]
+
     WEAPONS = ["Default", "Gun", "Shield", "Rifle", "Moon Boots", "Ninja Stars", "Grapple Hook", "Sword"]
 
     ITEMS = {

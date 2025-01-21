@@ -58,16 +58,16 @@ class Game:
             'clouds': load_images('clouds'),
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
-            'player/standard_skin/idle': Animation(load_images('entities/player/standard_skin/idle'), img_dur=6),
-            'player/standard_skin/run': Animation(load_images('entities/player/standard_skin/run'), img_dur=4),
-            'player/standard_skin/jump': Animation(load_images('entities/player/standard_skin/jump')),
-            'player/standard_skin/slide': Animation(load_images('entities/player/standard_skin/slide')),
-            'player/standard_skin/wall_slide': Animation(load_images('entities/player/standard_skin/wall_slide')),
-            'player/red_skin/idle': Animation(load_images('entities/player/red_skin/idle'), img_dur=6),
-            'player/red_skin/run': Animation(load_images('entities/player/red_skin/run'), img_dur=4),
-            'player/red_skin/jump': Animation(load_images('entities/player/red_skin/jump')),
-            'player/red_skin/slide': Animation(load_images('entities/player/red_skin/slide')),
-            'player/red_skin/wall_slide': Animation(load_images('entities/player/red_skin/wall_slide')),
+            'player/default/idle': Animation(load_images('entities/player/default/idle'), img_dur=6),
+            'player/default/run': Animation(load_images('entities/player/default/run'), img_dur=4),
+            'player/default/jump': Animation(load_images('entities/player/default/jump')),
+            'player/default/slide': Animation(load_images('entities/player/default/slide')),
+            'player/default/wall_slide': Animation(load_images('entities/player/default/wall_slide')),
+            'player/red/idle': Animation(load_images('entities/player/red/idle'), img_dur=6),
+            'player/red/run': Animation(load_images('entities/player/red/run'), img_dur=4),
+            'player/red/jump': Animation(load_images('entities/player/red/jump')),
+            'player/red/slide': Animation(load_images('entities/player/red/slide')),
+            'player/red/wall_slide': Animation(load_images('entities/player/red/wall_slide')),
             'particle/leaf': Animation(load_images('particles/leaf'), img_dur=20, loop=False),
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'coin': Animation(load_images('collectables/coin'), img_dur=6),
@@ -113,8 +113,8 @@ class Game:
         # Load the selected level
         self.load_level(self.level)
         
-        print(f"id: {self.players[self.playerID].id}")
-        print(f"size: {self.players[self.playerID].size}")
+        #print(f"id: {self.players[self.playerID].id}")
+        #print(f"size: {self.players[self.playerID].size}")
     
 
         # Game state
