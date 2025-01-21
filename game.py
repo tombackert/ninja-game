@@ -58,11 +58,16 @@ class Game:
             'clouds': load_images('clouds'),
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
-            'player/idle': Animation(load_images('entities/player/idle'), img_dur=6),
-            'player/run': Animation(load_images('entities/player/run'), img_dur=4),
-            'player/jump': Animation(load_images('entities/player/jump')),
-            'player/slide': Animation(load_images('entities/player/slide')),
-            'player/wall_slide': Animation(load_images('entities/player/wall_slide')),
+            'player/standard_skin/idle': Animation(load_images('entities/player/standard_skin/idle'), img_dur=6),
+            'player/standard_skin/run': Animation(load_images('entities/player/standard_skin/run'), img_dur=4),
+            'player/standard_skin/jump': Animation(load_images('entities/player/standard_skin/jump')),
+            'player/standard_skin/slide': Animation(load_images('entities/player/standard_skin/slide')),
+            'player/standard_skin/wall_slide': Animation(load_images('entities/player/standard_skin/wall_slide')),
+            'player/red_skin/idle': Animation(load_images('entities/player/red_skin/idle'), img_dur=6),
+            'player/red_skin/run': Animation(load_images('entities/player/red_skin/run'), img_dur=4),
+            'player/red_skin/jump': Animation(load_images('entities/player/red_skin/jump')),
+            'player/red_skin/slide': Animation(load_images('entities/player/red_skin/slide')),
+            'player/red_skin/wall_slide': Animation(load_images('entities/player/red_skin/wall_slide')),
             'particle/leaf': Animation(load_images('particles/leaf'), img_dur=20, loop=False),
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'coin': Animation(load_images('collectables/coin'), img_dur=6),
@@ -103,6 +108,7 @@ class Game:
         
         
         self.playerID = 0
+        self.playerSkin = settings.selected_skin
 
         # Load the selected level
         self.load_level(self.level)
@@ -155,9 +161,11 @@ class Game:
         else:
             enemy_id = 0
             player_id = 0
+            skin = self.playerSkin
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
                 if spawner['variant'] == 0:
                     player = Player(self, spawner['pos'], (8, 15), player_id, lifes=lifes, respawn_pos=list(spawner['pos']))
+                    player.skin = skin
                     player.air_time = 0
                     self.players.append(player)
                     player_id += 1

@@ -33,7 +33,10 @@ class PhysicsEntity:
     def set_action(self, action):
         if action != self.action:
             self.action = action
-            self.animation = self.game.assets[self.type + '/' + self.action].copy()
+            if self.type == 'enemy':
+                self.animation = self.game.assets[self.type + '/' + self.action].copy()
+            if self.type == 'player':
+                self.animation = self.game.assets[self.type + '/' + settings.SKINS[self.skin] + '/' + self.action].copy()
         
     def update(self, tilemap, movement=(0, 0)):
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
@@ -183,6 +186,7 @@ class Enemy(PhysicsEntity):
 
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size, id, lifes, respawn_pos):
+        self.skin = 0
         super().__init__(game, 'player', pos, size, id)
         self.air_time = 0
         self.jumps = 1
@@ -191,6 +195,7 @@ class Player(PhysicsEntity):
         self.lifes = lifes
         self.respawn_pos = respawn_pos
         self.shoot_cooldown = 0
+        
         
     def shoot(self):
         if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0:

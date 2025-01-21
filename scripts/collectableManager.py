@@ -11,25 +11,32 @@ DATA_FILE = 'data/collectables.json'
 class CollectableManager:
 
     PURCHASEABLES = {
+        "Default",
         "Gun", 
-        "Ammo"
+        "Ammo",
+        "Red Ninja",
     }
+    
     NOT_PURCHASEABLES = {
         "Shield", 
         "Moon Boots", 
         "Ninja Stars", 
-        "Sword", 
-        "Grapple Hook", 
         "Red Ninja", 
-        "Blue Ninja", 
-        "Green Ninja"
+        "Gold Ninja", 
+        "Platinum Ninja", 
+        "Diamond Ninja", 
+        "Assassin", 
+        "Berserker"
     }
 
+    SKINS = ["Default", "Red Ninja", "Gold Ninja", "Platinum Ninja", "Diamond Ninja", "Assassin", "Berserker"]
+    WEAPONS = ["Default", "Gun", "Shield", "Rifle", "Moon Boots", "Ninja Stars", "Grapple Hook", "Sword"]
 
     ITEMS = {
         "Gun": 500,
         "Ammo": 50,
         "Shield": 100,
+        "Rifle": 2000,
         "Moon Boots": 2500,
         "Ninja Stars": 500,
         "Sword": 1000,
@@ -113,6 +120,7 @@ class CollectableManager:
                     self.coins = data.get("coin_count", 0)
                     self.gun = data.get("gun", 0)
                     self.ammo = data.get("ammo", 0)
+                    self.red_ninja = data.get("red_ninja", 0)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Error loading collectable: {e}")
     
@@ -120,7 +128,8 @@ class CollectableManager:
         data = {
             "coin_count": self.coins,
             "gun": self.gun,
-            "ammo": self.ammo
+            "ammo": self.ammo,
+            "red_ninja": self.red_ninja
         }
         try:
             os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
@@ -188,9 +197,5 @@ class CollectableManager:
             return self.grapple_hook
         elif item == "Red Ninja":
             return self.red_ninja
-        elif item == "Blue Ninja":
-            return self.blue_ninja
-        elif item == "Green Ninja":
-            return self.green_ninja
         else:
             return 0

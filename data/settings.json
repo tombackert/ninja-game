@@ -3,6 +3,8 @@
     "sound_volume": 0.5,
     "selected_level": 10,
     "selected_editor_level": 10,
+    "selected_skin": 0,
+    "selected_weapon": 0,
     "playable_levels": {
         "0": true,
         "1": true,

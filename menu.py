@@ -201,6 +201,121 @@ class Menu:
             pygame.display.update()
             self.clock.tick(60)
 
+    def accessoires(self):
+        title = "Accessoires"
+        selected_option = 0
+
+        weapons = self.cm.WEAPONS
+        skins = self.cm.SKINS
+
+        max_option_length = max(len(weapons) for w in weapons)
+        weapons = [f"{weapons[i].ljust(max_option_length):<12}" for i in range(len(weapons))]
+
+        max_wappon_length = max(len(skins) for s in skins)
+        skins = [f"{skins[i].ljust(max_wappon_length):<12}" for i in range(len(skins))]
+
+        selected_option = 0
+        selected_weapon = 0
+        selected_skin = 0
+        start_index = 0
+        options_per_page = 2
+        msg_timer = 0
+        w_msg_timer = 0
+
+        while True:
+
+            UI.render_menu_bg(self.screen, self.display_1, self.bg)
+            UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
+            UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
+            UI.render_menu_ui_element(self.screen, f"Skin: {self.cm.SKINS[settings.selected_skin]}", self.pl, self.pt + 20)
+            UI.render_menu_ui_element(self.screen, f"Weapon: {self.cm.WEAPONS[settings.selected_weapon]}", self.pl, self.pt + 20*2)
+
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                        self.menu()
+                    if event.key in (pygame.K_UP, pygame.K_w):
+                        if selected_option == 0:
+                            selected_weapon = (selected_weapon - 1) % len(weapons)
+                        else:
+                            selected_skin = (selected_skin - 1) % len(skins)
+                    if event.key in (pygame.K_DOWN, pygame.K_s):
+                        if selected_option == 0:
+                            selected_weapon = (selected_weapon + 1) % len(weapons)
+                        else: 
+                            selected_skin = (selected_skin + 1) % len(skins)
+                    if event.key == pygame.K_TAB:
+                        selected_option = (selected_option + 1) % 2
+                        selected_weapon = 0
+                        selected_skin = 0
+                    if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        if selected_option == 0:
+                            selected_weapon_name = weapons[selected_weapon].strip()
+                            if self.cm.is_purchaseable(selected_weapon_name):
+                                settings.selected_weapon = selected_weapon
+
+                        else: 
+                            selected_skin_name = skins[selected_skin].strip()
+                            if self.cm.is_purchaseable(selected_skin_name):
+                                settings.selected_skin = selected_skin
+                            
+                    print("selected_option ", selected_option)
+                    print("selected_weapon ", selected_weapon)
+                    print("selected_skin ", selected_skin)
+
+
+            weapon_options = []
+            for i, weapon in enumerate(weapons):
+                if i == settings.selected_weapon:
+                    weapon_options.append(f"*{weapons[i]}")
+                else:
+                    weapon_options.append(f" {weapons[i]}")
+
+                weapon = weapon.strip()
+                if not self.cm.is_purchaseable(weapon):
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png", 
+                                   self.WIN_W // 2 - 150, 300 + (i * 50), 0.15)
+                else:
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png",
+                                   self.WIN_W // 2 - 150, 300 + (i * 50), 0.15)
+
+            skin_options = []
+            for i, skin in enumerate(skins):
+                if i == settings.selected_skin:
+                    skin_options.append(f"*{skins[i]}")
+                else:
+                    skin_options.append(f" {skins[i]}")
+
+                skin = skin.strip()
+                if not self.cm.is_purchaseable(skin):
+                    UI.render_ui_img(self.screen, "data/images/padlock-c.png",
+                                   self.WIN_W // 2 + 550, 300 + (i * 50), 0.15)
+                else:
+                    UI.render_ui_img(self.screen, "data/images/padlock-o.png",
+                                   self.WIN_W // 2 + 550, 300 + (i * 50), 0.15)
+
+            UI.render_o_box(self.screen, weapon_options, selected_weapon if selected_option == 0 else -1, 
+                           self.WIN_W // 2 - 350, 300, 50, 30)
+
+            UI.render_o_box(self.screen, skin_options, selected_skin if selected_option == 1 else -1,
+                           self.WIN_W // 2 + 350, 300, 50, 30)
+
+
+            UI.render_menu_ui_element(self.screen, "TAB to switch between weapons/skins", 
+                                    self.WIN_W // 2 - 100, self.WIN_H - self.pb)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", 
+                                    self.pl, self.WIN_H - self.pb)
+
+
+            pygame.display.update()
+            self.clock.tick(60)
+
+
+
     def options(self):
         title = "Options"
         selected_option = 0
@@ -248,7 +363,7 @@ class Menu:
     def menu(self):
 
         title = "Menu"
-        options = ["Play", "Levels", "Store", "Options", "Quit"]
+        options = ["Play", "Levels", "Store", "Accessoires", "Options", "Quit"]
         self.selected_option = 0 
 
         while True:
@@ -280,8 +395,10 @@ class Menu:
                         if options[self.selected_option] == options[2]:
                             self.store()
                         if options[self.selected_option] == options[3]:
-                            self.options()
+                            self.accessoires()
                         if options[self.selected_option] == options[4]:
+                            self.options()
+                        if options[self.selected_option] == options[5]:
                             pygame.quit()
                             sys.exit()
                     if event.key == pygame.K_ESCAPE:
