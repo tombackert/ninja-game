@@ -282,8 +282,8 @@ class Game:
                 frame_time_ms = (end_frame_time - start_frame_time) * 1000.0
                 fps = self.clock.get_fps()
 
-                UI.render_game_ui_element(self.display_2, f"FPS: {fps:.1f}", 5, 40)
-                UI.render_game_ui_element(self.display_2, f"{frame_time_ms:.2f} ms", 5, 50)
+                UI.render_game_ui_element(self.display_2, f"FPS: {fps:.1f}", 5, self.BASE_H - 20)
+                UI.render_game_ui_element(self.display_2, f"{frame_time_ms:.2f} ms", 5, self.BASE_H - 10) 
                 ###### END performance tracking
                 
                 # Screen shake
