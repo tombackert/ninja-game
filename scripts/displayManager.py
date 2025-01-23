@@ -14,7 +14,7 @@ class DisplayManager:
         display_info = pygame.display.Info()
         self.BASE_W = 640
         self.BASE_H = 360
-        
+        print(display_info.current_w, display_info.current_h)
         scale_x = display_info.current_w / self.BASE_W
         scale_y = display_info.current_h / self.BASE_H
         scale = min(scale_x, scale_y)
@@ -24,4 +24,8 @@ class DisplayManager:
             
         self.WIN_W = int(self.BASE_W * scale)
         self.WIN_H = int(self.BASE_H * scale)
-        self.scale = scale
+        
+        # Ensure window size doesn't exceed screen resolution
+        self.WIN_W = min(self.WIN_W, display_info.current_w)
+        self.WIN_H = min(self.WIN_H, display_info.current_h)
+        self.scale = self.WIN_W / self.BASE_W
