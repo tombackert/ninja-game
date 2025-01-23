@@ -183,6 +183,8 @@ class CollectableManager:
         return self.ITEMS[item]
     
     def get_amount(self, item):
+        if item == "Default":
+            return 1
         if item == "Gun":
             return self.gun
         elif item == "Ammo":

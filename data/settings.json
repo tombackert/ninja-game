@@ -1,22 +1,22 @@
 {
-    "music_volume": 0.0,
+    "music_volume": 0.5,
     "sound_volume": 0.5,
-    "selected_level": 10,
+    "selected_level": 0,
     "selected_editor_level": 10,
-    "selected_skin": 1,
+    "selected_skin": 0,
     "selected_weapon": 1,
     "playable_levels": {
         "0": true,
-        "1": true,
-        "2": true,
-        "3": true,
-        "4": true,
-        "5": true,
-        "6": true,
-        "7": true,
-        "8": true,
-        "9": true,
-        "10": true,
-        "15": true
+        "1": false,
+        "2": false,
+        "3": false,
+        "4": false,
+        "5": false,
+        "6": false,
+        "7": false,
+        "8": false,
+        "9": false,
+        "10": false,
+        "15": false
     }
 }

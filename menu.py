@@ -285,11 +285,11 @@ class Menu:
                 if enter:
                     if selected_option == 0:
                             selected_weapon_name = weapons[selected_weapon].strip()
-                            if self.cm.is_purchaseable(selected_weapon_name):
+                            if self.cm.get_amount(selected_weapon_name) > 0:
                                 settings.selected_weapon = selected_weapon
                     else: 
                         selected_skin_name = skins[selected_skin].strip()
-                        if self.cm.is_purchaseable(selected_skin_name):
+                        if self.cm.get_amount(selected_skin_name) > 0:
                             settings.selected_skin = selected_skin
 
                 if event.type == pygame.KEYUP:
