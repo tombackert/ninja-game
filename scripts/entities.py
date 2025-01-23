@@ -7,15 +7,17 @@ import pygame.font
 from scripts.particle import Particle
 from scripts.spark import Spark
 from scripts.settings import settings
+from scripts.collectableManager import CollectableManager as cm
+import math
 
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size, e_id):
+    def __init__(self, game, e_type, pos, size, id):
         self.game = game
         self.type = e_type
         self.pos = list(pos)
         self.size = size
-        self.id = e_id
+        self.id = id
         self.velocity = [0, 0]
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
         
@@ -33,7 +35,10 @@ class PhysicsEntity:
     def set_action(self, action):
         if action != self.action:
             self.action = action
-            self.animation = self.game.assets[self.type + '/' + self.action].copy()
+            if self.type == 'enemy':
+                self.animation = self.game.assets[self.type + '/' + self.action].copy()
+            if self.type == 'player':
+                self.animation = self.game.assets[self.type + '/' + cm.SKIN_PATHS[self.skin] + '/' + self.action].copy()
         
     def update(self, tilemap, movement=(0, 0)):
         self.collisions = {'up': False, 'down': False, 'right': False, 'left': False}
@@ -86,8 +91,8 @@ class PhysicsEntity:
              self.pos[1] - offset[1] + self.anim_offset[1]))
         
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size, e_id):
-        super().__init__(game, 'enemy', pos, size, e_id)
+    def __init__(self, game, pos, size=(15, 8), id=0):
+        super().__init__(game, 'enemy', pos, size, id)
         self.walking = 0
         
     def update(self, tilemap, movement=(0, 0)):
@@ -96,26 +101,31 @@ class Enemy(PhysicsEntity):
                 if (self.collisions['right'] or self.collisions['left']):
                     self.flip = not self.flip
                 else:
-                    movement = (movement[0] - 0.5 if self.flip else 0.5, movement[1])
+                    direction = 0.35 * (1 + 0.8 * math.log(settings.selected_level + 1))
+                    movement = (movement[0] - direction if self.flip else direction, movement[1])
             else:
                 self.flip = not self.flip
             self.walking = max(0, self.walking - 1)
             if not self.walking:
                 dis = (self.game.player.pos[0] - self.pos[0], 
                        self.game.player.pos[1] - self.pos[1])
-                if (abs(dis[1]) < 10):
+                if (abs(dis[1]) < 15):
                     if (self.flip and dis[0] < 0):
                         self.game.sfx['shoot'].play()
-                        self.game.projectiles.append([[self.rect().centerx - 7, 
-                                                       self.rect().centery], -1.5, 0])
+                        direction = -1.15 * (1 + 0.59 * math.log(settings.selected_level + 1))
+                        self.game.projectiles.append([[self.rect().centerx - 15, 
+                                                       self.rect().centery], direction, 0])
                         for i in range(4):
                             self.game.sparks.append(
                                 Spark(self.game.projectiles[-1][0], 
                                       random.random() - 0.5 + math.pi, 
                                       2 + random.random()))
+                        
                     if (not self.flip and dis[0] > 0):
-                        self.game.projectiles.append([[self.rect().centerx + 7, 
-                                                       self.rect().centery], 1.5, 0])
+                        self.game.sfx['shoot'].play()
+                        direction = 1.15 * (1 + 0.59 * math.log(settings.selected_level + 1))
+                        self.game.projectiles.append([[self.rect().centerx + 15, 
+                                                       self.rect().centery], direction, 0])
                         for i in range(4):
                             self.game.sparks.append(
                                 Spark(self.game.projectiles[-1][0], 
@@ -125,7 +135,6 @@ class Enemy(PhysicsEntity):
             self.walking = random.randint(30, 120)
         
         super().update(tilemap, movement=movement)
-        
         if movement[0] != 0:
             self.set_action('run')
         else:
@@ -182,20 +191,22 @@ class Enemy(PhysicsEntity):
                        self.rect().centery - offset[1]))
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size, e_id, lifes, respawn_pos):
-        super().__init__(game, 'player', pos, size, e_id)
+    def __init__(self, game, pos, size, id, lifes, respawn_pos):
+        self.skin = 0
+        super().__init__(game, 'player', pos, size, id)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
         self.lifes = lifes
         self.respawn_pos = respawn_pos
-        self.shoot_cooldown = 0
+        self.shoot_cooldown = 10
+        
         
     def shoot(self):
-        if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0:
+        if self.game.cm.gun and self.game.cm.ammo > 0 and self.shoot_cooldown == 0 and settings.selected_weapon == 1:
             self.game.sfx['shoot'].play()
-            direction = -1.5 if self.flip else 1.5
+            direction = -3.5 if self.flip else 3.5
             self.game.projectiles.append([
                 [self.rect().centerx + (7 * (-1 if self.flip else 1)), 
                  self.rect().centery], 
@@ -275,7 +286,7 @@ class Player(PhysicsEntity):
         if abs(self.dashing) <= 50:
             super().render(surf, offset=offset)
 
-        if self.game.cm.gun:
+        if self.game.cm.gun and settings.selected_weapon == 1:
             if self.flip:
                 surf.blit(pygame.transform.flip(self.game.assets['gun'], True, False), 
                         (self.rect().centerx - 4 - self.game.assets['gun'].get_width() - offset[0], 

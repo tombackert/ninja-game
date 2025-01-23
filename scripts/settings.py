@@ -10,6 +10,8 @@ class Settings:
         self._sound_volume = 0.5
         self._selected_level = 0
         self.selected_editor_level = 0
+        self.selected_weapon = 0
+        self.selected_skin = 0
         self.playable_levels = {
             0: True,
             1: False,
@@ -22,6 +24,7 @@ class Settings:
             8: False,
             9: False,
             10: False,
+            15: False,
         }
 
         self.load_settings()
@@ -80,6 +83,8 @@ class Settings:
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
                     self._selected_level = data.get("selected_level", self._selected_level)
                     self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
+                    self.selected_weapon = data.get("selected_weapon", self.selected_weapon)
+                    self.selected_skin = data.get("selected_skin", self.selected_skin)
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
@@ -94,8 +99,10 @@ class Settings:
         data = {
             "music_volume": self._music_volume,
             "sound_volume": self._sound_volume,
-            #"selected_level": self._selected_level,
+            "selected_level": self._selected_level,
             "selected_editor_level": self.selected_editor_level,
+            "selected_skin": self.selected_skin,
+            "selected_weapon": self.selected_weapon,
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()}
         }
         try:

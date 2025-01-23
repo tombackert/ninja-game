@@ -58,11 +58,16 @@ class Game:
             'clouds': load_images('clouds'),
             'enemy/idle': Animation(load_images('entities/enemy/idle'), img_dur=6),
             'enemy/run': Animation(load_images('entities/enemy/run'), img_dur=4),
-            'player/idle': Animation(load_images('entities/player/idle'), img_dur=6),
-            'player/run': Animation(load_images('entities/player/run'), img_dur=4),
-            'player/jump': Animation(load_images('entities/player/jump')),
-            'player/slide': Animation(load_images('entities/player/slide')),
-            'player/wall_slide': Animation(load_images('entities/player/wall_slide')),
+            'player/default/idle': Animation(load_images('entities/player/default/idle'), img_dur=6),
+            'player/default/run': Animation(load_images('entities/player/default/run'), img_dur=4),
+            'player/default/jump': Animation(load_images('entities/player/default/jump')),
+            'player/default/slide': Animation(load_images('entities/player/default/slide')),
+            'player/default/wall_slide': Animation(load_images('entities/player/default/wall_slide')),
+            'player/red/idle': Animation(load_images('entities/player/red/idle'), img_dur=6),
+            'player/red/run': Animation(load_images('entities/player/red/run'), img_dur=4),
+            'player/red/jump': Animation(load_images('entities/player/red/jump')),
+            'player/red/slide': Animation(load_images('entities/player/red/slide')),
+            'player/red/wall_slide': Animation(load_images('entities/player/red/wall_slide')),
             'particle/leaf': Animation(load_images('particles/leaf'), img_dur=20, loop=False),
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'coin': Animation(load_images('collectables/coin'), img_dur=6),
@@ -85,8 +90,6 @@ class Game:
 
         # Entities
         self.clouds = Clouds(self.assets['clouds'], count=16)
-        self.players = [Player(self, (100, 100), (8, 15), 0, lifes=3, respawn_pos=(100, 100))]
-        self.player = self.players[0]
         self.tilemap = Tilemap(self, tile_size=16)
         
         # Global variables
@@ -98,15 +101,25 @@ class Game:
         self.cm = CollectableManager(self)
         self.cm.load_collectables()
 
+        # Keyboard Manager
+        self.km = KeyboardManager(self)
+
+        
+        
+        
+        self.playerID = 0
+        self.playerSkin = settings.selected_skin
+
         # Load the selected level
         self.load_level(self.level)
+        
+        #print(f"id: {self.players[self.playerID].id}")
+        #print(f"size: {self.players[self.playerID].size}")
+    
 
         # Game state
         self.running = True
         self.paused = False
-
-        # Keyboard Manager
-        self.km = KeyboardManager(self)
 
     # Update sound volumes based on settings
     def update_sound_volumes(self):
@@ -133,51 +146,58 @@ class Game:
             self.leaf_spawners.append(pygame.Rect(4 + tree['pos'][0], 4 + tree['pos'][1], 23, 13))
 
         ###### START LOAD LEVEL
+        self.enemies = []
+        self.players = []
+
         if respawn:
-            self.enemies = []
             enemy_id = 0
-            self.player.pos = self.player.respawn_pos
-            self.player.air_time = 0
+            for player in self.players:
+                player.pos = player.respawn_pos
+                player.air_time = 0
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
                 if spawner['variant'] == 1:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
         else:
-            self.enemies = []
             enemy_id = 0
-            player_spawned = False
+            player_id = 0
+            skin = self.playerSkin
             for spawner in self.tilemap.extract([('spawners', 0), ('spawners', 1)]):
-                if spawner['variant'] == 0 and not player_spawned:
-                    self.player.pos = spawner['pos']
-                    self.player.respawn_pos = list(self.player.pos)
-                    self.player.air_time = 0
-                    player_spawned = True
+                if spawner['variant'] == 0:
+                    player = Player(self, spawner['pos'], (8, 15), player_id, lifes=lifes, respawn_pos=list(spawner['pos']))
+                    player.skin = skin
+                    player.air_time = 0
+                    self.players.append(player)
+                    player_id += 1
                 else:
                     self.enemies.append(Enemy(self, spawner['pos'], (8, 15), enemy_id))
                     enemy_id += 1
             self.saves = 1
+            
+            # Set the current player if there are any players
+            if self.players:
+                self.player = self.players[self.playerID]
         ###### END LOAD LEVEL
-
+        
         self.projectiles = []
         self.particles = []
         self.sparks = []
 
         self.scroll = [0, 0]
         self.dead = 0
-        self.player.lifes = lifes
+        if self.players:
+            self.player.lifes = lifes
         self.transition = -30
         self.endpoint = False
 
         self.cm.load_collectables_from_tilemap(self.tilemap)
-
-    def get_font(self, size):
-        return pygame.font.Font("data/font.ttf", size)
 
     def run(self):
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)
         self.sfx['ambience'].play(-1)
+
 
         while self.running:
             self.cm.load_collectables()
@@ -194,18 +214,23 @@ class Game:
 
                 for flag_rect in self.flags:
                     if self.player.rect().colliderect(flag_rect):
-                        #print("You reached the flag!")
                         self.endpoint = True
 
                 if self.endpoint:
                     self.transition += 1
                     if self.transition > 30:
                         self.timer.update_best_time()
-                        self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
+                        levels = [int(f.split('.')[0]) for f in os.listdir('data/maps') if f.endswith('.json')]
+                        levels.sort()
+                        current_level_index = levels.index(self.level)
+                        if current_level_index == len(levels) - 1:
+                            self.load_level(self.level)
+                        else:
+                            next_level = levels[current_level_index + 1]
+                            self.level = next_level
                         settings.set_level_to_playable(self.level)
                         settings.selected_level = self.level
                         self.load_level(self.level)
-
                 if self.transition < 0:
                     self.transition += 1
 
@@ -245,7 +270,7 @@ class Game:
                 UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
                 UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
                 UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
-                UI.render_game_ui_element(self.display_2, f"Coins: ${self.cm.coins}", 5, 15)
+                UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
                 UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
                 
                 # Screen shake

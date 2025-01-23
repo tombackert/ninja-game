@@ -12,7 +12,7 @@ class UI:
     GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
-    LOCK_IMG = pygame.image.load("data/images/gun.png")
+    #LOCK_IMG = pygame.image.load("data/images/gun.png")
 
     @staticmethod
     def get_font(size):
@@ -64,8 +64,12 @@ class UI:
 
         if not game.dead:
             for player in game.players:
-                player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
-                player.render(game.display, offset=render_scroll)
+                if player.id == game.playerID:
+                    player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
+                else:
+                    player.update(game.tilemap, (0, 0)) 
+                if player.lifes > 0:
+                    player.render(game.display, offset=render_scroll)
 
         # Projectiles
         for projectile in game.projectiles.copy():
@@ -80,23 +84,24 @@ class UI:
             elif projectile[2] > 360:
                 game.projectiles.remove(projectile)
             elif abs(game.player.dashing) < 50:
-                if game.player.rect().collidepoint(projectile[0]):
-                    game.projectiles.remove(projectile)
-                    game.player.lifes -= 1
-                    game.sfx['hit'].play()
-                    game.screenshake = max(16, game.screenshake)
-                    for i in range(30):
-                        angle = random.random() * math.pi * 2
-                        speed = random.random() * 5
-                        game.sparks.append(Spark(game.player.rect().center, angle, 2 + random.random()))
-                        game.particles.append(Particle(
-                            game, 'particle', game.player.rect().center,
-                            velocity=[
-                                math.cos(angle + math.pi) * speed * 0.5,
-                                math.sin(angle + math.pi) * speed * 0.5
-                            ],
-                            frame=random.randint(0, 7)
-                        ))
+                for player in game.players:
+                    if player.rect().collidepoint(projectile[0]):
+                        game.projectiles.remove(projectile)
+                        player.lifes -= 1
+                        game.sfx['hit'].play()
+                        game.screenshake = max(16, game.screenshake)
+                        for i in range(30):
+                            angle = random.random() * math.pi * 2
+                            speed = random.random() * 5
+                            game.sparks.append(Spark(player.rect().center, angle, 2 + random.random()))
+                            game.particles.append(Particle(
+                                game, 'particle', player.rect().center,
+                                velocity=[
+                                    math.cos(angle + math.pi) * speed * 0.5,
+                                    math.sin(angle + math.pi) * speed * 0.5
+                                ],
+                                frame=random.randint(0, 7)
+                            ))
 
         # Sparks
         for spark in game.sparks.copy():
@@ -172,6 +177,20 @@ class UI:
             surface=screen,
             font=font,
             text=title,
+            x=x,
+            y=y,
+            text_color=UI.PM_COLOR,
+            center=True,
+            scale=3
+        )
+
+    @staticmethod
+    def render_menu_subtitle(screen, subtitle, x, y):
+        font = UI.get_font(40)
+        UI.draw_text_with_outline(
+            surface=screen,
+            font=font,
+            text=subtitle,
             x=x,
             y=y,
             text_color=UI.PM_COLOR,

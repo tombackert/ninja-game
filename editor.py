@@ -9,7 +9,7 @@ from scripts.collectables import Collectables
 from scripts.settings import settings
 
 RENDER_SCALE = 2.0
-MAP_NAME = '9'
+MAP_NAME = '10'
 CURRENT_MAP = 'data/maps/' + str(MAP_NAME) + '.json'
 
 class Editor:
@@ -23,11 +23,11 @@ class Editor:
         self.clock = pygame.time.Clock()
 
         self.assets = {
-            'decor': load_images('tiles/decor'),
             'grass': load_images('tiles/grass'),
-            'large_decor': load_images('tiles/large_decor'),
             'stone': load_images('tiles/stone'),
             'spawners': load_images('tiles/spawners'),
+            'large_decor': load_images('tiles/large_decor'),
+            'decor': load_images('tiles/decor'),
             'coin': load_images('tiles/collectables/coin'),
             'flag': load_images('tiles/collectables/flag'),
         }
@@ -126,6 +126,47 @@ class Editor:
                             'pos': (mpos[0] + self.scroll[0], mpos[1] + self.scroll[1])
                         })
                 
+                if self.tile_group == 2 and self.tile_variant == 0:
+                    if self.tilemap.players == []:
+                        self.tilemap.players.append(
+                            Player(self, [tile_pos[0], tile_pos[1]], (8, 15), self.tilemap.get_player_count(), lifes=3, respawn_pos=(tile_pos[0], tile_pos[1]))
+                        )
+                        print("-----------------")
+                        print(self.tilemap.players)
+                        for player in self.tilemap.players:
+                            print(f"id: {player.id} at pos: {player.pos}") 
+                        print("-----------------")
+                    else:
+                        if not any(player.pos[0] == tile_pos[0] and player.pos[1] == tile_pos[1] for player in self.tilemap.players):
+                            self.tilemap.players.append(
+                                Player(self, [tile_pos[0], tile_pos[1]], (8, 15), self.tilemap.get_player_count(), lifes=3, respawn_pos=(tile_pos[0], tile_pos[1]))
+                            )
+                            print("-----------------")
+                            print(self.tilemap.players)
+                            for player in self.tilemap.players:
+                                print(f"id: {player.id} at pos: {player.pos}") 
+                            print("-----------------")                    
+                    
+                if self.tile_group == 2 and self.tile_variant == 1:
+                    if self.tilemap.enemies == []:
+                        self.tilemap.enemies.append(
+                            Enemy(self, [tile_pos[0], tile_pos[1]], (8, 15), self.tilemap.get_enemy_count())
+                        )
+                        print("-----------------")
+                        print(self.tilemap.enemies)
+                        for enemy in self.tilemap.enemies:
+                            print(f"id: {enemy.id} at pos: {enemy.pos}")
+                        print("-----------------")
+                    else:
+                        if not any (enemy.pos[0] == tile_pos[0] and enemy.pos[1] == tile_pos[1] for enemy in self.tilemap.enemies):
+                                self.tilemap.enemies.append(
+                                    Enemy(self, [tile_pos[0], tile_pos[1]], (8, 15), self.tilemap.get_enemy_count())
+                                )
+                                print("-----------------")
+                                print(self.tilemap.enemies)
+                                for enemy in self.tilemap.enemies:
+                                    print(f"id: {enemy.id} at pos: {enemy.pos}")
+                                print("-----------------")
 
             # Tile removal
             if self.right_clicking:
@@ -148,6 +189,34 @@ class Editor:
                             if tile_loc in self.tilemap.tilemap:
                                 del self.tilemap.tilemap[tile_loc]
 
+                # Entity removal
+                
+                for player in self.tilemap.players:
+                    if (player.pos[0] == tile_pos[0] and player.pos[1] == tile_pos[1]):
+                        self.tilemap.players.remove(player)
+                        
+                        print("-----------------")
+                        print(self.tilemap.players)
+                        for player in self.tilemap.players:
+                            print(f"id: {player.id} at pos: {player.pos}") 
+                        print("-----------------")
+                        
+                for enemy in self.tilemap.enemies:
+                    if (enemy.pos[0] == tile_pos[0] and enemy.pos[1] == tile_pos[1]):
+                        self.tilemap.enemies.remove(enemy)
+
+                        print("-----------------")
+                        print(self.tilemap.enemies)
+                        for enemy in self.tilemap.enemies:
+                            print(f"id: {enemy.id} at pos: {enemy.pos}")
+                        print("-----------------")
+
+            # update entity ids
+            for i, player in enumerate(self.tilemap.players):
+                player.id = i
+            
+            for i, enemy in enumerate(self.tilemap.enemies):
+                enemy.id = i
 
             self.display.blit(current_tile_img, (5, 5))
             tile_name = f"{self.tile_list[self.tile_group]}/{self.tile_variant}"
@@ -257,6 +326,10 @@ class Editor:
             position = str(int(self.scroll[0])) + ', ' + str(int(self.scroll[1]))
             position_surface = self.font.render(position, True, (0, 0, 0))
             self.display.blit(position_surface, (self.display.get_width() - position_surface.get_width() - 10, 10))
+
+            t_pos = str(tile_pos[0]) + ', ' + str(tile_pos[1])
+            t_pos_surface = self.font.render(t_pos, True, (0, 0, 0))
+            self.display.blit(t_pos_surface, (self.display.get_width() - t_pos_surface.get_width() - 10, 20))
 
             self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
             pygame.display.update()
