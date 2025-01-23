@@ -6,6 +6,7 @@ import os
 import pygame.font
 import json
 from datetime import datetime
+import time
 
 from scripts.displayManager import DisplayManager
 from scripts.entities import PhysicsEntity, Player, Enemy
@@ -204,6 +205,9 @@ class Game:
 
             while not self.paused:
 
+                ##### START performance tracking
+                start_frame_time = time.perf_counter()
+
                 # Init 
                 self.timer.update(self.level)
                 self.display.fill((0, 0, 0, 0))
@@ -272,6 +276,15 @@ class Game:
                 UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
                 UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
                 UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
+
+                ######
+                end_frame_time = time.perf_counter()
+                frame_time_ms = (end_frame_time - start_frame_time) * 1000.0
+                fps = self.clock.get_fps()
+
+                UI.render_game_ui_element(self.display_2, f"FPS: {fps:.1f}", 5, 40)
+                UI.render_game_ui_element(self.display_2, f"{frame_time_ms:.2f} ms", 5, 50)
+                ###### END performance tracking
                 
                 # Screen shake
                 Effects.screenshake(self)
