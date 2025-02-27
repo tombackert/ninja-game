@@ -22,12 +22,13 @@ class Menu:
         self.WIN_H = dm.WIN_H
 
         pygame.display.set_caption("Ninja Game")
-        self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.WIN_W, self.WIN_H = self.screen.get_size()
+
         self.display_1 = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
         self.clock = pygame.time.Clock()
         self.bg = pygame.image.load("data/images/background-big.png")
 
-        # Load music
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(settings.music_volume)
         pygame.mixer.music.play(-1)

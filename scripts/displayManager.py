@@ -25,7 +25,6 @@ class DisplayManager:
         self.WIN_W = int(self.BASE_W * scale)
         self.WIN_H = int(self.BASE_H * scale)
         
-        # Ensure window size doesn't exceed screen resolution
         self.WIN_W = min(self.WIN_W, display_info.current_w)
         self.WIN_H = min(self.WIN_H, display_info.current_h)
         self.scale = self.WIN_W / self.BASE_W
