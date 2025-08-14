@@ -1,6 +1,10 @@
 import socket
 import json
 import threading
+from scripts.logger import get_logger
+
+log = get_logger("client")
+
 
 class GameClient:
     def __init__(self, server_ip="localhost", server_port=5555):
@@ -22,14 +26,14 @@ class GameClient:
         try:
             self.sock.connect((self.server_ip, self.server_port))
             self.connected = True
-            print(f"[CLIENT] Successfully connected to {self.server_ip}:{self.server_port}")
+            log.info("Connected", f"{self.server_ip}:{self.server_port}")
 
             # Start receiving thread
             recv_thread = threading.Thread(target=self.listen_server)
             recv_thread.start()
 
         except Exception as e:
-            print(f"[CLIENT] Error while connecting: {e}")
+            log.error("Connect failed", e)
 
     def listen_server(self):
         """
@@ -39,7 +43,7 @@ class GameClient:
             try:
                 data = self.sock.recv(4096)
                 if not data:
-                    print("[CLIENT] Lost connection to server.")
+                    log.warn("Lost connection to server")
                     self.running = False
                     break
 
@@ -47,7 +51,7 @@ class GameClient:
                 self.handle_server_message(msg)
 
             except Exception as e:
-                print(f"[CLIENT] Error while receiving: {e}")
+                log.error("Receive error", e)
                 self.running = False
                 break
 
@@ -62,7 +66,7 @@ class GameClient:
         if msg_type == "WELCOME":
             # Server assigns you a player_id
             self.player_id = msg.get("client_id")
-            print(f"[CLIENT] Welcome, you are player {self.player_id}")
+            log.info("Welcome id", self.player_id)
 
         elif msg_type == "STATE":
             # Global game state
@@ -71,7 +75,7 @@ class GameClient:
             #   -> Update positions of other players
 
         else:
-            print(f"[CLIENT] Unknown message: {msg}")
+            log.warn("Unknown message", msg)
 
     def send_move(self, dx, dy):
         """
@@ -79,21 +83,18 @@ class GameClient:
         """
         if not self.connected:
             return
-        move_msg = {
-            "type": "MOVE",
-            "dx": dx,
-            "dy": dy
-        }
+        move_msg = {"type": "MOVE", "dx": dx, "dy": dy}
         self.send_data(move_msg)
 
     def send_data(self, data_dict):
         try:
             msg_str = json.dumps(data_dict)
             self.sock.sendall(msg_str.encode("utf-8"))
-        except:
-            print("[CLIENT] Error while sending.")
+        except Exception as e:
+            log.error("Send error", e)
 
     def close(self):
         self.running = False
         self.sock.close()
-        print("[CLIENT] Connection closed.")
+
+    log.info("Connection closed")

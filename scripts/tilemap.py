@@ -6,6 +6,9 @@ from scripts.utils import Animation
 from datetime import datetime
 import os
 import traceback
+from scripts.logger import get_logger
+
+log = get_logger("tilemap")
 
 AUTOTILE_MAP = {
     tuple(sorted([(1, 0), (0, 1)])): 0,
@@ -133,10 +136,10 @@ class Tilemap:
         try:
             with open(path, "w") as f:
                 json.dump(game_state, f, indent=4)
-            print(f"Game saved under {path}")
+            log.info("Game saved", path)
             return True
         except Exception as e:
-            print(f"Error saving tilemap: {e}")
+            log.error("Error saving tilemap", e)
             return False
 
     def load(self, path, load_entities=True):
@@ -188,7 +191,7 @@ class Tilemap:
             # print(f"Tilemap loaded from {path}")
         except Exception as e:
             traceback.print_exc()
-            print(f"Error while loading Tilemap: {e}")
+            log.error("Error while loading Tilemap", e)
 
     def solid_check(self, pos):
         tile_loc = (
@@ -263,15 +266,15 @@ class Tilemap:
     def get_image(self, tile):
         asset = self.game.assets.get(tile["type"])
         if asset is None:
-            print(f"Warning: Asset for tile type '{tile['type']}' not found.")
+            log.warn(f"Missing asset for tile type {tile['type']}")
             return None
 
         if isinstance(asset, list):
             if 0 <= tile["variant"] < len(asset):
                 return asset[tile["variant"]]
             else:
-                print(
-                    f"Warning: Variant index {tile['variant']} out of bounds for tile type '{tile['type']}'."
+                log.warn(
+                    f"Variant index {tile['variant']} out of bounds for tile type {tile['type']}"
                 )
                 return None
         elif isinstance(asset, pygame.Surface):
@@ -281,13 +284,11 @@ class Tilemap:
             if isinstance(frame, pygame.Surface):
                 return frame
             else:
-                print(
-                    f"Warning: Animation frame is not a Surface for tile type '{tile['type']}'."
-                )
+                log.warn(f"Animation frame not Surface for tile type {tile['type']}")
                 return None
         else:
-            print(
-                f"Warning: Unexpected asset type for tile type '{tile['type']}': {type(asset)}"
+            log.warn(
+                f"Unexpected asset type for tile type {tile['type']}: {type(asset)}"
             )
             return None
 

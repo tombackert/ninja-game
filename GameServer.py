@@ -2,6 +2,10 @@ import socket
 import threading
 import json
 import time
+from scripts.logger import get_logger
+
+log = get_logger("server")
+
 
 class GameServer:
     def __init__(self, host="localhost", port=5555, tick_rate=30):
@@ -20,7 +24,7 @@ class GameServer:
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen()
 
-        print(f"[SERVER] Running on {self.host}:{self.port}")
+        log.info("Running", f"{self.host}:{self.port}")
 
         # Dictionary for connected clients: { client_id: (conn, addr) }
         self.clients = {}
@@ -35,7 +39,7 @@ class GameServer:
 
     def start(self):
         """
-        Starts the server: 
+        Starts the server:
           - Thread for 'accept_clients'
           - Thread/main loop for 'game_loop'
         """
@@ -51,8 +55,8 @@ class GameServer:
         while self.running:
             try:
                 conn, addr = self.server_socket.accept()
-                print(f"[SERVER] New connection from {addr}")
-                
+                log.info("New connection", addr)
+
                 # Assign client ID
                 client_id = self.next_client_id
                 self.next_client_id += 1
@@ -63,7 +67,9 @@ class GameServer:
                 self.clients[client_id] = (conn, addr)
 
                 # Start thread for client
-                client_thread = threading.Thread(target=self.client_handler, args=(client_id,))
+                client_thread = threading.Thread(
+                    target=self.client_handler, args=(client_id,)
+                )
                 client_thread.start()
 
             except OSError:
@@ -90,11 +96,11 @@ class GameServer:
             except ConnectionResetError:
                 break
             except Exception as e:
-                print(f"[SERVER] Error with client {client_id}: {e}")
+                log.error(f"Client error {client_id}", e)
                 break
 
         # Client disconnected
-        print(f"[SERVER] Client {client_id} disconnected.")
+        log.info(f"Client {client_id} disconnected")
         conn.close()
         # Remove from dictionaries
         if client_id in self.clients:
@@ -136,10 +142,7 @@ class GameServer:
         Sends current game state to all clients.
         """
         # Minimal example: {"type": "STATE", "players": {...}}
-        state_msg = {
-            "type": "STATE",
-            "players": self.game_state
-        }
+        state_msg = {"type": "STATE", "players": self.game_state}
         for cid in list(self.clients.keys()):
             self.send_data(cid, state_msg)
 
@@ -153,8 +156,8 @@ class GameServer:
         try:
             msg_str = json.dumps(data_dict)
             conn.sendall(msg_str.encode("utf-8"))
-        except:
-            print(f"[SERVER] Error sending to client {client_id}")
+        except Exception as e:
+            log.error(f"Send error {client_id}", e)
 
     def shutdown(self):
         """
@@ -162,4 +165,4 @@ class GameServer:
         """
         self.running = False
         self.server_socket.close()
-        print("[SERVER] Shutdown completed.")
+        log.info("Shutdown completed")
