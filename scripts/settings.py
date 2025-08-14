@@ -1,5 +1,8 @@
 import json
 import os
+from scripts.logger import get_logger
+
+log = get_logger("settings")
 
 class Settings:
     SETTINGS_FILE = "data/settings.json"
@@ -12,6 +15,7 @@ class Settings:
         self.selected_editor_level = 0
         self.selected_weapon = 0
         self.selected_skin = 0
+        self._dirty = False
         self.playable_levels = {
             0: True,
             1: False,
@@ -26,7 +30,6 @@ class Settings:
             10: False,
             15: False,
         }
-
         self.load_settings()
 
     @property
@@ -35,8 +38,10 @@ class Settings:
 
     @music_volume.setter
     def music_volume(self, value):
-        self._music_volume = max(0.0, max(0.0, min(1.0, round(value * 10) / 10)))
-        self.save_settings()
+        new_val = max(0.0, max(0.0, min(1.0, round(value * 10) / 10)))
+        if new_val != self._music_volume:
+            self._music_volume = new_val
+            self._dirty = True
 
     @property
     def sound_volume(self):
@@ -44,8 +49,10 @@ class Settings:
 
     @sound_volume.setter
     def sound_volume(self, value):
-        self._sound_volume = max(0.0, max(0.0, min(1.0, round(value * 10) / 10)))
-        self.save_settings()
+        new_val = max(0.0, max(0.0, min(1.0, round(value * 10) / 10)))
+        if new_val != self._sound_volume:
+            self._sound_volume = new_val
+            self._dirty = True
 
     @property
     def selected_level(self):
@@ -53,8 +60,10 @@ class Settings:
 
     @selected_level.setter
     def selected_level(self, value):
-        self._selected_level = max(0, value)
-        self.save_settings()
+        new_val = max(0, value)
+        if new_val != self._selected_level:
+            self._selected_level = new_val
+            self._dirty = True
 
     def set_editor_level(self, value):
         self.selected_editor_level = max(0, value)
@@ -63,9 +72,9 @@ class Settings:
         return self.selected_editor_level
 
     def set_level_to_playable(self, level):
-        if level in self.playable_levels:
+        if level in self.playable_levels and not self.playable_levels[level]:
             self.playable_levels[level] = True
-            self.save_settings()
+            self._dirty = True
 
     def get_playable_levels(self):
         return self.playable_levels
@@ -89,13 +98,21 @@ class Settings:
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
             except (json.JSONDecodeError, IOError) as e:
-                print(f"Error loading settings: {e}")
-                self.save_settings()
+                log.warn("Error loading settings; regenerating", e)
+                self._dirty = True
+                self.flush()
         else:
-            self.save_settings()
+            self._dirty = True
+            self.flush()
 
-    def save_settings(self):
-        """Save current settings to the JSON file."""
+    def save_settings(self):  # backward compatibility; now conditional
+        if self._dirty:
+            self.flush()
+
+    def flush(self):
+        """Write settings to disk if dirty and clear dirty flag."""
+        if not self._dirty:
+            return
         data = {
             "music_volume": self._music_volume,
             "sound_volume": self._sound_volume,
@@ -109,7 +126,9 @@ class Settings:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
             with open(self.SETTINGS_FILE, "w") as f:
                 json.dump(data, f, indent=4)
+            self._dirty = False
+            log.debug("Settings flushed")
         except IOError as e:
-            print(f"Error saving settings: {e}")
+            log.error("Error saving settings", e)
 
 settings = Settings()
