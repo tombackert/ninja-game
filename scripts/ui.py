@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+from collections import OrderedDict
 from scripts.particle import Particle
 from scripts.spark import Spark
 
@@ -12,6 +13,75 @@ class UI:
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
     # LOCK_IMG = pygame.image.load("data/images/gun.png")
+
+    # Simple in-memory LRU cache for UI images (Issue 4 + optional enhancements)
+    _image_cache: "OrderedDict[tuple[str, float], pygame.Surface]" = OrderedDict()
+    _cache_capacity: int = 64
+    _cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
+
+    @staticmethod
+    def clear_image_cache():
+        """Clear cached UI images (for tests or memory reset)."""
+        UI._image_cache.clear()
+        UI._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
+
+    @staticmethod
+    def configure_image_cache(capacity: int | None = None, clear: bool = False):
+        """Configure cache capacity or clear contents.
+
+        Args:
+            capacity: New max number of cached (path, scale) variants.
+            clear: Whether to clear all cached entries & reset stats.
+        """
+        if capacity is not None and capacity > 0:
+            UI._cache_capacity = capacity
+            # If shrinking capacity, evict oldest until within limit
+            while len(UI._image_cache) > UI._cache_capacity:
+                UI._image_cache.popitem(last=False)
+                UI._cache_stats["evictions"] += 1
+        if clear:
+            UI.clear_image_cache()
+
+    @staticmethod
+    def get_image_cache_stats():
+        """Return a shallow copy of current cache statistics."""
+        return dict(
+            UI._cache_stats
+            | {"size": len(UI._image_cache), "capacity": UI._cache_capacity}
+        )
+
+    @staticmethod
+    def load_image_cached(path, scale=1):
+        """Load and scale an image with caching.
+
+        Cache key includes the path and scale factor so repeated calls avoid
+        disk IO and redundant scaling work.
+        """
+        key = (path, scale)
+        img = UI._image_cache.get(key)
+        if img is not None:
+            # LRU touch: move to end
+            UI._image_cache.move_to_end(key)
+            UI._cache_stats["hits"] += 1
+            return img
+
+        UI._cache_stats["misses"] += 1
+        base = pygame.image.load(path)
+        if scale != 1:
+            base = pygame.transform.scale(
+                base,
+                (
+                    int(base.get_width() * scale),
+                    int(base.get_height() * scale),
+                ),
+            )
+
+        # Evict if at capacity (before adding new)
+        if len(UI._image_cache) >= UI._cache_capacity:
+            UI._image_cache.popitem(last=False)
+            UI._cache_stats["evictions"] += 1
+        UI._image_cache[key] = base
+        return base
 
     @staticmethod
     def get_font(size):
@@ -317,10 +387,7 @@ class UI:
 
     @staticmethod
     def render_ui_img(display, p, x, y, scale=1):
-        img = pygame.image.load(p)
-        img = pygame.transform.scale(
-            img, (int(img.get_width() * scale), int(img.get_height() * scale))
-        )
+        img = UI.load_image_cached(p, scale=scale)
         display.blit(img, (x - img.get_width() / 2, y - img.get_height() / 2))
         UI.draw_img_outline(
             display, img, x - img.get_width() / 2, y - img.get_height() / 2
