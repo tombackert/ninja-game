@@ -32,13 +32,14 @@ SPARK_COUNT_DASH_COLLIDE = 30  # sparks spawned when dash collision occurs
 SPARK_COUNT_PROJECTILE = 4  # sparks spawned on projectile spawn or impact
 
 # Timers / Transitions
+DEAD_ANIM_FADE_START = 10  # frame at which transition fade begins after death
 RESPAWN_DEAD_THRESHOLD = 40  # frames until respawn when dead animation
 TRANSITION_MAX = 30  # max positive transition value
 TRANSITION_START = -30  # starting negative transition value
 AIR_TIME_FATAL = 420  # frames in air before considered 'dead'
 
 # Misc
-LEAF_SPAWNER_CLOUD_COUNT = 16  # number of clouds
+LEAF_SPAWNER_CLOUD_COUNT = 16  # number of clouds (also used for initial cloud count)
 SAVE_DEFAULT_LIVES = 3
 
 __all__ = [name for name in globals().keys() if name.isupper()]

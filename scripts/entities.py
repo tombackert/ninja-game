@@ -27,6 +27,7 @@ from scripts.constants import (
     ENEMY_SHOOT_SCALE_LOG,
     SPARK_PARTICLE_SPEED_MAX,
     SPARK_COUNT_ENEMY_HIT,
+    SPARK_COUNT_PROJECTILE,
     AIR_TIME_FATAL,
 )
 
@@ -163,7 +164,7 @@ class Enemy(PhysicsEntity):
                                 0,
                             ]
                         )
-                        for i in range(4):
+                        for i in range(SPARK_COUNT_PROJECTILE):
                             self.game.sparks.append(
                                 Spark(
                                     self.game.projectiles[-1][0],
@@ -186,7 +187,7 @@ class Enemy(PhysicsEntity):
                                 0,
                             ]
                         )
-                        for i in range(4):
+                        for i in range(SPARK_COUNT_PROJECTILE):
                             self.game.sparks.append(
                                 Spark(
                                     self.game.projectiles[-1][0],
@@ -211,7 +212,7 @@ class Enemy(PhysicsEntity):
                 self.game.cm.coins += 1
                 for i in range(SPARK_COUNT_ENEMY_HIT):
                     angle = random.random() * math.pi * 2
-                    speed = random.random() * 5
+                    speed = random.random() * SPARK_PARTICLE_SPEED_MAX
                     self.game.sparks.append(
                         Spark(self.rect().center, angle, 2 + random.random())
                     )
@@ -245,7 +246,7 @@ class Enemy(PhysicsEntity):
                 self.game.cm.coins += 1
                 for i in range(SPARK_COUNT_ENEMY_HIT):
                     angle = random.random() * math.pi * 2
-                    speed = random.random() * 5
+                    speed = random.random() * SPARK_PARTICLE_SPEED_MAX
                     self.game.sparks.append(
                         Spark(self.rect().center, angle, 2 + random.random())
                     )
@@ -344,7 +345,7 @@ class Player(PhysicsEntity):
             self.game.cm.ammo -= 1
             self.shoot_cooldown = 10
 
-            for i in range(4):
+            for i in range(SPARK_COUNT_PROJECTILE):
                 self.game.sparks.append(
                     Spark(
                         self.game.projectiles[-1][0],

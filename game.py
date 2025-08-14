@@ -8,7 +8,13 @@ from scripts.utils import load_image, load_images, Animation
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.timer import Timer
-from scripts.constants import TRANSITION_START, TRANSITION_MAX
+from scripts.constants import (
+    TRANSITION_START,
+    TRANSITION_MAX,
+    LEAF_SPAWNER_CLOUD_COUNT,
+    DEAD_ANIM_FADE_START,
+    RESPAWN_DEAD_THRESHOLD,
+)
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
 from scripts.ui import UI
@@ -104,7 +110,7 @@ class Game:
         self.update_sound_volumes()
 
         # Entities
-        self.clouds = Clouds(self.assets["clouds"], count=16)
+        self.clouds = Clouds(self.assets["clouds"], count=LEAF_SPAWNER_CLOUD_COUNT)
         self.tilemap = Tilemap(self, tile_size=16)
 
         # Global variables
@@ -266,11 +272,17 @@ class Game:
 
                 if self.dead:
                     self.dead += 1
-                    if self.dead >= 10:
+                    if self.dead >= DEAD_ANIM_FADE_START:
                         self.transition = min(TRANSITION_MAX, self.transition + 1)
-                    if self.dead > 40 and self.player.lifes >= 1:
+                    if (
+                        self.dead > RESPAWN_DEAD_THRESHOLD
+                        and self.player.lifes >= 1
+                    ):
                         self.load_level(self.level, self.player.lifes, respawn=True)
-                    if self.dead > 40 and self.player.lifes < 1:
+                    if (
+                        self.dead > RESPAWN_DEAD_THRESHOLD
+                        and self.player.lifes < 1
+                    ):
                         self.load_level(self.level)
 
                 ##### END COMPUTE GAME FLAGS
