@@ -7,6 +7,28 @@ from scripts.particle import Particle
 from scripts.spark import Spark
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager as cm
+from scripts.constants import (
+    GRAVITY_ACCEL,
+    MAX_FALL_SPEED,
+    HORIZONTAL_FRICTION,
+    WALL_SLIDE_MAX_SPEED,
+    JUMP_VELOCITY,
+    WALL_JUMP_HORIZONTAL_VEL,
+    WALL_JUMP_VERTICAL_VEL,
+    DASH_DURATION_FRAMES,
+    DASH_DECEL_TRIGGER_FRAME,
+    DASH_MIN_ACTIVE_ABS,
+    DASH_SPEED,
+    DASH_TRAIL_PARTICLE_SPEED,
+    PROJECTILE_SPEED,
+    ENEMY_DIRECTION_BASE,
+    ENEMY_DIRECTION_SCALE_LOG,
+    ENEMY_SHOOT_BASE,
+    ENEMY_SHOOT_SCALE_LOG,
+    SPARK_PARTICLE_SPEED_MAX,
+    SPARK_COUNT_ENEMY_HIT,
+    AIR_TIME_FATAL,
+)
 
 
 class PhysicsEntity:
@@ -79,8 +101,8 @@ class PhysicsEntity:
 
         self.last_movement = movement
 
-        self.velocity[1] = min(5, self.velocity[1] + 0.1)
-
+        # Gravity & vertical collision resolution
+        self.velocity[1] = min(MAX_FALL_SPEED, self.velocity[1] + GRAVITY_ACCEL)
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
 
@@ -109,7 +131,11 @@ class Enemy(PhysicsEntity):
                 if self.collisions["right"] or self.collisions["left"]:
                     self.flip = not self.flip
                 else:
-                    direction = 0.35 * (1 + 0.8 * math.log(settings.selected_level + 1))
+                    direction = ENEMY_DIRECTION_BASE * (
+                        1
+                        + ENEMY_DIRECTION_SCALE_LOG
+                        * math.log(settings.selected_level + 1)
+                    )
                     movement = (
                         movement[0] - direction if self.flip else direction,
                         movement[1],
@@ -125,8 +151,10 @@ class Enemy(PhysicsEntity):
                 if abs(dis[1]) < 15:
                     if self.flip and dis[0] < 0:
                         self.game.sfx["shoot"].play()
-                        direction = -1.15 * (
-                            1 + 0.59 * math.log(settings.selected_level + 1)
+                        direction = -ENEMY_SHOOT_BASE * (
+                            1
+                            + ENEMY_SHOOT_SCALE_LOG
+                            * math.log(settings.selected_level + 1)
                         )
                         self.game.projectiles.append(
                             [
@@ -146,8 +174,10 @@ class Enemy(PhysicsEntity):
 
                     if not self.flip and dis[0] > 0:
                         self.game.sfx["shoot"].play()
-                        direction = 1.15 * (
-                            1 + 0.59 * math.log(settings.selected_level + 1)
+                        direction = ENEMY_SHOOT_BASE * (
+                            1
+                            + ENEMY_SHOOT_SCALE_LOG
+                            * math.log(settings.selected_level + 1)
                         )
                         self.game.projectiles.append(
                             [
@@ -173,12 +203,13 @@ class Enemy(PhysicsEntity):
         else:
             self.set_action("idle")
 
-        if abs(self.game.player.dashing) >= 50:
+        # Dash kill & projectile collision checks
+        if abs(self.game.player.dashing) >= DASH_MIN_ACTIVE_ABS:
             if self.rect().colliderect(self.game.player.rect()):
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx["hit"].play()
                 self.game.cm.coins += 1
-                for i in range(30):
+                for i in range(SPARK_COUNT_ENEMY_HIT):
                     angle = random.random() * math.pi * 2
                     speed = random.random() * 5
                     self.game.sparks.append(
@@ -212,7 +243,7 @@ class Enemy(PhysicsEntity):
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx["hit"].play()
                 self.game.cm.coins += 1
-                for i in range(30):
+                for i in range(SPARK_COUNT_ENEMY_HIT):
                     angle = random.random() * math.pi * 2
                     speed = random.random() * 5
                     self.game.sparks.append(
@@ -299,7 +330,7 @@ class Player(PhysicsEntity):
             and settings.selected_weapon == 1
         ):
             self.game.sfx["shoot"].play()
-            direction = -3.5 if self.flip else 3.5
+            direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
             self.game.projectiles.append(
                 [
                     [
@@ -329,7 +360,7 @@ class Player(PhysicsEntity):
 
         self.air_time += 1
 
-        if self.air_time > 420:
+        if self.air_time > AIR_TIME_FATAL:
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
             self.game.dead += 1
@@ -341,7 +372,7 @@ class Player(PhysicsEntity):
         self.wall_slide = False
         if (self.collisions["right"] or self.collisions["left"]) and self.air_time > 4:
             self.wall_slide = True
-            self.velocity[1] = min(self.velocity[1], 0.5)
+            self.velocity[1] = min(self.velocity[1], WALL_SLIDE_MAX_SPEED)
             if self.collisions["right"]:
                 self.flip = False
             else:
@@ -356,7 +387,7 @@ class Player(PhysicsEntity):
             else:
                 self.set_action("idle")
 
-        if abs(self.dashing) in {60, 50}:
+        if abs(self.dashing) in {DASH_DURATION_FRAMES, DASH_MIN_ACTIVE_ABS}:
             for i in range(20):
                 angle = random.random() * math.pi * 2
                 speed = random.random() * 0.5 + 0.5
@@ -374,11 +405,17 @@ class Player(PhysicsEntity):
             self.dashing = max(0, self.dashing - 1)
         if self.dashing < 0:
             self.dashing = min(0, self.dashing + 1)
-        if abs(self.dashing) > 50:
-            self.velocity[0] = abs(self.dashing) / self.dashing * 8
-            if abs(self.dashing) == 51:
+        if abs(self.dashing) > DASH_MIN_ACTIVE_ABS:
+            self.velocity[0] = abs(self.dashing) / self.dashing * DASH_SPEED
+            if abs(self.dashing) == DASH_DECEL_TRIGGER_FRAME:
                 self.velocity[0] *= 0.1
-            pvelocity = [abs(self.dashing) / self.dashing * random.random() * 3, 0]
+            pvelocity = [
+                abs(self.dashing)
+                / self.dashing
+                * random.random()
+                * DASH_TRAIL_PARTICLE_SPEED,
+                0,
+            ]
             self.game.particles.append(
                 Particle(
                     self.game,
@@ -390,12 +427,12 @@ class Player(PhysicsEntity):
             )
 
         if self.velocity[0] > 0:
-            self.velocity[0] = max(self.velocity[0] - 0.1, 0)
+            self.velocity[0] = max(self.velocity[0] - HORIZONTAL_FRICTION, 0)
         else:
-            self.velocity[0] = min(self.velocity[0] + 0.1, 0)
+            self.velocity[0] = min(self.velocity[0] + HORIZONTAL_FRICTION, 0)
 
     def render(self, surf, offset=(0, 0)):
-        if abs(self.dashing) <= 50:
+        if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
 
         if self.game.cm.gun and settings.selected_weapon == 1:
@@ -422,20 +459,20 @@ class Player(PhysicsEntity):
     def jump(self):
         if self.wall_slide:
             if self.flip and self.last_movement[0] < 0:
-                self.velocity[0] = 3.5
-                self.velocity[1] = -2.5
+                self.velocity[0] = WALL_JUMP_HORIZONTAL_VEL
+                self.velocity[1] = WALL_JUMP_VERTICAL_VEL
                 self.air_time = 5
                 self.jumps = max(0, self.jumps - 1)
                 return True
             elif not self.flip and self.last_movement[0] > 0:
-                self.velocity[0] = -3.5
-                self.velocity[1] = -2.5
+                self.velocity[0] = -WALL_JUMP_HORIZONTAL_VEL
+                self.velocity[1] = WALL_JUMP_VERTICAL_VEL
                 self.air_time = 5
                 self.jumps = max(0, self.jumps - 1)
                 return True
 
         elif self.jumps:
-            self.velocity[1] = -3
+            self.velocity[1] = JUMP_VELOCITY
             self.jumps -= 1
             self.air_time = 5
             return True
@@ -444,6 +481,6 @@ class Player(PhysicsEntity):
         if not self.dashing:
             self.game.sfx["dash"].play()
             if self.flip:
-                self.dashing = -60
+                self.dashing = -DASH_DURATION_FRAMES
             else:
-                self.dashing = 60
+                self.dashing = DASH_DURATION_FRAMES

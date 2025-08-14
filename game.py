@@ -8,6 +8,7 @@ from scripts.utils import load_image, load_images, Animation
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.timer import Timer
+from scripts.constants import TRANSITION_START, TRANSITION_MAX
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
 from scripts.ui import UI
@@ -207,7 +208,7 @@ class Game:
         if self.players:
             # Set using canonical name; alias still supports legacy code.
             self.player.lives = lives
-        self.transition = -30
+        self.transition = TRANSITION_START
         self.endpoint = False
 
         self.cm.load_collectables_from_tilemap(self.tilemap)
@@ -240,7 +241,7 @@ class Game:
 
                 if self.endpoint:
                     self.transition += 1
-                    if self.transition > 30:
+                    if self.transition > TRANSITION_MAX:
                         self.timer.update_best_time()
                         levels = [
                             int(f.split(".")[0])
@@ -266,7 +267,7 @@ class Game:
                 if self.dead:
                     self.dead += 1
                     if self.dead >= 10:
-                        self.transition = min(30, self.transition + 1)
+                        self.transition = min(TRANSITION_MAX, self.transition + 1)
                     if self.dead > 40 and self.player.lifes >= 1:
                         self.load_level(self.level, self.player.lifes, respawn=True)
                     if self.dead > 40 and self.player.lifes < 1:

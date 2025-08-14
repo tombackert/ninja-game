@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 data/.DS_Store
 data/saves/
+data/settings.json
+data/collectables.json
