@@ -701,7 +701,7 @@ class Menu:
             UI.render_menu_ui_element(
                 screen, f"Level: {game.level}", game.WIN_W // 2 - 40, 5
             )
-            UI.render_menu_ui_element(screen, f"Lives: {game.player.lifes}", 5, 5)
+            UI.render_menu_ui_element(screen, f"Lives: {game.player.lives}", 5, 5)
             UI.render_menu_ui_element(screen, f"Coins: ${game.cm.coins}", 5, 25)
             UI.render_menu_ui_element(screen, f"Ammo:  {game.cm.ammo}", 5, 45)
             UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 450, 50)
