@@ -274,15 +274,9 @@ class Game:
                     self.dead += 1
                     if self.dead >= DEAD_ANIM_FADE_START:
                         self.transition = min(TRANSITION_MAX, self.transition + 1)
-                    if (
-                        self.dead > RESPAWN_DEAD_THRESHOLD
-                        and self.player.lifes >= 1
-                    ):
+                    if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes >= 1:
                         self.load_level(self.level, self.player.lifes, respawn=True)
-                    if (
-                        self.dead > RESPAWN_DEAD_THRESHOLD
-                        and self.player.lifes < 1
-                    ):
+                    if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes < 1:
                         self.load_level(self.level)
 
                 ##### END COMPUTE GAME FLAGS
