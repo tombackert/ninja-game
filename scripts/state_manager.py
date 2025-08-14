@@ -57,6 +57,11 @@ class State:
     ) -> None:  # pragma: no cover - default no-op
         pass
 
+    # New action-based hook (Issue 11). States migrating to InputRouter
+    # should override this instead of `handle`.
+    def handle_actions(self, actions: Sequence[str]) -> None:  # pragma: no cover
+        pass
+
     def update(self, dt: float) -> None:  # pragma: no cover - default no-op
         pass
 
@@ -113,6 +118,12 @@ class StateManager:
         if self.current:
             self.current.handle(events)
 
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        if self.current:
+            # Prefer new action API when implemented by state.
+            if hasattr(self.current, "handle_actions"):
+                self.current.handle_actions(actions)  # type: ignore[attr-defined]
+
     def update(self, dt: float) -> None:
         if self.current:
             self.current.update(dt)
@@ -146,24 +157,16 @@ class MenuState(State):
         self.start_game = False
         self._ui = UI
 
-    def handle(self, events: Sequence[pygame.event.Event]) -> None:
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    self.selected = (self.selected - 1) % len(self.options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    self.selected = (self.selected + 1) % len(self.options)
-                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    self.enter = True
-                elif event.key == pygame.K_ESCAPE:
-                    self.quit_requested = True
-            elif event.type == pygame.KEYUP:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    self.enter = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        for act in actions:
+            if act == "menu_up":
+                self.selected = (self.selected - 1) % len(self.options)
+            elif act == "menu_down":
+                self.selected = (self.selected + 1) % len(self.options)
+            elif act == "menu_select":
                 self.enter = True
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self.enter = False
+            elif act == "menu_quit":
+                self.quit_requested = True
 
     def update(self, dt: float) -> None:
         if self.enter:
@@ -202,18 +205,11 @@ class GameState(State):
     def game(self):  # convenience
         return self._game
 
-    def handle(self, events: Sequence[pygame.event.Event]) -> None:
-        if (
-            hasattr(self._game, "km")
-            and self._game.km
-            and hasattr(self._game.km, "process_events")
-        ):
-            self._game.km.process_events(events)
+    def handle_actions(self, actions: Sequence[str]) -> None:
         self.request_pause = False
-        for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        for act in actions:
+            if act == "pause_toggle":
                 self.request_pause = True
-                break
 
     def update(self, dt: float) -> None:
         g = self._game
@@ -266,14 +262,13 @@ class PauseState(State):
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
 
-    def handle(self, events: Sequence[pygame.event.Event]) -> None:
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.closed = True
-                if event.key == pygame.K_m:
-                    self.return_to_menu = True
-                    self.closed = True
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        for act in actions:
+            if act == "pause_close":
+                self.closed = True
+            elif act == "pause_menu":
+                self.return_to_menu = True
+                self.closed = True
 
     def update(self, dt: float) -> None:
         self._ticks += 1

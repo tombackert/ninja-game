@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import pygame
 from scripts.state_manager import StateManager, GameState, PauseState, MenuState
+from scripts.input_router import InputRouter
 
 
 def main():
@@ -18,19 +19,22 @@ def main():
     clock = pygame.time.Clock()
 
     sm = StateManager()
+    router = InputRouter()
     # Start in menu
     sm.set(MenuState())
 
     running = True
     while running:
-        # --- Single central event poll (Issue 10 acceptance criteria) ---
+        # --- Single central event poll (Issue 10 + 11) ---
         events = pygame.event.get()
         for e in events:
             if e.type == pygame.QUIT:
                 running = False
 
-        # Dispatch to active state
-        sm.handle(events)
+        # Input routing -> actions -> state handling
+        current_name = sm.current.name if sm.current else ""
+        actions = router.process(events, current_name)
+        sm.handle_actions(actions)
 
         # State-driven transitions (minimal, non-invasive)
         cur = sm.current
@@ -42,12 +46,11 @@ def main():
                 running = False
         if isinstance(cur, GameState) and getattr(cur, "request_pause", False):
             sm.push(PauseState())
-        if isinstance(cur, PauseState):
-            if cur.closed:
-                return_to_menu = cur.return_to_menu
-                sm.pop()  # resume underlying state (GameState)
-                if return_to_menu:
-                    sm.set(MenuState())
+        if isinstance(cur, PauseState) and cur.closed:
+            return_to_menu = cur.return_to_menu
+            sm.pop()  # resume underlying state (GameState)
+            if return_to_menu:
+                sm.set(MenuState())
 
         # --- Update & Render cycle ---
         dt = clock.tick(60) / 1000.0  # 60 FPS cap; dt in seconds
