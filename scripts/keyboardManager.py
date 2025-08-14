@@ -6,6 +6,53 @@ class KeyboardManager:
     def __init__(self, game):
         self.game = game
 
+    # New centralized event processing (Issue 10 migration support)
+    def process_events(self, events):
+        """Process a batch of pygame events.
+
+        This mirrors legacy logic in handle_keyboard_input but without
+        polling the global event queue. It enables a single global
+        event fetch in the application loop / StateManager.
+        """
+        for event in events:
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    # GameState will push a PauseState; keep legacy flag for now
+                    self.game.paused = True
+                if event.key == pygame.K_a:
+                    self.game.movement[0] = True
+                if event.key == pygame.K_d:
+                    self.game.movement[1] = True
+                if event.key == pygame.K_w:
+                    if self.game.player.jump():
+                        self.game.sfx["jump"].play()
+                if event.key == pygame.K_LEFT:
+                    self.game.movement[0] = True
+                if event.key == pygame.K_RIGHT:
+                    self.game.movement[1] = True
+                if event.key == pygame.K_UP:
+                    if self.game.player.jump():
+                        self.game.sfx["jump"].play()
+                if event.key == pygame.K_SPACE:
+                    self.game.player.dash()
+                if event.key == pygame.K_x:
+                    self.game.player.shoot()
+                if event.key == pygame.K_r:
+                    self.game.dead += 1
+                    self.game.player.lives -= 1
+                if event.key == pygame.K_p:
+                    if self.game.saves > 0:
+                        self.game.saves -= 1
+                        self.game.player.respawn_pos = list(self.game.player.pos)
+            if event.type == pygame.KEYUP:
+                if event.key in (pygame.K_a, pygame.K_LEFT):
+                    self.game.movement[0] = False
+                if event.key in (pygame.K_d, pygame.K_RIGHT):
+                    self.game.movement[1] = False
+
     def handle_keyboard_input(self):
         for event in pygame.event.get():
 

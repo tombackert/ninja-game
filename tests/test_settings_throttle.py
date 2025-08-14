@@ -5,7 +5,7 @@ from scripts.settings import Settings
 
 def test_settings_no_write_on_same_value(tmp_path, monkeypatch):
     # Use a temp settings file
-    settings_path = tmp_path / 'settings.json'
+    settings_path = tmp_path / "settings.json"
     s = Settings()
     s.SETTINGS_FILE = str(settings_path)
     s._dirty = True
@@ -21,7 +21,7 @@ def test_settings_no_write_on_same_value(tmp_path, monkeypatch):
 
 
 def test_settings_write_after_change_and_flush(tmp_path, monkeypatch):
-    settings_path = tmp_path / 'settings.json'
+    settings_path = tmp_path / "settings.json"
     s = Settings()
     s.SETTINGS_FILE = str(settings_path)
     s._dirty = True
@@ -35,7 +35,7 @@ def test_settings_write_after_change_and_flush(tmp_path, monkeypatch):
 
 
 def test_settings_save_settings_backward_compat(tmp_path):
-    settings_path = tmp_path / 'settings.json'
+    settings_path = tmp_path / "settings.json"
     s = Settings()
     s.SETTINGS_FILE = str(settings_path)
     s._dirty = True

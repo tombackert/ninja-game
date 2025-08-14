@@ -1,0 +1,63 @@
+"""Application entry harness using StateManager.
+
+Temporary experimental loop to validate migration of Game/Menu into
+states. For now it launches directly into GameState. ESC in-game sets a
+pause request which results in a PauseState being pushed.
+"""
+
+from __future__ import annotations
+import os
+import pygame
+from scripts.state_manager import StateManager, GameState, PauseState, MenuState
+
+
+def main():
+    os.environ.setdefault("NINJA_GAME_TESTING", "0")
+    pygame.init()
+    screen = pygame.display.set_mode((1280, 720))  # windowed for development
+    clock = pygame.time.Clock()
+
+    sm = StateManager()
+    # Start in menu
+    sm.set(MenuState())
+
+    running = True
+    while running:
+        # --- Single central event poll (Issue 10 acceptance criteria) ---
+        events = pygame.event.get()
+        for e in events:
+            if e.type == pygame.QUIT:
+                running = False
+
+        # Dispatch to active state
+        sm.handle(events)
+
+        # State-driven transitions (minimal, non-invasive)
+        cur = sm.current
+        if isinstance(cur, MenuState):
+            if getattr(cur, "start_game", False):
+                sm.set(GameState())
+                cur = sm.current
+            elif getattr(cur, "quit_requested", False):
+                running = False
+        if isinstance(cur, GameState) and getattr(cur, "request_pause", False):
+            sm.push(PauseState())
+        if isinstance(cur, PauseState):
+            if cur.closed:
+                return_to_menu = cur.return_to_menu
+                sm.pop()  # resume underlying state (GameState)
+                if return_to_menu:
+                    sm.set(MenuState())
+
+        # --- Update & Render cycle ---
+        dt = clock.tick(60) / 1000.0  # 60 FPS cap; dt in seconds
+        sm.update(dt)
+        sm.render(screen)
+        pygame.display.flip()
+
+    # Graceful shutdown
+    pygame.quit()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

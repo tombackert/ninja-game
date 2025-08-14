@@ -4,6 +4,7 @@ from scripts.logger import get_logger
 
 log = get_logger("settings")
 
+
 class Settings:
     SETTINGS_FILE = "data/settings.json"
 
@@ -67,7 +68,7 @@ class Settings:
 
     def set_editor_level(self, value):
         self.selected_editor_level = max(0, value)
-    
+
     def get_selected_editor_level(self):
         return self.selected_editor_level
 
@@ -90,13 +91,21 @@ class Settings:
                     data = json.load(f)
                     self._music_volume = data.get("music_volume", self._music_volume)
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
-                    self._selected_level = data.get("selected_level", self._selected_level)
-                    self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
-                    self.selected_weapon = data.get("selected_weapon", self.selected_weapon)
+                    self._selected_level = data.get(
+                        "selected_level", self._selected_level
+                    )
+                    self.selected_editor_level = data.get(
+                        "selected_editor_level", self.selected_editor_level
+                    )
+                    self.selected_weapon = data.get(
+                        "selected_weapon", self.selected_weapon
+                    )
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
-                        self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
+                        self.playable_levels[level] = playable_levels.get(
+                            str(level), self.playable_levels[level]
+                        )
             except (json.JSONDecodeError, IOError) as e:
                 log.warn("Error loading settings; regenerating", e)
                 self._dirty = True
@@ -120,7 +129,7 @@ class Settings:
             "selected_editor_level": self.selected_editor_level,
             "selected_skin": self.selected_skin,
             "selected_weapon": self.selected_weapon,
-            "playable_levels": {str(k): v for k, v in self.playable_levels.items()}
+            "playable_levels": {str(k): v for k, v in self.playable_levels.items()},
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
@@ -130,5 +139,6 @@ class Settings:
             log.debug("Settings flushed")
         except IOError as e:
             log.error("Error saving settings", e)
+
 
 settings = Settings()
