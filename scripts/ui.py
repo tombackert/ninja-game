@@ -4,6 +4,7 @@ import random
 from collections import OrderedDict
 from scripts.particle import Particle
 from scripts.spark import Spark
+from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 
 
 class UI:
@@ -178,16 +179,7 @@ class UI:
             )
             if game.tilemap.solid_check(projectile[0]):
                 game.projectiles.remove(projectile)
-                for i in range(4):
-                    game.sparks.append(
-                        Spark(
-                            projectile[0],
-                            random.random()
-                            - 0.5
-                            + (math.pi if projectile[1] > 0 else 0),
-                            2 + random.random(),
-                        )
-                    )
+                spawn_projectile_sparks(game, projectile[0], projectile[1])
             elif projectile[2] > 360:
                 game.projectiles.remove(projectile)
             elif abs(game.player.dashing) < 50:
@@ -197,24 +189,7 @@ class UI:
                         player.lives -= 1
                         game.sfx["hit"].play()
                         game.screenshake = max(16, game.screenshake)
-                        for i in range(30):
-                            angle = random.random() * math.pi * 2
-                            speed = random.random() * 5
-                            game.sparks.append(
-                                Spark(player.rect().center, angle, 2 + random.random())
-                            )
-                            game.particles.append(
-                                Particle(
-                                    game,
-                                    "particle",
-                                    player.rect().center,
-                                    velocity=[
-                                        math.cos(angle + math.pi) * speed * 0.5,
-                                        math.sin(angle + math.pi) * speed * 0.5,
-                                    ],
-                                    frame=random.randint(0, 7),
-                                )
-                            )
+                        spawn_hit_sparks(game, player.rect().center)
 
         # Sparks
         for spark in game.sparks.copy():

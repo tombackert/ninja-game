@@ -5,6 +5,7 @@ import pygame
 
 from scripts.particle import Particle
 from scripts.spark import Spark
+from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
@@ -164,14 +165,9 @@ class Enemy(PhysicsEntity):
                                 0,
                             ]
                         )
-                        for i in range(SPARK_COUNT_PROJECTILE):
-                            self.game.sparks.append(
-                                Spark(
-                                    self.game.projectiles[-1][0],
-                                    random.random() - 0.5 + math.pi,
-                                    2 + random.random(),
-                                )
-                            )
+                        spawn_projectile_sparks(
+                            self.game, self.game.projectiles[-1][0], direction
+                        )
 
                     if not self.flip and dis[0] > 0:
                         self.game.sfx["shoot"].play()
@@ -187,14 +183,9 @@ class Enemy(PhysicsEntity):
                                 0,
                             ]
                         )
-                        for i in range(SPARK_COUNT_PROJECTILE):
-                            self.game.sparks.append(
-                                Spark(
-                                    self.game.projectiles[-1][0],
-                                    random.random() - 0.5,
-                                    2 + random.random(),
-                                )
-                            )
+                        spawn_projectile_sparks(
+                            self.game, self.game.projectiles[-1][0], direction
+                        )
         elif random.random() < 0.01:
             self.walking = random.randint(30, 120)
 
@@ -210,24 +201,7 @@ class Enemy(PhysicsEntity):
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx["hit"].play()
                 self.game.cm.coins += 1
-                for i in range(SPARK_COUNT_ENEMY_HIT):
-                    angle = random.random() * math.pi * 2
-                    speed = random.random() * SPARK_PARTICLE_SPEED_MAX
-                    self.game.sparks.append(
-                        Spark(self.rect().center, angle, 2 + random.random())
-                    )
-                    self.game.particles.append(
-                        Particle(
-                            self.game,
-                            "particle",
-                            self.rect().center,
-                            velocity=[
-                                math.cos(angle + math.pi) * speed * 0.5,
-                                math.sin(angle + math.pi) * speed * 0.5,
-                            ],
-                            frame=random.randint(0, 7),
-                        )
-                    )
+                spawn_hit_sparks(self.game, self.rect().center)
                 self.game.sparks.append(
                     Spark(self.rect().center, 0, 5 + random.random())
                 )
@@ -244,24 +218,7 @@ class Enemy(PhysicsEntity):
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx["hit"].play()
                 self.game.cm.coins += 1
-                for i in range(SPARK_COUNT_ENEMY_HIT):
-                    angle = random.random() * math.pi * 2
-                    speed = random.random() * SPARK_PARTICLE_SPEED_MAX
-                    self.game.sparks.append(
-                        Spark(self.rect().center, angle, 2 + random.random())
-                    )
-                    self.game.particles.append(
-                        Particle(
-                            self.game,
-                            "particle",
-                            self.rect().center,
-                            velocity=[
-                                math.cos(angle + math.pi) * speed * 0.5,
-                                math.sin(angle + math.pi) * speed * 0.5,
-                            ],
-                            frame=random.randint(0, 7),
-                        )
-                    )
+                spawn_hit_sparks(self.game, self.rect().center)
                 return True
 
     def render(self, surf, offset=(0, 0)):
@@ -345,14 +302,7 @@ class Player(PhysicsEntity):
             self.game.cm.ammo -= 1
             self.shoot_cooldown = 10
 
-            for i in range(SPARK_COUNT_PROJECTILE):
-                self.game.sparks.append(
-                    Spark(
-                        self.game.projectiles[-1][0],
-                        random.random() - 0.5 + (math.pi if direction < 0 else 0),
-                        2 + random.random(),
-                    )
-                )
+            spawn_projectile_sparks(self.game, self.game.projectiles[-1][0], direction)
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)
