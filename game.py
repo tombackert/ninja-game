@@ -17,6 +17,7 @@ from scripts.constants import (
 )
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
+from scripts.level_cache import list_levels
 from scripts.ui import UI
 from scripts.keyboardManager import KeyboardManager
 from scripts.effects import Effects
@@ -249,12 +250,7 @@ class Game:
                     self.transition += 1
                     if self.transition > TRANSITION_MAX:
                         self.timer.update_best_time()
-                        levels = [
-                            int(f.split(".")[0])
-                            for f in os.listdir("data/maps")
-                            if f.endswith(".json")
-                        ]
-                        levels.sort()
+                        levels = list_levels()
                         current_level_index = levels.index(self.level)
                         if current_level_index == len(levels) - 1:
                             self.load_level(self.level)

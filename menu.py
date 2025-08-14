@@ -4,6 +4,7 @@ import os
 from scripts.displayManager import DisplayManager
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
+from scripts.level_cache import list_levels
 from scripts.ui import UI
 
 
@@ -75,11 +76,8 @@ class Menu:
         self.menu()
 
     def levels(self):
-
-        level_files = [f for f in os.listdir("data/maps") if f.endswith(".json")]
-        level_files.sort()
-        levels = [int(f.split(".")[0]) for f in level_files]
-        levels.sort()
+        # Use cached level listing to avoid repeated directory scanning
+        levels = list_levels()
 
         level_index = (
             levels.index(self.selected_level) if self.selected_level in levels else 0
@@ -136,7 +134,7 @@ class Menu:
                 msg_timer -= 1
 
             level_options = []
-            for level in levels[start_index: start_index + levels_per_page]:
+            for level in levels[start_index : start_index + levels_per_page]:
                 if level == self.selected_level:
                     level_options.append(f"*Level {level:<2}")
                 else:

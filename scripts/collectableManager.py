@@ -1,11 +1,23 @@
 import os
 import json
+from dataclasses import dataclass
+from typing import Dict, Optional, Iterable, List
 from scripts.collectables import Collectables
 from scripts.utils import load_image
 from scripts import settings
 
 COIN_IMAGE_PATH = "collectables/coin.png"
 DATA_FILE = "data/collectables.json"
+
+
+@dataclass(frozen=True)
+class ItemDef:
+    name: str
+    attr: str
+    price: int
+    category: str  # 'weapon' | 'skin' | 'utility'
+    purchaseable: bool
+    increment: int = 1  # amount to add on successful purchase
 
 
 class CollectableManager:
@@ -59,23 +71,34 @@ class CollectableManager:
         "Sword",
     ]
 
-    # Unified item price mapping (corrected 'Berserker' spelling)
-    ITEMS = {
-        "Gun": 500,
-        "Ammo": 50,
-        "Shield": 100,
-        "Rifle": 2000,
-        "Moon Boots": 2500,
-        "Ninja Stars": 500,
-        "Sword": 1000,
-        "Grapple Hook": 5000,
-        "Red Ninja": 1000,
-        "Gold Ninja": 2000,
-        "Platinum Ninja": 3000,
-        "Diamond Ninja": 5000,
-        "Assassin": 7000,
-        "Berserker": 10000,
+    # Centralized item registry (Issue 6 refinement)
+    _ITEM_DEFS: Dict[str, ItemDef] = {
+        # Weapons / utilities
+        "Gun": ItemDef("Gun", "gun", 500, "weapon", True, 1),
+        "Ammo": ItemDef("Ammo", "ammo", 50, "weapon", True, 25),
+        "Shield": ItemDef("Shield", "shield", 100, "weapon", False, 1),
+        "Rifle": ItemDef("Rifle", "gun", 2000, "weapon", False, 1),  # shares attr?
+        "Moon Boots": ItemDef("Moon Boots", "moon_boots", 2500, "weapon", False, 1),
+        "Ninja Stars": ItemDef("Ninja Stars", "ninja_stars", 500, "weapon", False, 3),
+        "Sword": ItemDef("Sword", "sword", 1000, "weapon", False, 1),
+        "Grapple Hook": ItemDef(
+            "Grapple Hook", "grapple_hook", 5000, "weapon", False, 1
+        ),
+        # Skins
+        "Red Ninja": ItemDef("Red Ninja", "red_ninja", 1000, "skin", True, 1),
+        "Gold Ninja": ItemDef("Gold Ninja", "gold_ninja", 2000, "skin", False, 1),
+        "Platinum Ninja": ItemDef(
+            "Platinum Ninja", "platinum_ninja", 3000, "skin", False, 1
+        ),
+        "Diamond Ninja": ItemDef(
+            "Diamond Ninja", "diamond_ninja", 5000, "skin", False, 1
+        ),
+        "Assassin": ItemDef("Assassin", "assassin", 7000, "skin", False, 1),
+        "Berserker": ItemDef("Berserker", "berserker", 10000, "skin", False, 1),
     }
+
+    # Derived price mapping kept for backward compatibility (tests & menu store)
+    ITEMS = {name: idef.price for name, idef in _ITEM_DEFS.items()}
 
     def __init__(self, game):
         self.coin_list = []
@@ -182,65 +205,62 @@ class CollectableManager:
         except IOError:
             pass
 
-    def is_purchaseable(self, item):
-        return item in self.PURCHASEABLES
+    def is_purchaseable(self, item: str) -> bool:
+        idef = self._ITEM_DEFS.get(item)
+        return bool(idef and idef.purchaseable)
 
-    def buy_collectable(self, item):
-        if self.is_purchaseable(item):
-            if self.coins >= self.ITEMS[item]:
-                if item == "Gun":
-                    self.gun += 1
-                elif item == "Ammo":
-                    self.ammo += 25
-                elif item == "Shield":
-                    self.shield += 1
-                elif item == "Moon Boots":
-                    self.moon_boots += 1
-                elif item == "Ninja Stars":
-                    self.ninja_stars += 3
-                elif item == "Sword":
-                    self.sword += 1
-                elif item == "Grapple Hook":
-                    self.grapple_hook += 1
-                elif item == "Red Ninja":
-                    self.red_ninja += 1
-                elif item == "Gold Ninja":
-                    self.gold_ninja += 1
-                elif item == "Platinum Ninja":
-                    self.platinum_ninja += 1
-                elif item == "Diamond Ninja":
-                    self.diamond_ninja += 1
-                elif item == "Assassin":
-                    self.assassin += 1
-                elif item == "Berserker":
-                    self.berserker += 1
+    def validate_item(self, item: str) -> bool:
+        return item in self._ITEM_DEFS
 
-                self.coins -= self.ITEMS[item]
-                self.save_collectables()
-                return "success"
-            else:
-                return "not enough coins"
-        else:
+    def get_item_def(self, item: str) -> Optional[ItemDef]:
+        return self._ITEM_DEFS.get(item)
+
+    def buy_collectable(self, item: str) -> str:
+        idef = self.get_item_def(item)
+        if not idef:
+            return "unknown item"
+        if not idef.purchaseable:
             return "not purchaseable"
+        if self.coins < idef.price:
+            return "not enough coins"
+        current_val = getattr(self, idef.attr, 0)
+        setattr(self, idef.attr, current_val + idef.increment)
+        self.coins -= idef.price
+        self.save_collectables()
+        return "success"
 
-    def get_price(self, item):
+    def get_price(self, item: str) -> int:
+        if item not in self.ITEMS:
+            raise KeyError(f"Unknown item '{item}'")
         return self.ITEMS[item]
 
-    def get_amount(self, item):
-        mapping = {
-            "Default": 1,
-            "Gun": self.gun,
-            "Ammo": self.ammo,
-            "Shield": self.shield,
-            "Moon Boots": self.moon_boots,
-            "Ninja Stars": self.ninja_stars,
-            "Sword": self.sword,
-            "Grapple Hook": self.grapple_hook,
-            "Red Ninja": self.red_ninja,
-            "Gold Ninja": self.gold_ninja,
-            "Platinum Ninja": self.platinum_ninja,
-            "Diamond Ninja": self.diamond_ninja,
-            "Assassin": self.assassin,
-            "Berserker": self.berserker,
-        }
-        return mapping.get(item, 0)
+    def get_amount(self, item: str) -> int:
+        if item == "Default":
+            return 1
+        idef = self.get_item_def(item)
+        if not idef:
+            return 0
+        return int(getattr(self, idef.attr, 0))
+
+    # Ownership listing helpers
+    def list_owned_skins(self) -> List[str]:
+        owned = ["Default"]
+        for skin in self.SKINS:
+            if skin == "Default":
+                continue
+            if self.get_amount(skin) > 0:
+                owned.append(skin)
+        return owned
+
+    def list_owned_weapons(self) -> List[str]:
+        owned = ["Default"]
+        for w in self.WEAPONS:
+            if w == "Default":
+                continue
+            # Some weapons share attributes (e.g., Rifle -> gun).
+            # If their attr > 0 consider owned.
+            if w in self._ITEM_DEFS:
+                idef = self._ITEM_DEFS[w]
+                if getattr(self, idef.attr, 0) > 0:
+                    owned.append(w)
+        return owned
