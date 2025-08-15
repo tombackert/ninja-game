@@ -12,8 +12,8 @@
 
 
 
-This is a fun and challenging 2D Platformer game where you must use your skills to navigate through difficult worlds, defeat enemies, collect trophies, reach new goals or just have fun playing against your friends. 
-This project is intended for anyone who is looking to dive into game dev, learn how basic game mechanics work, or stengthen their coding skills in a learning by doing approach.  
+This is a fun and challenging 2D Platformer game where you must use your skills to navigate through difficult worlds, defeat enemies, collect trophies, reach new goals or just have fun playing against your friends.
+This project is intended for anyone who is looking to dive into game dev, learn how basic game mechanics work, or stengthen their coding skills in a learning by doing approach.
 
 ## The game features:
 
@@ -96,6 +96,3 @@ All credits belong to [DaFluffyPotato](https://www.youtube.com/@DaFluffyPotato) 
 
 ## License:
 This repository is licensed under the MIT License.
-
-
-

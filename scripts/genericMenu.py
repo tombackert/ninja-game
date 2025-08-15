@@ -6,7 +6,6 @@ from scripts.ui import UI
 
 class SingleMenu:
     def __init__(self, title, options, actions, screen, display, bg, music, input_manager):
-
         self.title = title
         self.options = options
         self.actions = actions

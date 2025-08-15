@@ -10,7 +10,6 @@ from scripts.ui import UI
 
 
 class Menu:
-
     def __init__(self):
         """Initialize main menu resources.
 
@@ -179,7 +178,6 @@ class Menu:
             self.clock.tick(60)
 
     def store(self):
-
         options = list(self.cm.ITEMS.keys())
         prices = list(self.cm.ITEMS.values())
 
@@ -312,7 +310,6 @@ class Menu:
         enter = False
 
         while True:
-
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
             UI.render_menu_subtitle(self.screen, "Weapons", self.WIN_W // 2 - 350, 320)
@@ -475,7 +472,6 @@ class Menu:
         selected_option = 0
 
         while True:
-
             options = [
                 f"Music Volume:{int(settings.music_volume * 100):3d}%",
                 f"Sound Volume:{int(settings.sound_volume * 100):3d}%",
@@ -520,14 +516,12 @@ class Menu:
             self.clock.tick(60)
 
     def menu(self):
-
         title = "Menu"
         options = ["Play", "Levels", "Store", "Accessoires", "Options", "Quit"]
         self.selected_option = 0
         enter = False
 
         while True:
-
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
             UI.render_o_box(self.screen, options, self.selected_option, self.WIN_W // 2, 300, 50)

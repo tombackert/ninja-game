@@ -55,14 +55,12 @@ class KeyboardManager:
 
     def handle_keyboard_input(self):
         for event in pygame.event.get():
-
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
             # Movement keys
             if event.type == pygame.KEYDOWN:
-
                 if event.key == pygame.K_ESCAPE:
                     self.game.paused = True
 

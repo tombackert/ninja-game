@@ -5,7 +5,6 @@ from scripts.particle import Particle
 
 
 class UI:
-
     COLOR = "#137547"
     GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
@@ -324,7 +323,6 @@ class UI:
 
     @staticmethod
     def render_o_box(screen, options, selected_option, x, y, spacing, font_size=30):
-
         option_rects = []
         font = UI.get_font(font_size)
 
@@ -444,7 +442,6 @@ class UI:
 
     @staticmethod
     def draw_img_outline(surface, img, x, y, outline_color=(0, 0, 0), scale=2):
-
         mask = pygame.mask.from_surface(img)
         outline_surf = mask.to_surface(setcolor=outline_color, unsetcolor=(0, 0, 0, 0))
 

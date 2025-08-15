@@ -22,7 +22,7 @@ GameApp (entry)
  │   ├─ GameState
  │   ├─ PauseState
  │   ├─ StoreState
- |   ├─ OptionsState 
+ |   ├─ OptionsState
  │   └─ (Future) MultiplayerLobbyState / MatchState
  ├─ Core Loop
  │   1. Poll events (InputRouter)

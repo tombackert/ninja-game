@@ -43,7 +43,6 @@ Note:
 
 class Game:
     def __init__(self):
-
         pygame.init()
 
         dm = DisplayManager()

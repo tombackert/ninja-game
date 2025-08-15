@@ -10,9 +10,7 @@ from scripts.genericMenu import SingleMenu
 
 
 class MenuSystem:
-
     def __init__(self):
-
         pygame.init()
 
         self.dm = DisplayManager()

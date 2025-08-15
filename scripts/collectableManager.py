@@ -19,7 +19,6 @@ class ItemDef:
 
 
 class CollectableManager:
-
     PURCHASEABLES = {
         "Default",
         "Gun",
