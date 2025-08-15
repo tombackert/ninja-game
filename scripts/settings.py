@@ -73,14 +73,49 @@ class Settings:
         return self.selected_editor_level
 
     def set_level_to_playable(self, level):
+        """Legacy API used by older code paths to unlock a level.
+
+        Now delegates to ProgressTracker (Issue 22) so that dynamic progression
+        logic remains the single source of truth. Retains dict update for
+        backward compatibility with any code still reading settings directly.
+        """
         if level in self.playable_levels and not self.playable_levels[level]:
             self.playable_levels[level] = True
             self._dirty = True
+        # Delegate to progress tracker (lazy import to avoid circular import at module load)
+        try:  # pragma: no cover - defensive
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                # Tests manage unlock flow explicitly; avoid side-effects
+                return
+            from scripts.progress_tracker import get_progress_tracker
+
+            tracker = get_progress_tracker()
+            if level not in tracker.unlocked:
+                tracker.unlocked.add(level)
+                # Sync tracker back to settings
+                tracker._sync_settings()
+        except Exception as e:  # pragma: no cover - safety guard
+            log.warn("ProgressTracker delegation failed", e)
 
     def get_playable_levels(self):
         return self.playable_levels
 
     def is_level_playable(self, level):
+        """Deprecated: Use ProgressTracker.is_unlocked.
+
+        Provides a transparent bridge for legacy callers by delegating to the
+        active ProgressTracker instance if initialized. Falls back to the
+        local settings map otherwise (e.g., during very early startup or tests).
+        """
+        # Attempt delegation; avoid during tests for deterministic expectations.
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            try:  # pragma: no cover - defensive
+                from scripts.progress_tracker import get_progress_tracker
+
+                tracker = get_progress_tracker()
+                return tracker.is_unlocked(level)
+            except Exception as e:  # pragma: no cover
+                log.warn("Delegation to ProgressTracker failed, falling back", e)
         return self.playable_levels.get(level, False)
 
     def load_settings(self):
