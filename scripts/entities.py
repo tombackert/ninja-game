@@ -155,15 +155,11 @@ class Enemy(PhysicsEntity):
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        self.game.projectiles.append(
-                            [
-                                [self.rect().centerx - 15, self.rect().centery],
-                                direction,
-                                0,
-                            ]
-                        )
-                        spawn_projectile_sparks(
-                            self.game, self.game.projectiles[-1][0], direction
+                        self.game.projectiles.spawn(
+                            self.rect().centerx - 15,
+                            self.rect().centery,
+                            direction,
+                            "enemy",
                         )
 
                     if not self.flip and dis[0] > 0:
@@ -173,15 +169,11 @@ class Enemy(PhysicsEntity):
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        self.game.projectiles.append(
-                            [
-                                [self.rect().centerx + 15, self.rect().centery],
-                                direction,
-                                0,
-                            ]
-                        )
-                        spawn_projectile_sparks(
-                            self.game, self.game.projectiles[-1][0], direction
+                        self.game.projectiles.spawn(
+                            self.rect().centerx + 15,
+                            self.rect().centery,
+                            direction,
+                            "enemy",
                         )
         elif random.random() < 0.01:
             self.walking = random.randint(30, 120)
@@ -207,16 +199,7 @@ class Enemy(PhysicsEntity):
                 )
                 return True
 
-        rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
-        for projectile in self.game.projectiles.copy():
-            projectile_rect = pygame.Rect(projectile[0][0], projectile[0][1], 4, 4)
-            if rect.colliderect(projectile_rect):
-                self.game.projectiles.remove(projectile)
-                self.game.screenshake = max(16, self.game.screenshake)
-                self.game.audio.play("hit")
-                self.game.cm.coins += 1
-                spawn_hit_sparks(self.game, self.rect().center)
-                return True
+    # Collision with player projectiles handled centrally in ProjectileSystem.update
 
     def render(self, surf, offset=(0, 0)):
         super().render(surf, offset=offset)
@@ -286,20 +269,14 @@ class Player(PhysicsEntity):
         ):
             self.game.audio.play("shoot")
             direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
-            self.game.projectiles.append(
-                [
-                    [
-                        self.rect().centerx + (7 * (-1 if self.flip else 1)),
-                        self.rect().centery,
-                    ],
-                    direction,
-                    0,
-                ]
+            self.game.projectiles.spawn(
+                self.rect().centerx + (7 * (-1 if self.flip else 1)),
+                self.rect().centery,
+                direction,
+                "player",
             )
             self.game.cm.ammo -= 1
             self.shoot_cooldown = 10
-
-            spawn_projectile_sparks(self.game, self.game.projectiles[-1][0], direction)
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)

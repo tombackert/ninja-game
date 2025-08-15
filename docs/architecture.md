@@ -148,9 +148,11 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - Produces a normalized `InputIntent` struct consumed by simulation.
 
 ### 6.4 ProjectileSystem
-- Owns projectile list.
-- Provides `spawn(origin, velocity, meta)` and `update(tilemap, entities)`.
-- Collision callbacks decoupled from Entities (Entities raise spawn requests rather than mutating global lists).
+- Implemented (Issue 17). Owns projectile collection & simulation.
+- API: `spawn(x, y, vx, owner)`, `update(tilemap, players, enemies)`, `get_draw_commands()`.
+- Handles movement, lifetime expiry (`PROJECTILE_LIFETIME_FRAMES`), tile & entity collisions.
+- Rendering now read-only: UI iterates `get_draw_commands` (decouples simulation from presentation).
+- Removes prior ad-hoc list mutation / collision checks from `ui.render_game_elements` & `Enemy.update`.
 
 ### 6.5 ParticleSystem
 - Structured particle records (type, pos, vel, lifetime, style data).

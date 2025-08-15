@@ -257,6 +257,9 @@ class GameState(State):
             from scripts.effects import Effects
 
             Effects.transition(g)
+        # Update projectiles each simulation update (partial migration scope)
+        if hasattr(g, "projectiles") and hasattr(g.projectiles, "update"):
+            g.projectiles.update(g.tilemap, g.players, g.enemies)
 
     def render(self, surface: pygame.Surface) -> None:
         # Delegate full frame composition to unified Renderer (Issue 14).

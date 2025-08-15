@@ -22,6 +22,9 @@ DASH_TRAIL_PARTICLE_SPEED = 3  # particle horizontal speed factor
 
 # Combat / Shooting
 PROJECTILE_SPEED = 3.5  # base projectile horizontal speed
+PROJECTILE_LIFETIME_FRAMES = (
+    360  # frames before projectile expires (legacy hardcoded value)
+)
 ENEMY_SHOOT_BASE = 1.15  # base enemy projectile speed factor
 ENEMY_DIRECTION_BASE = 0.35  # base enemy walking direction magnitude
 ENEMY_DIRECTION_SCALE_LOG = 0.8  # scale for log(level+1) when walking

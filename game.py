@@ -21,6 +21,7 @@ from scripts.level_cache import list_levels
 from scripts.ui import UI
 from scripts.keyboardManager import KeyboardManager
 from scripts.effects import Effects
+from scripts.projectile_system import ProjectileSystem
 
 """Legacy monolithic Game loop.
 
@@ -199,7 +200,8 @@ class Game:
                 self.player = self.players[self.playerID]
         # END LOAD LEVEL
 
-        self.projectiles = []
+        # Systems / collections (post-refactor additions)
+        self.projectiles = ProjectileSystem(self)
         self.particles = []
         self.sparks = []
 
@@ -274,6 +276,9 @@ class Game:
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
             UI.render_game_elements(self, render_scroll)
+            # Update projectiles after entities so newly spawned this frame move immediately
+            if hasattr(self.projectiles, "update"):
+                self.projectiles.update(self.tilemap, self.players, self.enemies)
             self.km.handle_keyboard_input()  # Legacy direct polling
             self.km.handle_mouse_input()
 

@@ -164,31 +164,15 @@ class UI:
                 if player.lives > 0:
                     player.render(game.display, offset=render_scroll)
 
-        # Projectiles
-        for projectile in game.projectiles.copy():
-            projectile[0][0] += projectile[1]
-            projectile[2] += 1
-            img = game.assets["projectile"]
+        # Projectiles (render only; simulation handled by ProjectileSystem)
+        for img, dx, dy in game.projectiles.get_draw_commands():
             game.display.blit(
                 img,
                 (
-                    projectile[0][0] - img.get_width() / 2 - render_scroll[0],
-                    projectile[0][1] - img.get_height() / 2 - render_scroll[1],
+                    dx - render_scroll[0],
+                    dy - render_scroll[1],
                 ),
             )
-            if game.tilemap.solid_check(projectile[0]):
-                game.projectiles.remove(projectile)
-                spawn_projectile_sparks(game, projectile[0], projectile[1])
-            elif projectile[2] > 360:
-                game.projectiles.remove(projectile)
-            elif abs(game.player.dashing) < 50:
-                for player in game.players:
-                    if player.rect().collidepoint(projectile[0]):
-                        game.projectiles.remove(projectile)
-                        player.lives -= 1
-                        game.audio.play("hit")
-                        game.screenshake = max(16, game.screenshake)
-                        spawn_hit_sparks(game, player.rect().center)
 
         # Sparks
         for spark in game.sparks.copy():
