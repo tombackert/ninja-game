@@ -144,6 +144,11 @@ class Game:
     def load_level(self, map_id, lives=3, respawn=False):
         self.timer.reset()
         self.tilemap.load("data/maps/" + str(map_id) + ".json")
+        # Precompute immutable tile type counts for performance HUD (tiles static during gameplay)
+        try:
+            self.tilemap._cached_type_counts = self.tilemap._recompute_type_counts()  # type: ignore[attr-defined]
+        except Exception:
+            pass
 
         # Extract flags
         self.flags = []
