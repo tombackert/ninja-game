@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import TextIO
 
 _LEVELS = {"DEBUG": 10, "INFO": 20, "WARN": 30, "ERROR": 40}
-_DEFAULT_LEVEL_NAME = os.environ.get("NINJA_LOG_LEVEL", "INFO").upper()
+_DEFAULT_LEVEL_NAME = os.environ.get("NINJA_LOG_LEVEL", "DEBUG").upper()
 _MIN_LEVEL = _LEVELS.get(_DEFAULT_LEVEL_NAME, 20)
 
 

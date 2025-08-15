@@ -59,6 +59,12 @@ class InputRouter:
             _key_rule(pygame.K_RETURN, "menu_select"),
             _key_rule(pygame.K_KP_ENTER, "menu_select"),
             _key_rule(pygame.K_ESCAPE, "menu_quit"),
+            _key_rule(pygame.K_BACKSPACE, "menu_back"),
+            _key_rule(pygame.K_LEFT, "options_left"),
+            _key_rule(pygame.K_a, "options_left"),
+            _key_rule(pygame.K_RIGHT, "options_right"),
+            _key_rule(pygame.K_d, "options_right"),
+            _key_rule(pygame.K_TAB, "accessories_switch"),
             _mouse_button_rule(1, "menu_select"),
         ]
         game_rules: List[Rule] = [
@@ -73,6 +79,10 @@ class InputRouter:
                 "MenuState": menu_rules,
                 "GameState": game_rules,
                 "PauseState": pause_rules,
+                "LevelsState": menu_rules,
+                "StoreState": menu_rules,
+                "AccessoriesState": menu_rules,
+                "OptionsState": menu_rules,
             }
         )
 

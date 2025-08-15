@@ -21,7 +21,24 @@ from scripts.level_cache import list_levels
 from scripts.ui import UI
 from scripts.keyboardManager import KeyboardManager
 from scripts.effects import Effects
-from menu import Menu
+
+"""Legacy monolithic Game loop.
+
+Note:
+    The refactored application now uses `StateManager` (see `app.py`) and
+    `GameState` for per-frame update & render. The legacy in-method pause
+    handling (nested `while not self.paused` and the blocking
+    `Menu.pause_menu(self)` call) has been removed as part of Issue 13
+    (PauseState integration). Pressing ESC in the modern flow is routed
+    to an action (`pause_toggle`) which pushes a `PauseState` overlay.
+
+    This `run()` method remains for backward compatibility with older
+    entry points but no longer provides an in-loop pause menu. It should
+    be considered deprecated and will be deleted once all callers migrate
+    to the state-driven architecture.
+"""
+
+# from menu import Menu  # Removed: pause menu now handled by PauseState
 
 
 class Game:
@@ -132,11 +149,14 @@ class Game:
         # Load the selected level
         self.load_level(self.level)
 
+        # Debug prints (kept as comments for reference)
         # print(f"id: {self.players[self.playerID].id}")
         # print(f"size: {self.players[self.playerID].size}")
 
-        # Game state
+        # Game state (legacy loop compatibility)
         self.running = True
+        # Legacy pause flag retained only for backward compatibility; the
+        # new architecture uses PauseState overlays.
         self.paused = False
 
     # Update sound volumes based on settings
@@ -226,124 +246,106 @@ class Game:
         pygame.mixer.music.play(-1)
         self.sfx["ambience"].play(-1)
 
+        # Simplified legacy loop (no in-loop pause handling). For full
+        # gameplay use the state-driven `app.main()` harness.
         while self.running:
+            start_frame_time = time.perf_counter()
+
             self.cm.load_collectables()
+            self.timer.update(self.level)
+            self.display.fill((0, 0, 0, 0))
+            self.display_2.blit(self.assets["background"], (0, 0))
+            self.screenshake = max(0, self.screenshake - 1)
 
-            while not self.paused:
-
-                ##### START performance tracking
-                start_frame_time = time.perf_counter()
-
-                # Init
-                self.timer.update(self.level)
-                self.display.fill((0, 0, 0, 0))
-                self.display_2.blit(self.assets["background"], (0, 0))
-                self.screenshake = max(0, self.screenshake - 1)
-
-                #### START COMPUTE GAME FLAGS
-
-                for flag_rect in self.flags:
-                    if self.player.rect().colliderect(flag_rect):
-                        self.endpoint = True
-
-                if self.endpoint:
-                    self.transition += 1
-                    if self.transition > TRANSITION_MAX:
-                        self.timer.update_best_time()
-                        levels = list_levels()
-                        current_level_index = levels.index(self.level)
-                        if current_level_index == len(levels) - 1:
-                            self.load_level(self.level)
-                        else:
-                            next_level = levels[current_level_index + 1]
-                            self.level = next_level
-                        settings.set_level_to_playable(self.level)
-                        settings.selected_level = self.level
+            # Flag & level completion logic (unchanged)
+            for flag_rect in self.flags:
+                if self.player.rect().colliderect(flag_rect):
+                    self.endpoint = True
+            if self.endpoint:
+                self.transition += 1
+                if self.transition > TRANSITION_MAX:
+                    self.timer.update_best_time()
+                    levels = list_levels()
+                    current_level_index = levels.index(self.level)
+                    if current_level_index == len(levels) - 1:
                         self.load_level(self.level)
-                if self.transition < 0:
-                    self.transition += 1
+                    else:
+                        next_level = levels[current_level_index + 1]
+                        self.level = next_level
+                    settings.set_level_to_playable(self.level)
+                    settings.selected_level = self.level
+                    self.load_level(self.level)
+            if self.transition < 0:
+                self.transition += 1
 
-                if self.player.lifes < 1:
-                    self.dead += 1
+            if self.player.lifes < 1:
+                self.dead += 1
+            if self.dead:
+                self.dead += 1
+                if self.dead >= DEAD_ANIM_FADE_START:
+                    self.transition = min(TRANSITION_MAX, self.transition + 1)
+                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes >= 1:
+                    self.load_level(self.level, self.player.lifes, respawn=True)
+                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes < 1:
+                    self.load_level(self.level)
 
-                if self.dead:
-                    self.dead += 1
-                    if self.dead >= DEAD_ANIM_FADE_START:
-                        self.transition = min(TRANSITION_MAX, self.transition + 1)
-                    if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes >= 1:
-                        self.load_level(self.level, self.player.lifes, respawn=True)
-                    if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes < 1:
-                        self.load_level(self.level)
+            # Camera smoothing
+            self.scroll[0] += (
+                self.player.rect().centerx
+                - self.display.get_width() / 2
+                - self.scroll[0]
+            ) / 30
+            self.scroll[1] += (
+                self.player.rect().centery
+                - self.display.get_height() / 2
+                - self.scroll[1]
+            ) / 30
+            render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
-                ##### END COMPUTE GAME FLAGS
+            UI.render_game_elements(self, render_scroll)
+            self.km.handle_keyboard_input()  # Legacy direct polling
+            self.km.handle_mouse_input()
 
-                # Rendering?
-                self.scroll[0] += (
-                    self.player.rect().centerx
-                    - self.display.get_width() / 2
-                    - self.scroll[0]
-                ) / 30
-                self.scroll[1] += (
-                    self.player.rect().centery
-                    - self.display.get_height() / 2
-                    - self.scroll[1]
-                ) / 30
-                render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
+            if self.transition:
+                Effects.transition(self)
+            self.display_2.blit(self.display, (0, 0))
 
-                # Graphics rendering
-                UI.render_game_elements(self, render_scroll)
+            # HUD
+            UI.render_game_ui_element(
+                self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5
+            )
+            UI.render_game_ui_element(
+                self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15
+            )
+            UI.render_game_ui_element(
+                self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5
+            )
+            UI.render_game_ui_element(
+                self.display_2, f"Lives: {self.player.lifes}", 5, 5
+            )
+            UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
+            UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
 
-                # Keyboard events
-                self.km.handle_keyboard_input()
-                self.km.handle_mouse_input()
+            end_frame_time = time.perf_counter()
+            frame_time_ms = (end_frame_time - start_frame_time) * 1000.0
+            fps = self.clock.get_fps()
+            UI.render_game_ui_element(
+                self.display_2, f"FPS: {fps:.1f}", 5, self.BASE_H - 20
+            )
+            UI.render_game_ui_element(
+                self.display_2, f"{frame_time_ms:.2f} ms", 5, self.BASE_H - 10
+            )
 
-                # Level transition
-                if self.transition:
-                    Effects.transition(self)
-                self.display_2.blit(self.display, (0, 0))
+            Effects.screenshake(self)
+            pygame.display.update()
+            self.clock.tick(60)
 
-                # UI
-                UI.render_game_ui_element(
-                    self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5
-                )
-                UI.render_game_ui_element(
-                    self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15
-                )
-                UI.render_game_ui_element(
-                    self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5
-                )
-                UI.render_game_ui_element(
-                    self.display_2, f"Lives: {self.player.lifes}", 5, 5
-                )
-                UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
-                UI.render_game_ui_element(
-                    self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25
-                )
+            # If ESC pressed (legacy flag), exit loop (pause handled externally in new system)
+            if self.paused:
+                self.running = False
 
-                ######
-                end_frame_time = time.perf_counter()
-                frame_time_ms = (end_frame_time - start_frame_time) * 1000.0
-                fps = self.clock.get_fps()
-
-                UI.render_game_ui_element(
-                    self.display_2, f"FPS: {fps:.1f}", 5, self.BASE_H - 20
-                )
-                UI.render_game_ui_element(
-                    self.display_2, f"{frame_time_ms:.2f} ms", 5, self.BASE_H - 10
-                )
-                ###### END performance tracking
-
-                # Screen shake
-                Effects.screenshake(self)
-
-                # Clock
-                pygame.display.update()
-                self.clock.tick(60)  # 60fps
-
-            self.cm.save_collectables()
-            Menu.pause_menu(self)
-
-        print("Game Over")
+        self.cm.save_collectables()
+        print("Game Over (legacy run loop exited)")
 
 
 if __name__ == "__main__":

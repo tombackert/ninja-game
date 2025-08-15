@@ -8,7 +8,16 @@ pause request which results in a PauseState being pushed.
 from __future__ import annotations
 import os
 import pygame
-from scripts.state_manager import StateManager, GameState, PauseState, MenuState
+from scripts.state_manager import (
+    StateManager,
+    GameState,
+    PauseState,
+    MenuState,
+    LevelsState,
+    StoreState,
+    AccessoriesState,
+    OptionsState,
+)
 from scripts.input_router import InputRouter
 
 
@@ -44,6 +53,23 @@ def main():
                 cur = sm.current
             elif getattr(cur, "quit_requested", False):
                 running = False
+            elif getattr(cur, "next_state", None):
+                nxt = cur.next_state
+                cur.next_state = None
+                if nxt == "Levels":
+                    sm.set(LevelsState())
+                elif nxt == "Store":
+                    sm.set(StoreState())
+                elif nxt == "Accessories":
+                    sm.set(AccessoriesState())
+                elif nxt == "Options":
+                    sm.set(OptionsState())
+                cur = sm.current
+        # Generic back handling for submenu states
+        if isinstance(cur, (LevelsState, StoreState, AccessoriesState, OptionsState)):
+            if getattr(cur, "request_back", False):
+                sm.set(MenuState())
+                cur = sm.current
         if isinstance(cur, GameState) and getattr(cur, "request_pause", False):
             sm.push(PauseState())
         if isinstance(cur, PauseState) and cur.closed:
