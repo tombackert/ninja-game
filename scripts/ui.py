@@ -105,7 +105,7 @@ class UI:
         if fps is not None:
             rows.append(("FPS:", f"{fps:.1f}"))
         if theor_fps is not None:
-            rows.append(("TheoFPS:", f"{theor_fps:.0f}"))
+            rows.append(("FPS:", f"{theor_fps:.0f}"))
         section_breaks.append(len(rows))  # end of perf section
         img = UI.get_image_cache_stats()
         txt = UI.get_text_cache_stats()

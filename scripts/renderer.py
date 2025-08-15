@@ -102,7 +102,7 @@ class Renderer:
         if seq is not None:
             seq.append("compose")
 
-        # 6. HUD: 
+        # 6. HUD:
         game_counts = {
             "players": len(getattr(game, "players", [])),
             "enemies": len(getattr(game, "enemies", [])),
@@ -117,8 +117,22 @@ class Renderer:
         self.perf_hud.end_work_segment()
         state_ref = getattr(game, "state_ref", None)
         if getattr(state_ref, "perf_enabled", False):
-            # Render performance overlay (timings + counts)
-            self.perf_hud.render(game.display_2, x=5, y=game.BASE_H - 120)
+            # Add tile type counts (throttled via overlay rebuild) without heavy per-frame cost
+            try:
+                if hasattr(game, "tilemap") and hasattr(game.tilemap, "get_type_counts"):
+                    self.perf_hud._game_counts = {
+                        **getattr(self.perf_hud, "_game_counts", {}),  # existing entity counts
+                        **{f"tile:{k}": v for k, v in game.tilemap.get_type_counts().items()},
+                    }
+                if hasattr(game, "cm") and hasattr(game.cm, "get_collectable_counts"):
+                    self.perf_hud._game_counts = {
+                        **getattr(self.perf_hud, "_game_counts", {}),
+                        **game.cm.get_collectable_counts(),
+                    }
+            except Exception:
+                pass
+            # Render performance overlay (timings + counts incl. tiles)
+            self.perf_hud.render(game.display_2, x=5, y=game.BASE_H - 170)
             if seq is not None and self.perf_hud.last_sample:
                 seq.append("perf")
 

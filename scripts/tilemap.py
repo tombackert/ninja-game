@@ -49,7 +49,8 @@ class Tilemap:
         self.meta_data = {}
         # Current save schema version (Issue 21)
         self.version = 2
-
+        # Cache for tile type counts (recomputed on perf overlay rebuild cycles)
+        self._cached_type_counts = None  # type: ignore[assignment]
         self.save_dir = "data/saves"
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
@@ -212,6 +213,11 @@ class Tilemap:
                     self.enemies.append(enemy)
 
             # print(f"Tilemap loaded from {path}")
+            # Precompute immutable type counts for performance HUD (done once per level load)
+            try:
+                self._cached_type_counts = self._recompute_type_counts()
+            except Exception:
+                pass
         except Exception as e:
             traceback.print_exc()
             log.error("Error while loading Tilemap", e)
@@ -331,6 +337,42 @@ class Tilemap:
 
     def get_enemy_count(self):
         return len(self.enemies)
+
+    # ------------------------------------------------------------------
+    # Introspection helpers for performance HUD
+    def get_type_counts(self, throttle: bool = True) -> dict:
+        """Return cached counts of tiles by *type* (including offgrid).
+
+        Tiles do not change during gameplay (except collectables handled
+        separately), so we precompute once at level load and simply
+        return the snapshot here. The parameter `throttle` is retained
+        for backward compatibility but no longer affects behaviour.
+        """
+        if self._cached_type_counts is None:
+            # Fallback (should be precomputed at load time)
+            self._cached_type_counts = self._recompute_type_counts()
+        return self._cached_type_counts
+
+    # Internal helper to build counts (called once at load)
+    def _recompute_type_counts(self) -> dict:
+        counts: dict[str, int] = {}
+        for tile in self.tilemap.values():
+            t = tile.get("type")
+            if t:
+                counts[t] = counts.get(t, 0) + 1
+        for tile in self.offgrid_tiles:
+            t = tile.get("type")
+            if t:
+                counts[t] = counts.get(t, 0) + 1
+        try:
+            from scripts.tilemap import PHYSICS_TILES  # local import safe
+
+            physics_total = sum(v for k, v in counts.items() if k in PHYSICS_TILES)
+            if physics_total:
+                counts["_physics"] = physics_total
+        except Exception:
+            pass
+        return counts
 
     def extract_entities(self):
         pass
