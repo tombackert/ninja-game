@@ -186,7 +186,7 @@ class UI:
                     if player.rect().collidepoint(projectile[0]):
                         game.projectiles.remove(projectile)
                         player.lives -= 1
-                        game.sfx["hit"].play()
+                        game.audio.play("hit")
                         game.screenshake = max(16, game.screenshake)
                         spawn_hit_sparks(game, player.rect().center)
 

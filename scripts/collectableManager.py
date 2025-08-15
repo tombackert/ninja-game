@@ -142,13 +142,13 @@ class CollectableManager:
             if coin.update(player_rect):
                 self.coin_list.remove(coin)
                 self.coins += 1
-                self.game.sfx["collect"].play()
+                self.game.audio.play("collect")
 
         for ammo in self.ammo_pickups[:]:
             if ammo.update(player_rect):
                 self.ammo_pickups.remove(ammo)
                 self.ammo += 5
-                self.game.sfx["collect"].play()
+                self.game.audio.play("collect")
 
     def render(self, surf, offset=(0, 0)):
         for coin in self.coin_list:

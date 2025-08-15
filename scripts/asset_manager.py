@@ -6,11 +6,12 @@ usage across the codebase. Provides a single import side-effect location
 for Pygame resource I/O to simplify future headless / asset pipeline changes.
 
 Design:
-- Singleton-style access via `AssetManager.get()` 
+- Singleton-style access via `AssetManager.get()`
   (lightweight; thread-safety not required now).
 - Image cache keyed by relative path under data/images/ *without* leading slash.
-- Animation builder caches underlying frame lists; 
-  each `get_animation` returns a *fresh* Animation copy so per-entity state (frame index) is not shared.
+- Animation builder caches underlying frame lists;
+  each `get_animation` returns a *fresh* Animation copy so
+  per-entity state (frame index) is not shared.
 - Sound cache keyed by relative path under data/sfx/.
 - Background preloading minimal; other assets load on first request.
 

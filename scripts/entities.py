@@ -149,7 +149,7 @@ class Enemy(PhysicsEntity):
                 )
                 if abs(dis[1]) < 15:
                     if self.flip and dis[0] < 0:
-                        self.game.sfx["shoot"].play()
+                        self.game.audio.play("shoot")
                         direction = -ENEMY_SHOOT_BASE * (
                             1
                             + ENEMY_SHOOT_SCALE_LOG
@@ -167,7 +167,7 @@ class Enemy(PhysicsEntity):
                         )
 
                     if not self.flip and dis[0] > 0:
-                        self.game.sfx["shoot"].play()
+                        self.game.audio.play("shoot")
                         direction = ENEMY_SHOOT_BASE * (
                             1
                             + ENEMY_SHOOT_SCALE_LOG
@@ -196,7 +196,7 @@ class Enemy(PhysicsEntity):
         if abs(self.game.player.dashing) >= DASH_MIN_ACTIVE_ABS:
             if self.rect().colliderect(self.game.player.rect()):
                 self.game.screenshake = max(16, self.game.screenshake)
-                self.game.sfx["hit"].play()
+                self.game.audio.play("hit")
                 self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
                 self.game.sparks.append(
@@ -213,7 +213,7 @@ class Enemy(PhysicsEntity):
             if rect.colliderect(projectile_rect):
                 self.game.projectiles.remove(projectile)
                 self.game.screenshake = max(16, self.game.screenshake)
-                self.game.sfx["hit"].play()
+                self.game.audio.play("hit")
                 self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
                 return True
@@ -284,7 +284,7 @@ class Player(PhysicsEntity):
             and self.shoot_cooldown == 0
             and settings.selected_weapon == 1
         ):
-            self.game.sfx["shoot"].play()
+            self.game.audio.play("shoot")
             direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
             self.game.projectiles.append(
                 [
@@ -427,7 +427,7 @@ class Player(PhysicsEntity):
 
     def dash(self):
         if not self.dashing:
-            self.game.sfx["dash"].play()
+            self.game.audio.play("dash")
             if self.flip:
                 self.dashing = -DASH_DURATION_FRAMES
             else:

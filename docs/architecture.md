@@ -136,8 +136,11 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - Replaces scattered `pygame.image.load` / `pygame.mixer.Sound` calls in `game.py`; future steps will remove remaining direct util helpers.
 
 ### 6.2 AudioService
-- Abstracts mixer. Methods: `play_sfx(id)`, `play_music(track, loop=True)`, `set_volumes(music, sfx)`.
-- Queues & throttling (future) to prevent sound spam.
+- Implemented (Issue 16): centralized wrapper over `pygame.mixer`.
+- API: `play(name, loops=0)`, `play_music(track, loops=-1)`, `apply_volumes()`, `set_music_volume(v)`, `set_sound_volume(v)`.
+- Loads sounds through `AssetManager` ensuring single I/O location.
+- Normalizes per-sound base volumes (jump/dash/etc.) then scales by global settings.
+- Future: channel pooling, spam throttling, ducking, spatialization.
 
 ### 6.3 InputRouter
 - Maps (device event → semantic action) per state.

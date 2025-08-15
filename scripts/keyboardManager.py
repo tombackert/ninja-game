@@ -28,14 +28,14 @@ class KeyboardManager:
                     self.game.movement[1] = True
                 if event.key == pygame.K_w:
                     if self.game.player.jump():
-                        self.game.sfx["jump"].play()
+                        self.game.audio.play("jump")
                 if event.key == pygame.K_LEFT:
                     self.game.movement[0] = True
                 if event.key == pygame.K_RIGHT:
                     self.game.movement[1] = True
                 if event.key == pygame.K_UP:
                     if self.game.player.jump():
-                        self.game.sfx["jump"].play()
+                        self.game.audio.play("jump")
                 if event.key == pygame.K_SPACE:
                     self.game.player.dash()
                 if event.key == pygame.K_x:
@@ -73,7 +73,7 @@ class KeyboardManager:
                     self.game.movement[1] = True
                 if event.key == pygame.K_w:
                     if self.game.player.jump():
-                        self.game.sfx["jump"].play()
+                        self.game.audio.play("jump")
 
                 # Arrow keys
                 if event.key == pygame.K_LEFT:
@@ -82,7 +82,7 @@ class KeyboardManager:
                     self.game.movement[1] = True
                 if event.key == pygame.K_UP:
                     if self.game.player.jump():
-                        self.game.sfx["jump"].play()
+                        self.game.audio.play("jump")
 
                 # Space for dash
                 if event.key == pygame.K_SPACE:

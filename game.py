@@ -4,6 +4,7 @@ import time
 from scripts.displayManager import DisplayManager
 from scripts.entities import Player, Enemy
 from scripts.asset_manager import AssetManager
+from scripts.audio_service import AudioService
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.timer import Timer
@@ -101,17 +102,8 @@ class Game:
             "projectile": am.get_image("projectile.png"),
         }
 
-        # Load sound effects and set volume based on settings
-        self.sfx = {
-            "jump": am.get_sound("jump.wav"),
-            "dash": am.get_sound("dash.wav"),
-            "hit": am.get_sound("hit.wav"),
-            "shoot": am.get_sound("shoot.wav"),
-            "ambience": am.get_sound("ambience.wav"),
-            "collect": am.get_sound("collect.wav"),
-        }
-
-        self.update_sound_volumes()
+        # Audio service replaces direct sound dict (Issue 16)
+        self.audio = AudioService.get()
 
         # Entities
         self.clouds = Clouds(self.assets["clouds"], count=LEAF_SPAWNER_CLOUD_COUNT)
@@ -145,14 +137,9 @@ class Game:
         # new architecture uses PauseState overlays.
         self.paused = False
 
-    # Update sound volumes based on settings
-    def update_sound_volumes(self):
-        self.sfx["ambience"].set_volume(settings.sound_volume * 0.2)
-        self.sfx["shoot"].set_volume(settings.sound_volume * 0.4)
-        self.sfx["hit"].set_volume(settings.sound_volume * 0.8)
-        self.sfx["dash"].set_volume(settings.sound_volume * 0.1)
-        self.sfx["jump"].set_volume(settings.sound_volume * 0.7)
-        self.sfx["collect"].set_volume(settings.sound_volume * 0.4)
+    # Backward compatibility shim for old calls (will be removed):
+    def update_sound_volumes(self):  # pragma: no cover - compatibility
+        self.audio.apply_volumes()
 
     def load_level(self, map_id, lives=3, respawn=False):
         self.timer.reset()
@@ -227,10 +214,8 @@ class Game:
         self.cm.load_collectables_from_tilemap(self.tilemap)
 
     def run(self):
-        pygame.mixer.music.load("data/music.wav")
-        pygame.mixer.music.set_volume(settings.music_volume)
-        pygame.mixer.music.play(-1)
-        self.sfx["ambience"].play(-1)
+        self.audio.play_music("data/music.wav", loops=-1)
+        self.audio.play("ambience", loops=-1)
 
         # Simplified legacy loop (no in-loop pause handling). For full
         # gameplay use the state-driven `app.main()` harness.
