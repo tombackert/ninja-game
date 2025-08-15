@@ -22,6 +22,7 @@ from scripts.ui import UI
 from scripts.keyboardManager import KeyboardManager
 from scripts.effects import Effects
 from scripts.projectile_system import ProjectileSystem
+from scripts.particle_system import ParticleSystem
 
 """Legacy monolithic Game loop.
 
@@ -202,8 +203,11 @@ class Game:
 
         # Systems / collections (post-refactor additions)
         self.projectiles = ProjectileSystem(self)
-        self.particles = []
-        self.sparks = []
+        self.particle_system = ParticleSystem(self)
+        # Backward compatibility aliases so existing code that directly
+        # appends to game.particles / game.sparks continues to work.
+        self.particles = self.particle_system.particles
+        self.sparks = self.particle_system.sparks
 
         self.scroll = [0, 0]
         self.dead = 0
@@ -276,7 +280,8 @@ class Game:
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
             UI.render_game_elements(self, render_scroll)
-            # Update projectiles after entities so newly spawned this frame move immediately
+            # Update projectiles after entities so newly spawned
+            # this frame move immediately
             if hasattr(self.projectiles, "update"):
                 self.projectiles.update(self.tilemap, self.players, self.enemies)
             self.km.handle_keyboard_input()  # Legacy direct polling

@@ -1,9 +1,7 @@
 import pygame
-import math
 import random
 from collections import OrderedDict
 from scripts.particle import Particle
-from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 
 
 class UI:
@@ -174,12 +172,21 @@ class UI:
                 ),
             )
 
-        # Sparks
-        for spark in game.sparks.copy():
-            kill = spark.update()
-            spark.render(game.display, offset=render_scroll)
-            if kill:
-                game.sparks.remove(spark)
+        # Update & render sparks / particles via central system if present
+        if hasattr(game, "particle_system"):
+            game.particle_system.update()
+            draw_refs = game.particle_system.get_draw_commands()
+            for spark in draw_refs["sparks"]:
+                spark.render(game.display, offset=render_scroll)
+            for particle in draw_refs["particles"]:
+                particle.render(game.display, offset=render_scroll)
+        else:
+            # Legacy path (should be phased out)
+            for spark in game.sparks.copy():
+                kill = spark.update()
+                spark.render(game.display, offset=render_scroll)
+                if kill:
+                    game.sparks.remove(spark)
 
         # Collectables update & render
         game.cm.update(game.player.rect())
@@ -193,14 +200,7 @@ class UI:
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             game.display_2.blit(display_sillhouette, offset_o)
 
-        # Particles
-        for particle in game.particles.copy():
-            kill = particle.update()
-            particle.render(game.display, offset=render_scroll)
-            if particle.type == "leaf":
-                particle.pos[0] += math.sin(particle.animation.frame * 0.035) * 0.3
-            if kill:
-                game.particles.remove(particle)
+    # Particle update now handled above when particle_system present.
 
     @staticmethod
     def render_o_box(screen, options, selected_option, x, y, spacing, font_size=30):

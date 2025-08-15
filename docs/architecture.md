@@ -155,8 +155,12 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - Removes prior ad-hoc list mutation / collision checks from `ui.render_game_elements` & `Enemy.update`.
 
 ### 6.5 ParticleSystem
-- Structured particle records (type, pos, vel, lifetime, style data).
-- Rendering stage filters visible subset (culling extension).
+- Implemented (Issue 18). Centralizes management of transient visual particles and sparks.
+- API: `spawn_particle(type, pos, velocity=(0,0), frame=0)`, `spawn_spark(pos, angle, speed)`, `update()`, `get_draw_commands()`.
+- Maintains internal lists (`particles`, `sparks`) still exposed via `game.particles` / `game.sparks` aliases for backward compatibility during migration.
+- Update handles lifetime removal (animation done or spark speed decays to 0) and applies legacy leaf sway effect.
+- UI layer now invokes a single `particle_system.update()` instead of duplicating per-item loops.
+- Future extensions: pooling (reducing allocations), spatial culling, batch rendering via vertex arrays.
 
 ### 6.6 Effects
 - High-level visual transformations (screen shake, transitions) parameterized; no direct game state mutation besides effect state.
