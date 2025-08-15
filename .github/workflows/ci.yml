@@ -13,6 +13,7 @@ jobs:
     env:
       SDL_VIDEODRIVER: dummy
       PYTHONUNBUFFERED: 1
+      SDL_AUDIODRIVER: dummy
     steps:
       - name: Checkout
         uses: actions/checkout@v4

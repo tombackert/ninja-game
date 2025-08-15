@@ -15,6 +15,7 @@ Design:
 
 from __future__ import annotations
 from typing import Dict
+import os
 import pygame
 from scripts.asset_manager import AssetManager
 from scripts.settings import settings
@@ -24,6 +25,34 @@ class AudioService:
     _instance: "AudioService | None" = None
 
     def __init__(self) -> None:
+        # Ensure mixer initialized (CI headless may need dummy audio driver)
+        if not pygame.get_init():  # Guard in case service used before global init
+            pygame.init()
+        if not pygame.mixer.get_init():
+            # Try normal init first; if it fails (no audio device), fallback to dummy
+            try:
+                pygame.mixer.init()
+            except pygame.error:
+                # Attempt fallback to dummy audio driver
+                os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+                try:
+                    pygame.mixer.init()
+                except pygame.error:
+                    # As a last resort, create no-op stand-ins; tests that patch sounds will still function.
+                    class _NullMusic:
+                        def load(self, *a, **kw):
+                            pass
+
+                        def play(self, *a, **kw):
+                            pass
+
+                        def set_volume(self, *a, **kw):
+                            pass
+
+                        def stop(self):
+                            pass
+
+                    pygame.mixer.music = _NullMusic()  # type: ignore
         self._sfx: Dict[str, pygame.mixer.Sound] = {}
         self._am = AssetManager.get()
         # Pre-register known sounds (can lazily add later)
@@ -56,7 +85,10 @@ class AudioService:
             elif k == "collect":
                 base = 0.4
             snd.set_volume(sound_v * base)
-        pygame.mixer.music.set_volume(music_v)
+        try:
+            pygame.mixer.music.set_volume(music_v)
+        except Exception:
+            pass
 
     # SFX ----------------------------------------------------------------
     def play(self, name: str, loops: int = 0) -> None:
@@ -68,16 +100,25 @@ class AudioService:
             except Exception:
                 return
             self.apply_volumes()
-        snd.play(loops)
+        try:
+            snd.play(loops)
+        except Exception:
+            pass
 
     # Music ---------------------------------------------------------------
     def play_music(self, track: str = "data/music.wav", loops: int = -1) -> None:
-        pygame.mixer.music.load(track)
-        pygame.mixer.music.play(loops)
-        self.apply_volumes()
+        try:
+            pygame.mixer.music.load(track)
+            pygame.mixer.music.play(loops)
+            self.apply_volumes()
+        except Exception:
+            pass
 
     def stop_music(self) -> None:
-        pygame.mixer.music.stop()
+        try:
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
 
     def set_music_volume(self, v: float) -> None:
         settings.music_volume = v
