@@ -58,6 +58,7 @@ class UI:
         x: int = 5,
         y: int = 5,
         update_every: int = 10,
+        min_width: int = 190,
     ):
         """Render (throttled) performance HUD.
 
@@ -77,11 +78,20 @@ class UI:
             UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1  # type: ignore[attr-defined]
         )
         if not rebuild and UI._perf_overlay_cache is not None:  # type: ignore[attr-defined]
-            # Fast path: reuse cached overlay surface at requested anchor.
-            surface.blit(UI._perf_overlay_cache, (x, y))  # type: ignore[attr-defined]
-            return
+            # If caller now requests a wider overlay than cached, force rebuild.
+            try:  # pragma: no cover - defensive
+                if UI._perf_overlay_cache.get_width() < min_width:  # type: ignore[attr-defined]
+                    rebuild = True
+            except Exception:
+                rebuild = True
+            if not rebuild:
+                surface.blit(UI._perf_overlay_cache, (x, y))  # type: ignore[attr-defined]
+                return
         font = UI.get_font(8)
-        overlay = pygame.Surface((190, 120), pygame.SRCALPHA)
+        # We'll size width dynamically based on measured text so large values fit.
+        # Fallback height remains fixed (120) for layout stability.
+        # Build rows first (existing logic continues below) then compute width.
+        # (Overlay surface created later after measuring text.)
 
         # Build rows first so we can size columns dynamically (prevents overlap).
         rows: list[tuple[str, str]] = []
@@ -93,7 +103,7 @@ class UI:
         if fps is not None:
             rows.append(("FPS:", f"{fps:.1f}"))
         if theor_fps is not None:
-            rows.append(("Theor:", f"{theor_fps:.0f}"))
+            rows.append(("TheoFPS:", f"{theor_fps:.0f}"))
         img = UI.get_image_cache_stats()
         txt = UI.get_text_cache_stats()
 
@@ -101,8 +111,8 @@ class UI:
             total = stats.get("hits", 0) + stats.get("misses", 0)
             return (stats.get("hits", 0) / total * 100.0) if total else 0.0
 
-        rows.append(("ImgC:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
-        rows.append(("TxtC:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
+        rows.append(("ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
+        rows.append(("TxtCache:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
         rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
 
         # Determine max label width for alignment (use fixed inner padding 5).
@@ -113,6 +123,18 @@ class UI:
             if w > label_w:
                 label_w = w
         value_x = inner_x + label_w + 4
+
+        # Compute dynamic column widths (labels already measured above) and max value width
+        value_w = 0
+        for _, val in rows:
+            wv = font.render(val, True, UI.GAME_UI_COLOR).get_width()
+            if wv > value_w:
+                value_w = wv
+        # Reserve space for optional icon (approx 22px) + padding
+        icon_pad = 24
+        dynamic_width = inner_x + label_w + 4 + value_w + 6 + icon_pad
+        overlay_w = max(min_width, dynamic_width)
+        overlay = pygame.Surface((overlay_w, 120), pygame.SRCALPHA)
 
         line = 5
         for lbl, val in rows:

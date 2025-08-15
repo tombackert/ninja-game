@@ -81,6 +81,7 @@ def main():
         # --- Update & Render cycle ---
         dt = clock.tick(60) / 1000.0  # 60 FPS cap; dt in seconds
         sm.update(dt)
+        # Mark end of work segment just after state update & render prep but before present
         sm.render(screen)
         pygame.display.flip()
 

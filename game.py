@@ -129,10 +129,10 @@ class Game:
         # Legacy pause flag retained only for backward compatibility; the
         # new architecture uses PauseState overlays.
         self.paused = False
-        # Performance overlay (legacy loop) – track moving average frame time
-        self._avg_frame_ms = None
-        self._perf_alpha = 0.1  # smoothing factor for EMA
-        self._last_full_frame_ms = None  # for overlay display (previous frame full time)
+        # Performance HUD (shared abstraction with modern renderer)
+        from scripts.perf_hud import PerformanceHUD  # local import to avoid early cost if unused
+
+        self.perf_hud = PerformanceHUD(enabled=True)
 
     # Backward compatibility shim for old calls (will be removed):
     def update_sound_volumes(self):  # pragma: no cover - compatibility
@@ -219,7 +219,7 @@ class Game:
         # Simplified legacy loop (no in-loop pause handling). For full
         # gameplay use the state-driven `app.main()` harness.
         while self.running:
-            start_frame_time = time.perf_counter()
+            self.perf_hud.begin_frame()
 
             self.timer.update(self.level)
             self.display.fill((0, 0, 0, 0))
@@ -283,36 +283,16 @@ class Game:
             UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
             UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
 
-            # END of 'work' portion (before present & tick sleep)
-            work_end_time = time.perf_counter()
-            work_ms = (work_end_time - start_frame_time) * 1000.0
-            # Update EMA (based on work section for input/logic cost visibility)
-            if self._avg_frame_ms is None:
-                self._avg_frame_ms = work_ms
-            else:
-                self._avg_frame_ms = self._perf_alpha * work_ms + (1 - self._perf_alpha) * self._avg_frame_ms
-            theor_fps = 1000.0 / work_ms if work_ms > 0 else None
-            fps = self.clock.get_fps()  # reflects previous frame timing
-            from scripts.settings import settings as _settings  # local import safe
-
-            if getattr(_settings, "show_perf_overlay", True):  # pragma: no branch
-                UI.render_perf_overlay(
-                    self.display_2,
-                    work_ms=work_ms,
-                    frame_full_ms=self._last_full_frame_ms,
-                    avg_work_ms=self._avg_frame_ms,
-                    fps=fps,
-                    theor_fps=theor_fps,
-                    x=5,
-                    y=self.BASE_H - 90,
-                )
+            # Mark end of work segment for HUD
+            self.perf_hud.end_work_segment()
+            # Render overlay using prior full frame data
+            self.perf_hud.render(self.display_2, x=5, y=self.BASE_H - 90)
             # Present (screenshake applied after overlay so it can shake as well)
             Effects.screenshake(self)
             pygame.display.update()
-            # Cap / sleep & measure full frame including present
+            # Cap / sleep & finalize full frame timing (available next frame)
             self.clock.tick(60)
-            full_end_time = time.perf_counter()
-            self._last_full_frame_ms = (full_end_time - start_frame_time) * 1000.0
+            self.perf_hud.end_frame(clock=self.clock)
 
             # If ESC pressed (legacy flag),
             # exit loop (pause handled externally in new system)

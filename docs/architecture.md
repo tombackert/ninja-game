@@ -172,13 +172,17 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - Performance: Repeated HUD draws (timer, coins, ammo, lives) now result in cache hits after first frame (hit ratio >90% during steady state). Outline generation now amortized to first occurrence only.
 - Future Enhancements: Adaptive capacity sizing based on observed churn; debug overlay integration showing cache efficiency; pre-warming cache on menu load for static labels; potential atlas packing of text surfaces to reduce texture binds (if migrating to GPU pipeline later).
 ### 6.10 Logging / Metrics
-- Thin wrapper around Python logging (INFO default, DEBUG for instrumentation).
-### 6.11 NetSyncService (Future)
 - (Planned) Manages client prediction + server authoritative reconciliation:
   - Input buffering (sequence numbers).
   - State snapshots (compressed entity states).
   - Interpolation buffers for remote entities.
-  - Rollback hooks (re-simulate stored inputs on corrected snapshot).
+ Thin wrapper around Python logging (INFO default, DEBUG for instrumentation).
+ PerformanceHUD (`scripts/perf_hud.py`) encapsulates timing previously embedded in `Renderer.render`:
+  - `begin_frame()` records full + work segment start.
+  - `end_work_segment()` computes work_ms and maintains EMA (alpha=0.1).
+  - `end_frame()` captures total frame duration (work + post + present).
+  - `render()` delegates drawing to `UI.render_perf_overlay` (separation of logic vs presentation).
+ Advantages: testable smoothing logic (unit test `tests/test_performance_hud.py`), cleaner renderer, future extensibility (logging JSON metrics or sampling) without touching UI code.
 
 ### 6.12 AIScheduler / PolicyService (Future)
 
