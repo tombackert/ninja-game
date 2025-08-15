@@ -31,9 +31,7 @@ from scripts.constants import (
 
 
 class PhysicsEntity:
-    def __init__(
-        self, game, e_type, pos, size, id, services: ServiceContainer | None = None
-    ):
+    def __init__(self, game, e_type, pos, size, id, services: ServiceContainer | None = None):
         # Retain original game reference for legacy code; prefer services if provided.
         self.game = game
         self.services = services  # May be None until systems initialized
@@ -61,9 +59,7 @@ class PhysicsEntity:
             if self.type == "enemy":
                 self.animation = self.game.assets[self.type + "/" + self.action].copy()
             if self.type == "player":
-                self.animation = self.game.assets[
-                    self.type + "/" + cm.SKIN_PATHS[self.skin] + "/" + self.action
-                ].copy()
+                self.animation = self.game.assets[self.type + "/" + cm.SKIN_PATHS[self.skin] + "/" + self.action].copy()
 
     # --- Physics step granular methods (Issue 20) ---
     def begin_update(self):
@@ -153,24 +149,18 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-    def __init__(
-        self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None
-    ):
+    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None):
         super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
 
     def update(self, tilemap, movement=(0, 0)):
         if self.walking:
-            if tilemap.solid_check(
-                (self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)
-            ):
+            if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
                 if self.collisions["right"] or self.collisions["left"]:
                     self.flip = not self.flip
                 else:
                     direction = ENEMY_DIRECTION_BASE * (
-                        1
-                        + ENEMY_DIRECTION_SCALE_LOG
-                        * math.log(settings.selected_level + 1)
+                        1 + ENEMY_DIRECTION_SCALE_LOG * math.log(settings.selected_level + 1)
                     )
                     movement = (
                         movement[0] - direction if self.flip else direction,
@@ -191,15 +181,9 @@ class Enemy(PhysicsEntity):
                         else:
                             self.game.audio.play("shoot")
                         direction = -ENEMY_SHOOT_BASE * (
-                            1
-                            + ENEMY_SHOOT_SCALE_LOG
-                            * math.log(settings.selected_level + 1)
+                            1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
                         )
-                        (
-                            self.services.projectiles.spawn
-                            if self.services
-                            else self.game.projectiles.spawn
-                        )(
+                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
                             self.rect().centerx - 15,
                             self.rect().centery,
                             direction,
@@ -212,15 +196,9 @@ class Enemy(PhysicsEntity):
                         else:
                             self.game.audio.play("shoot")
                         direction = ENEMY_SHOOT_BASE * (
-                            1
-                            + ENEMY_SHOOT_SCALE_LOG
-                            * math.log(settings.selected_level + 1)
+                            1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
                         )
-                        (
-                            self.services.projectiles.spawn
-                            if self.services
-                            else self.game.projectiles.spawn
-                        )(
+                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
                             self.rect().centerx + 15,
                             self.rect().centery,
                             direction,
@@ -245,12 +223,8 @@ class Enemy(PhysicsEntity):
                     self.game.audio.play("hit")
                 self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
-                self.game.sparks.append(
-                    Spark(self.rect().center, 0, 5 + random.random())
-                )
-                self.game.sparks.append(
-                    Spark(self.rect().center, math.pi, 5 + random.random())
-                )
+                self.game.sparks.append(Spark(self.rect().center, 0, 5 + random.random()))
+                self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + random.random()))
                 return True
 
     # Collision with player projectiles handled centrally in ProjectileSystem.update
@@ -262,10 +236,7 @@ class Enemy(PhysicsEntity):
             surf.blit(
                 pygame.transform.flip(self.game.assets["gun"], True, False),
                 (
-                    self.rect().centerx
-                    - 4
-                    - self.game.assets["gun"].get_width()
-                    - offset[0],
+                    self.rect().centerx - 4 - self.game.assets["gun"].get_width() - offset[0],
                     self.rect().centery - offset[1],
                 ),
             )
@@ -397,10 +368,7 @@ class Player(PhysicsEntity):
             if abs(self.dashing) == DASH_DECEL_TRIGGER_FRAME:
                 self.velocity[0] *= 0.1
             pvelocity = [
-                abs(self.dashing)
-                / self.dashing
-                * random.random()
-                * DASH_TRAIL_PARTICLE_SPEED,
+                abs(self.dashing) / self.dashing * random.random() * DASH_TRAIL_PARTICLE_SPEED,
                 0,
             ]
             self.game.particles.append(
@@ -433,10 +401,7 @@ class Player(PhysicsEntity):
                 surf.blit(
                     pygame.transform.flip(self.game.assets["gun"], True, False),
                     (
-                        self.rect().centerx
-                        - 4
-                        - self.game.assets["gun"].get_width()
-                        - offset[0],
+                        self.rect().centerx - 4 - self.game.assets["gun"].get_width() - offset[0],
                         self.rect().centery - offset[1],
                     ),
                 )

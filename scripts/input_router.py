@@ -32,9 +32,7 @@ def _key_rule(key: int, action: Action, event_type=pygame.KEYDOWN) -> Rule:
     return _r
 
 
-def _mouse_button_rule(
-    button: int, action: Action, event_type=pygame.MOUSEBUTTONDOWN
-) -> Rule:
+def _mouse_button_rule(button: int, action: Action, event_type=pygame.MOUSEBUTTONDOWN) -> Rule:
     def _r(e: pygame.event.Event):  # type: ignore[override]
         if e.type == event_type and getattr(e, "button", None) == button:
             return action
@@ -86,18 +84,14 @@ class InputRouter:
             }
         )
 
-    def register_rules(
-        self, state_name: str, rules: Iterable[Rule], append: bool = True
-    ) -> None:
+    def register_rules(self, state_name: str, rules: Iterable[Rule], append: bool = True) -> None:
         lst = self._rules.setdefault(state_name, [])
         if append:
             lst.extend(rules)
         else:
             self._rules[state_name] = list(rules)
 
-    def process(
-        self, events: Iterable[pygame.event.Event], state_name: str
-    ) -> List[Action]:
+    def process(self, events: Iterable[pygame.event.Event], state_name: str) -> List[Action]:
         rules = self._rules.get(state_name, [])
         actions: List[Action] = []
         for e in events:
@@ -110,9 +104,7 @@ class InputRouter:
         return actions
 
     # Convenience hook for tests / introspection
-    def actions_for(
-        self, key: int, state_name: str
-    ) -> List[Action]:  # pragma: no cover - helper
+    def actions_for(self, key: int, state_name: str) -> List[Action]:  # pragma: no cover - helper
         evt = pygame.event.Event(pygame.KEYDOWN, {"key": key})
         return self.process([evt], state_name)
 

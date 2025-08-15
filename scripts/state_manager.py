@@ -45,20 +45,14 @@ class State:
     name: str = "State"
 
     # Lifecycle -----------------------------------------------------
-    def on_enter(
-        self, previous: "State | None"
-    ) -> None:  # pragma: no cover - default no-op
+    def on_enter(self, previous: "State | None") -> None:  # pragma: no cover - default no-op
         pass
 
-    def on_exit(
-        self, next_state: "State | None"
-    ) -> None:  # pragma: no cover - default no-op
+    def on_exit(self, next_state: "State | None") -> None:  # pragma: no cover - default no-op
         pass
 
     # Main loop hooks -----------------------------------------------
-    def handle(
-        self, events: Sequence[pygame.event.Event]
-    ) -> None:  # pragma: no cover - default no-op
+    def handle(self, events: Sequence[pygame.event.Event]) -> None:  # pragma: no cover - default no-op
         pass
 
     # New action-based hook (Issue 11). States migrating to InputRouter
@@ -69,9 +63,7 @@ class State:
     def update(self, dt: float) -> None:  # pragma: no cover - default no-op
         pass
 
-    def render(
-        self, surface: pygame.Surface
-    ) -> None:  # pragma: no cover - default no-op
+    def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - default no-op
         pass
 
 
@@ -169,9 +161,7 @@ class MenuState(State):
             "Options",
             "Quit",
         ]
-        self.list_widget = ScrollableListWidget(
-            self.options, visible_rows=6, spacing=50, font_size=30
-        )
+        self.list_widget = ScrollableListWidget(self.options, visible_rows=6, spacing=50, font_size=30)
         self.selected = 0  # legacy compatibility (to be removed)
         self.enter = False
         self.quit_requested = False
@@ -345,7 +335,7 @@ class LevelsState(State):
         )
         self.widget.selected_index = self.index
         self.message: str | None = None
-        self.message_timer = 0
+        self.message_timer: float = 0.0
         self.request_back = False
         self.enter = False
 
@@ -388,11 +378,7 @@ class LevelsState(State):
             if idx >= len(self.levels):
                 break
             lvl = self.levels[idx]
-            icon = (
-                "data/images/padlock-o.png"
-                if self.progress.is_unlocked(lvl)
-                else "data/images/padlock-c.png"
-            )
+            icon = "data/images/padlock-o.png" if self.progress.is_unlocked(lvl) else "data/images/padlock-c.png"
             UI.render_ui_img(
                 surface,
                 icon,
@@ -439,12 +425,8 @@ class StoreState(State):
         self.options_raw = list(self.cm.ITEMS.keys())
         # Build formatted options with aligned prices
         max_len = max(len(o) for o in self.options_raw)
-        self.options = [
-            f"{o.ljust(max_len)}  ${self.cm.ITEMS[o]:<6}" for o in self.options_raw
-        ]
-        self.widget = ScrollableListWidget(
-            self.options, visible_rows=5, spacing=50, font_size=30
-        )
+        self.options = [f"{o.ljust(max_len)}  ${self.cm.ITEMS[o]:<6}" for o in self.options_raw]
+        self.widget = ScrollableListWidget(self.options, visible_rows=5, spacing=50, font_size=30)
         self.message: str | None = None
         self.message_timer = 0.0
         self.request_back = False
@@ -492,11 +474,7 @@ class StoreState(State):
             if idx >= len(self.options_raw):
                 break
             item_name = self.options_raw[idx]
-            icon = (
-                "data/images/padlock-o.png"
-                if self.cm.is_purchaseable(item_name)
-                else "data/images/padlock-c.png"
-            )
+            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(item_name) else "data/images/padlock-c.png"
             UI.render_ui_img(
                 surface,
                 icon,
@@ -541,12 +519,8 @@ class AccessoriesState(State):
         self.cm = CollectableManager(None)
         self.weapons = list(self.cm.WEAPONS)
         self.skins = list(self.cm.SKINS)
-        self.weapon_widget = ScrollableListWidget(
-            [w for w in self.weapons], visible_rows=4, spacing=50, font_size=30
-        )
-        self.skin_widget = ScrollableListWidget(
-            [s for s in self.skins], visible_rows=4, spacing=50, font_size=30
-        )
+        self.weapon_widget = ScrollableListWidget([w for w in self.weapons], visible_rows=4, spacing=50, font_size=30)
+        self.skin_widget = ScrollableListWidget([s for s in self.skins], visible_rows=4, spacing=50, font_size=30)
         self.active_panel = 0  # 0 weapons, 1 skins
         self.request_back = False
         self.enter = False
@@ -556,13 +530,9 @@ class AccessoriesState(State):
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
             if a == "menu_up":
-                (
-                    self.weapon_widget if self.active_panel == 0 else self.skin_widget
-                ).move_up()
+                (self.weapon_widget if self.active_panel == 0 else self.skin_widget).move_up()
             elif a == "menu_down":
-                (
-                    self.weapon_widget if self.active_panel == 0 else self.skin_widget
-                ).move_down()
+                (self.weapon_widget if self.active_panel == 0 else self.skin_widget).move_down()
             elif a == "menu_select":
                 self.enter = True
             elif a in ("menu_back", "menu_quit"):
@@ -610,11 +580,7 @@ class AccessoriesState(State):
             if idx >= len(self.weapons):
                 break
             name = self.weapons[idx]
-            icon = (
-                "data/images/padlock-o.png"
-                if self.cm.is_purchaseable(name)
-                else "data/images/padlock-c.png"
-            )
+            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(name) else "data/images/padlock-c.png"
             UI.render_ui_img(
                 surface,
                 icon,
@@ -627,11 +593,7 @@ class AccessoriesState(State):
             if idx >= len(self.skins):
                 break
             name = self.skins[idx]
-            icon = (
-                "data/images/padlock-o.png"
-                if self.cm.is_purchaseable(name)
-                else "data/images/padlock-c.png"
-            )
+            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(name) else "data/images/padlock-c.png"
             UI.render_ui_img(
                 surface,
                 icon,
@@ -640,12 +602,8 @@ class AccessoriesState(State):
                 0.15,
             )
         UI.render_menu_ui_element(surface, f"Coins: ${self.cm.coins}", 20, 20)
-        UI.render_menu_ui_element(
-            surface, f"Weapon: {self.cm.WEAPONS[self.settings.selected_weapon]}", 20, 40
-        )
-        UI.render_menu_ui_element(
-            surface, f"Skin: {self.cm.SKINS[self.settings.selected_skin]}", 20, 60
-        )
+        UI.render_menu_ui_element(surface, f"Weapon: {self.cm.WEAPONS[self.settings.selected_weapon]}", 20, 40)
+        UI.render_menu_ui_element(surface, f"Skin: {self.cm.SKINS[self.settings.selected_skin]}", 20, 60)
         UI.render_menu_ui_element(
             surface,
             "TAB switch list",
@@ -706,9 +664,7 @@ class OptionsState(State):
                 elif self.widget.selected_index == 1:
                     self.settings.sound_volume = self.settings.sound_volume - 0.1
                 elif self.widget.selected_index == 2:
-                    self.settings.show_perf_overlay = (
-                        not self.settings.show_perf_overlay
-                    )
+                    self.settings.show_perf_overlay = not self.settings.show_perf_overlay
             elif a == "options_right":
                 if self.widget.selected_index == 0:
                     self.settings.music_volume = self.settings.music_volume + 0.1
@@ -716,9 +672,7 @@ class OptionsState(State):
                 elif self.widget.selected_index == 1:
                     self.settings.sound_volume = self.settings.sound_volume + 0.1
                 elif self.widget.selected_index == 2:
-                    self.settings.show_perf_overlay = (
-                        not self.settings.show_perf_overlay
-                    )
+                    self.settings.show_perf_overlay = not self.settings.show_perf_overlay
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values

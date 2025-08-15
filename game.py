@@ -78,26 +78,18 @@ class Game:
             "clouds": am.get_image_frames("clouds"),
             "enemy/idle": am.get_animation("entities/enemy/idle", img_dur=6),
             "enemy/run": am.get_animation("entities/enemy/run", img_dur=4),
-            "player/default/idle": am.get_animation(
-                "entities/player/default/idle", img_dur=6
-            ),
-            "player/default/run": am.get_animation(
-                "entities/player/default/run", img_dur=4
-            ),
+            "player/default/idle": am.get_animation("entities/player/default/idle", img_dur=6),
+            "player/default/run": am.get_animation("entities/player/default/run", img_dur=4),
             "player/default/jump": am.get_animation("entities/player/default/jump"),
             "player/default/slide": am.get_animation("entities/player/default/slide"),
-            "player/default/wall_slide": am.get_animation(
-                "entities/player/default/wall_slide"
-            ),
+            "player/default/wall_slide": am.get_animation("entities/player/default/wall_slide"),
             "player/red/idle": am.get_animation("entities/player/red/idle", img_dur=6),
             "player/red/run": am.get_animation("entities/player/red/run", img_dur=4),
             "player/red/jump": am.get_animation("entities/player/red/jump"),
             "player/red/slide": am.get_animation("entities/player/red/slide"),
             "player/red/wall_slide": am.get_animation("entities/player/red/wall_slide"),
             "particle/leaf": am.get_animation("particles/leaf", img_dur=20, loop=False),
-            "particle/particle": am.get_animation(
-                "particles/particle", img_dur=6, loop=False
-            ),
+            "particle/particle": am.get_animation("particles/particle", img_dur=6, loop=False),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
             "gun": am.get_image("gun.png"),
@@ -141,9 +133,7 @@ class Game:
         # Performance overlay (legacy loop) – track moving average frame time
         self._avg_frame_ms = None
         self._perf_alpha = 0.1  # smoothing factor for EMA
-        self._last_full_frame_ms = (
-            None  # for overlay display (previous frame full time)
-        )
+        self._last_full_frame_ms = None  # for overlay display (previous frame full time)
 
     # Backward compatibility shim for old calls (will be removed):
     def update_sound_volumes(self):  # pragma: no cover - compatibility
@@ -162,9 +152,7 @@ class Game:
 
         self.leaf_spawners = []
         for tree in self.tilemap.extract([("large_decor", 2)], keep=True):
-            self.leaf_spawners.append(
-                pygame.Rect(4 + tree["pos"][0], 4 + tree["pos"][1], 23, 13)
-            )
+            self.leaf_spawners.append(pygame.Rect(4 + tree["pos"][0], 4 + tree["pos"][1], 23, 13))
 
         # START LOAD LEVEL
         self.enemies = []
@@ -272,16 +260,8 @@ class Game:
                     self.load_level(self.level)
 
             # Camera smoothing
-            self.scroll[0] += (
-                self.player.rect().centerx
-                - self.display.get_width() / 2
-                - self.scroll[0]
-            ) / 30
-            self.scroll[1] += (
-                self.player.rect().centery
-                - self.display.get_height() / 2
-                - self.scroll[1]
-            ) / 30
+            self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
+            self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
             UI.render_game_elements(self, render_scroll)
@@ -297,18 +277,10 @@ class Game:
             self.display_2.blit(self.display, (0, 0))
 
             # HUD
-            UI.render_game_ui_element(
-                self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5
-            )
-            UI.render_game_ui_element(
-                self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15
-            )
-            UI.render_game_ui_element(
-                self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5
-            )
-            UI.render_game_ui_element(
-                self.display_2, f"Lives: {self.player.lifes}", 5, 5
-            )
+            UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
+            UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
+            UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
+            UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
             UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
             UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
 
@@ -319,10 +291,7 @@ class Game:
             if self._avg_frame_ms is None:
                 self._avg_frame_ms = work_ms
             else:
-                self._avg_frame_ms = (
-                    self._perf_alpha * work_ms
-                    + (1 - self._perf_alpha) * self._avg_frame_ms
-                )
+                self._avg_frame_ms = self._perf_alpha * work_ms + (1 - self._perf_alpha) * self._avg_frame_ms
             theor_fps = 1000.0 / work_ms if work_ms > 0 else None
             fps = self.clock.get_fps()  # reflects previous frame timing
             from scripts.settings import settings as _settings  # local import safe

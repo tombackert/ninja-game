@@ -57,10 +57,7 @@ class ProgressTracker:
             self.unlocked = {0}
         # Developer override: if DEV_UNLOCK_LEVELS=1,
         # treat all discovered levels unlocked
-        if (
-            os.environ.get("DEV_UNLOCK_LEVELS") == "1"
-            and "PYTEST_CURRENT_TEST" not in os.environ
-        ):
+        if os.environ.get("DEV_UNLOCK_LEVELS") == "1" and "PYTEST_CURRENT_TEST" not in os.environ:
             self.unlocked.update(self.levels)
         # Normalize settings map to discovered levels only
         self._sync_settings()

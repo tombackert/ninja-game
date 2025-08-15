@@ -99,9 +99,7 @@ class Editor:
         import os
 
         max_frames_env = os.environ.get("EDITOR_MAX_FRAMES")
-        max_frames = (
-            int(max_frames_env) if max_frames_env and max_frames_env.isdigit() else None
-        )
+        max_frames = int(max_frames_env) if max_frames_env and max_frames_env.isdigit() else None
         frame_counter = 0
 
         while True:
@@ -114,15 +112,12 @@ class Editor:
 
             self.tilemap.render(self.display, offset=render_scroll)
 
-            current_tile_img = self.assets[self.tile_list[self.tile_group]][
-                self.tile_variant
-            ].copy()
+            current_tile_img = self.assets[self.tile_list[self.tile_group]][self.tile_variant].copy()
             current_tile_img.set_alpha(180)
 
             mpos = pygame.mouse.get_pos()
             mpos = (
-                mpos[0]
-                / self.scale_x,  # X-Koordinate mit horizontalem Skalierungsfaktor
+                mpos[0] / self.scale_x,  # X-Koordinate mit horizontalem Skalierungsfaktor
                 mpos[1] / self.scale_y,  # Y-Koordinate mit vertikalem Skalierungsfaktor
             )
             tile_pos = (
@@ -204,8 +199,7 @@ class Editor:
                         print("-----------------")
                     else:
                         if not any(
-                            player.pos[0] == tile_pos[0]
-                            and player.pos[1] == tile_pos[1]
+                            player.pos[0] == tile_pos[0] and player.pos[1] == tile_pos[1]
                             for player in self.tilemap.players
                         ):
                             self.tilemap.players.append(
@@ -347,14 +341,10 @@ class Editor:
                             self.m_offset = self.multi_tile_size // 2
                     elif not self.shift:
                         if event.button == 4:
-                            self.tile_group = (self.tile_group - 1) % len(
-                                self.tile_list
-                            )
+                            self.tile_group = (self.tile_group - 1) % len(self.tile_list)
                             self.tile_variant = 0
                         if event.button == 5:
-                            self.tile_group = (self.tile_group + 1) % len(
-                                self.tile_list
-                            )
+                            self.tile_group = (self.tile_group + 1) % len(self.tile_list)
                             self.tile_variant = 0
 
                 if event.type == pygame.MOUSEBUTTONUP:
@@ -441,9 +431,7 @@ class Editor:
             )
 
             # NOTE: Must provide destination tuple to blit; previous code caused TypeError
-            self.screen.blit(
-                pygame.transform.scale(self.display, (self.WIN_W, self.WIN_H)), (0, 0)
-            )
+            self.screen.blit(pygame.transform.scale(self.display, (self.WIN_W, self.WIN_H)), (0, 0))
             pygame.display.update()
             self.clock.tick(60)  # 60fps
 

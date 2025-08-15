@@ -67,9 +67,7 @@ class GameServer:
                 self.clients[client_id] = (conn, addr)
 
                 # Start thread for client
-                client_thread = threading.Thread(
-                    target=self.client_handler, args=(client_id,)
-                )
+                client_thread = threading.Thread(target=self.client_handler, args=(client_id,))
                 client_thread.start()
 
             except OSError:

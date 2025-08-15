@@ -26,7 +26,8 @@ def main(num_balls=1000, run_time=10):
     try:
         current_video_driver = pygame.display.get_driver()
         print(f"Video driver:   {current_video_driver}")
-    except:
+    except Exception:
+        # Broad exception acceptable here because environment may lack a display driver in headless mode
         print("Video driver could not be determined.")
 
     # -- Fenster erstellen --

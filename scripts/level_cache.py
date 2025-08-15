@@ -12,8 +12,10 @@ from typing import List
 
 MAPS_DIR = "data/maps"
 
-_cache = {
-    "levels": None,  # type: ignore
+from typing import Any, Dict, Optional
+
+_cache: Dict[str, Any] = {
+    "levels": None,
     "mtime": None,
 }
 
@@ -45,7 +47,7 @@ def list_levels() -> List[int]:
     if _cache["levels"] is None or _cache["mtime"] != mtime:
         _cache["levels"] = _scan_levels()
         _cache["mtime"] = mtime
-    return list(_cache["levels"])  # shallow copy to prevent external mutation
+    return list(_cache["levels"])  # type: ignore[arg-type]
 
 
 def invalidate_level_cache() -> None:

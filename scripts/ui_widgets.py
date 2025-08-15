@@ -65,9 +65,7 @@ class ScrollableListWidget:
 
     # Visible slice ---------------------------------------------------
     def visible_options(self) -> List[str]:
-        return self.options[
-            self._scroll_offset: self._scroll_offset + self.visible_rows
-        ]
+        return self.options[self._scroll_offset : self._scroll_offset + self.visible_rows]
 
     def visible_selected_local_index(self) -> int:
         if self.selected_index == -1:

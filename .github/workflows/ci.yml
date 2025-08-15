@@ -7,6 +7,34 @@ on:
     branches: [ main ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Ruff
+        run: |
+          ruff check .
+      - name: Black format check
+        run: |
+          black --check .
+      - name: Mypy (lenient)
+        run: |
+          mypy scripts || true
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

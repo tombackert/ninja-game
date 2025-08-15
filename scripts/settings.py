@@ -129,24 +129,14 @@ class Settings:
                     data = json.load(f)
                     self._music_volume = data.get("music_volume", self._music_volume)
                     self._sound_volume = data.get("sound_volume", self._sound_volume)
-                    self._selected_level = data.get(
-                        "selected_level", self._selected_level
-                    )
-                    self.selected_editor_level = data.get(
-                        "selected_editor_level", self.selected_editor_level
-                    )
-                    self.selected_weapon = data.get(
-                        "selected_weapon", self.selected_weapon
-                    )
+                    self._selected_level = data.get("selected_level", self._selected_level)
+                    self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
+                    self.selected_weapon = data.get("selected_weapon", self.selected_weapon)
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
-                    self.show_perf_overlay = data.get(
-                        "show_perf_overlay", self.show_perf_overlay
-                    )
+                    self.show_perf_overlay = data.get("show_perf_overlay", self.show_perf_overlay)
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
-                        self.playable_levels[level] = playable_levels.get(
-                            str(level), self.playable_levels[level]
-                        )
+                        self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
             except (json.JSONDecodeError, IOError) as e:
                 log.warn("Error loading settings; regenerating", e)
                 self._dirty = True

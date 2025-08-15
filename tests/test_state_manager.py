@@ -2,9 +2,7 @@ import os
 import pytest
 from scripts.state_manager import StateManager, State
 
-os.environ["NINJA_GAME_TESTING"] = (
-    "1"  # ensure Menu/Game constructors stay non-interactive
-)
+os.environ["NINJA_GAME_TESTING"] = "1"  # ensure Menu/Game constructors stay non-interactive
 
 
 class DummyState(State):
@@ -13,14 +11,10 @@ class DummyState(State):
         self.tracker = tracker
 
     def on_enter(self, previous):  # record transitions
-        self.tracker.append(
-            f"enter:{self.label}:{previous.label if previous else 'None'}"
-        )
+        self.tracker.append(f"enter:{self.label}:{previous.label if previous else 'None'}")
 
     def on_exit(self, next_state):
-        self.tracker.append(
-            f"exit:{self.label}:{next_state.label if next_state else 'None'}"
-        )
+        self.tracker.append(f"exit:{self.label}:{next_state.label if next_state else 'None'}")
 
 
 def test_push_and_current():

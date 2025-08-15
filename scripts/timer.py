@@ -17,11 +17,7 @@ class Timer:
         self.best_times = self.load_best_times()
         self.best_time = self.get_best_time_value(self.current_level)
         self.text = "00:00.00"
-        self.best_time_text = (
-            self.format_time(self.best_time)
-            if self.best_time != float("inf")
-            else "--:--:--"
-        )
+        self.best_time_text = self.format_time(self.best_time) if self.best_time != float("inf") else "--:--:--"
 
     def update(self, level):
         self.current_level = str(level)
@@ -29,11 +25,7 @@ class Timer:
         self.elapsed_time = self.current_time - self.start_time
         self.text = self.format_time(self.elapsed_time)
         self.best_time = self.get_best_time_value(self.current_level)
-        self.best_time_text = (
-            self.format_time(self.best_time)
-            if self.best_time != float("inf")
-            else "--:--:--"
-        )
+        self.best_time_text = self.format_time(self.best_time) if self.best_time != float("inf") else "--:--:--"
 
     def format_time(self, time):
         if time == float("inf"):

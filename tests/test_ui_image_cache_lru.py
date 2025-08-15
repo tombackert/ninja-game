@@ -15,9 +15,7 @@ def make_img(path, color):
 
 def setup_module(module):
     # Create 5 images
-    for i, color in enumerate(
-        [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]
-    ):
+    for i, color in enumerate([(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255)]):
         make_img(f"temp_img_{i}.png", color)
 
 

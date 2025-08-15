@@ -78,9 +78,7 @@ class Tilemap:
         tiles = []
         tile_loc = (int(pos[0] // self.tile_size), int(pos[1] // self.tile_size))
         for offset in NEIGHBOR_OFFSET:
-            check_loc = (
-                str(tile_loc[0] + offset[0]) + ";" + str(tile_loc[1] + offset[1])
-            )
+            check_loc = str(tile_loc[0] + offset[0]) + ";" + str(tile_loc[1] + offset[1])
             if check_loc in self.tilemap:
                 tiles.append(self.tilemap[check_loc])
         return tiles
@@ -208,9 +206,7 @@ class Tilemap:
                     self.players.append(player)
 
                 for enemy_data in entities_data.get("enemies", []):
-                    enemy = Enemy(
-                        self.game, enemy_data["pos"], (8, 15), enemy_data["id"]
-                    )
+                    enemy = Enemy(self.game, enemy_data["pos"], (8, 15), enemy_data["id"])
                     enemy.velocity = enemy_data.get("velocity", [0, 0])
                     enemy.alive = enemy_data.get("alive", True)
                     self.enemies.append(enemy)
@@ -221,11 +217,7 @@ class Tilemap:
             log.error("Error while loading Tilemap", e)
 
     def solid_check(self, pos):
-        tile_loc = (
-            str(int(pos[0] // self.tile_size))
-            + ";"
-            + str(int(pos[1] // self.tile_size))
-        )
+        tile_loc = str(int(pos[0] // self.tile_size)) + ";" + str(int(pos[1] // self.tile_size))
         if tile_loc in self.tilemap:
             if self.tilemap[tile_loc]["type"] in PHYSICS_TILES:
                 return self.tilemap[tile_loc]
@@ -249,11 +241,7 @@ class Tilemap:
             tile = self.tilemap[loc]
             neighbors = set()
             for shift in [(1, 0), (-1, 0), (0, -1), (0, 1)]:
-                check_loc = (
-                    str(tile["pos"][0] + shift[0])
-                    + ";"
-                    + str(tile["pos"][1] + shift[1])
-                )
+                check_loc = str(tile["pos"][0] + shift[0]) + ";" + str(tile["pos"][1] + shift[1])
                 if check_loc in self.tilemap:
                     if self.tilemap[check_loc]["type"] == tile["type"]:
                         neighbors.add(shift)
@@ -265,9 +253,7 @@ class Tilemap:
         for tile in self.offgrid_tiles:
             image = self.get_image(tile)
             if image:
-                surf.blit(
-                    image, (tile["pos"][0] - offset[0], tile["pos"][1] - offset[1])
-                )
+                surf.blit(image, (tile["pos"][0] - offset[0], tile["pos"][1] - offset[1]))
 
         for x in range(
             int(offset[0] // self.tile_size),
@@ -300,9 +286,7 @@ class Tilemap:
             if 0 <= tile["variant"] < len(asset):
                 return asset[tile["variant"]]
             else:
-                log.warn(
-                    f"Variant index {tile['variant']} out of bounds for tile type {tile['type']}"
-                )
+                log.warn(f"Variant index {tile['variant']} out of bounds for tile type {tile['type']}")
                 return None
         elif isinstance(asset, pygame.Surface):
             return asset
@@ -314,9 +298,7 @@ class Tilemap:
                 log.warn(f"Animation frame not Surface for tile type {tile['type']}")
                 return None
         else:
-            log.warn(
-                f"Unexpected asset type for tile type {tile['type']}: {type(asset)}"
-            )
+            log.warn(f"Unexpected asset type for tile type {tile['type']}: {type(asset)}")
             return None
 
     def save_game(self):

@@ -79,18 +79,12 @@ class CollectableManager:
         "Moon Boots": ItemDef("Moon Boots", "moon_boots", 2500, "weapon", False, 1),
         "Ninja Stars": ItemDef("Ninja Stars", "ninja_stars", 500, "weapon", False, 3),
         "Sword": ItemDef("Sword", "sword", 1000, "weapon", False, 1),
-        "Grapple Hook": ItemDef(
-            "Grapple Hook", "grapple_hook", 5000, "weapon", False, 1
-        ),
+        "Grapple Hook": ItemDef("Grapple Hook", "grapple_hook", 5000, "weapon", False, 1),
         # Skins
         "Red Ninja": ItemDef("Red Ninja", "red_ninja", 1000, "skin", True, 1),
         "Gold Ninja": ItemDef("Gold Ninja", "gold_ninja", 2000, "skin", False, 1),
-        "Platinum Ninja": ItemDef(
-            "Platinum Ninja", "platinum_ninja", 3000, "skin", False, 1
-        ),
-        "Diamond Ninja": ItemDef(
-            "Diamond Ninja", "diamond_ninja", 5000, "skin", False, 1
-        ),
+        "Platinum Ninja": ItemDef("Platinum Ninja", "platinum_ninja", 3000, "skin", False, 1),
+        "Diamond Ninja": ItemDef("Diamond Ninja", "diamond_ninja", 5000, "skin", False, 1),
         "Assassin": ItemDef("Assassin", "assassin", 7000, "skin", False, 1),
         "Berserker": ItemDef("Berserker", "berserker", 10000, "skin", False, 1),
     }
@@ -127,15 +121,11 @@ class CollectableManager:
 
         coin_tiles = tilemap.extract([("coin", 0)], keep=False)
         for tile in coin_tiles:
-            self.coin_list.append(
-                Collectables(self.game, tile["pos"], self.game.assets["coin"])
-            )
+            self.coin_list.append(Collectables(self.game, tile["pos"], self.game.assets["coin"]))
 
         ammo_tiles = tilemap.extract([("ammo", 0)], keep=False)
         for tile in ammo_tiles:
-            self.ammo_pickups.append(
-                Collectables(self.game, tile["pos"], self.game.assets["ammo"])
-            )
+            self.ammo_pickups.append(Collectables(self.game, tile["pos"], self.game.assets["ammo"]))
 
     def update(self, player_rect):
         for coin in self.coin_list[:]:

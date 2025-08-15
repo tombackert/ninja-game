@@ -124,9 +124,7 @@ class ProjectileSystem:
                 # Player damage (skip if heavily dashing similar to old logic)
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
                 for player in players:
-                    if abs(
-                        player.dashing
-                    ) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                    if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
                         if proj in self._projectiles:
                             self._projectiles.remove(proj)
                             player.lives -= 1
@@ -152,9 +150,7 @@ class ProjectileSystem:
         """
         img = self.game.assets["projectile"]
         for proj in self._projectiles:
-            yield img, proj["pos"][0] - img.get_width() / 2, proj["pos"][
-                1
-            ] - img.get_height() / 2
+            yield img, proj["pos"][0] - img.get_width() / 2, proj["pos"][1] - img.get_height() / 2
 
 
 __all__ = ["ProjectileSystem"]

@@ -28,11 +28,7 @@ class GunWeapon(Weapon):
         else:
             player.game.audio.play("shoot")
         direction = -PROJECTILE_SPEED if player.flip else PROJECTILE_SPEED
-        (
-            player.services.projectiles.spawn
-            if player.services
-            else player.game.projectiles.spawn
-        )(
+        (player.services.projectiles.spawn if player.services else player.game.projectiles.spawn)(
             player.rect().centerx + (7 * (-1 if player.flip else 1)),
             player.rect().centery,
             direction,

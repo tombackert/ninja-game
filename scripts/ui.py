@@ -15,7 +15,9 @@ class UI:
     _cache_capacity: int = 64
     _cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
     # Text outline cache
-    _text_cache: "OrderedDict[tuple[str, int, str, tuple[int,int,int], tuple[int,int,int]], pygame.Surface]" = (OrderedDict())
+    _text_cache: "OrderedDict[tuple[str, int, str, tuple[int,int,int], tuple[int,int,int]], pygame.Surface]" = (
+        OrderedDict()
+    )
     _text_cache_capacity: int = 256
     _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
@@ -39,17 +41,11 @@ class UI:
 
     @staticmethod
     def get_image_cache_stats():
-        return dict(
-            UI._cache_stats
-            | {"size": len(UI._image_cache), "capacity": UI._cache_capacity}
-        )
+        return dict(UI._cache_stats | {"size": len(UI._image_cache), "capacity": UI._cache_capacity})
 
     @staticmethod
     def get_text_cache_stats():
-        return dict(
-            UI._text_cache_stats
-            | {"size": len(UI._text_cache), "capacity": UI._text_cache_capacity}
-        )
+        return dict(UI._text_cache_stats | {"size": len(UI._text_cache), "capacity": UI._text_cache_capacity})
 
     @staticmethod
     def render_perf_overlay(
@@ -79,8 +75,7 @@ class UI:
             UI._perf_overlay_cache = None  # type: ignore[attr-defined]
         UI._perf_overlay_frame += 1  # type: ignore[attr-defined]
         rebuild = (
-            UI._perf_overlay_cache is None  # type: ignore[attr-defined]
-            or (UI._perf_overlay_frame % update_every) == 1
+            UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1  # type: ignore[attr-defined]
         )
         if not rebuild and UI._perf_overlay_cache is not None:  # type: ignore[attr-defined]
             # Fast path: reuse cached overlay surface at requested anchor.
@@ -228,9 +223,7 @@ class UI:
             # Create surface large enough for outlines
             w, h = base.get_width(), base.get_height()
             outline_pad = scale + 1
-            surf = pygame.Surface(
-                (w + outline_pad * 2, h + outline_pad * 2), pygame.SRCALPHA
-            )
+            surf = pygame.Surface((w + outline_pad * 2, h + outline_pad * 2), pygame.SRCALPHA)
             for ox, oy in offsets:
                 outline_surf = font.render(text, True, outline_color)
                 surf.blit(
@@ -285,9 +278,7 @@ class UI:
         if not game.dead:
             for player in game.players:
                 if player.id == game.playerID:
-                    player.update(
-                        game.tilemap, (game.movement[1] - game.movement[0], 0)
-                    )
+                    player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
                 else:
                     player.update(game.tilemap, (0, 0))
                 if player.lives > 0:
@@ -325,9 +316,7 @@ class UI:
 
         # Display sillhouette
         display_mask = pygame.mask.from_surface(game.display)
-        display_sillhouette = display_mask.to_surface(
-            setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0)
-        )
+        display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             game.display_2.blit(display_sillhouette, offset_o)
 
@@ -478,6 +467,4 @@ class UI:
     def render_ui_img(display, p, x, y, scale=1):
         img = UI.load_image_cached(p, scale=scale)
         display.blit(img, (x - img.get_width() / 2, y - img.get_height() / 2))
-        UI.draw_img_outline(
-            display, img, x - img.get_width() / 2, y - img.get_height() / 2
-        )
+        UI.draw_img_outline(display, img, x - img.get_width() / 2, y - img.get_height() / 2)

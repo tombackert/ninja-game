@@ -55,7 +55,7 @@ class Renderer:
         # Performance tracking
         self.show_perf = show_perf
         self._last_frame_ms = 0.0
-        self._avg_frame_ms = None  # moving average frame time (ms)
+        self._avg_frame_ms: Optional[float] = None  # moving average frame time (ms)
         self._alpha = 0.1  # smoothing factor for EMA
 
     @property
@@ -85,12 +85,8 @@ class Renderer:
         # 3. World & entities
         from scripts.ui import UI  # local import avoids cycles
 
-        game.scroll[0] += (
-            game.player.rect().centerx - game.display.get_width() / 2 - game.scroll[0]
-        ) / 30
-        game.scroll[1] += (
-            game.player.rect().centery - game.display.get_height() / 2 - game.scroll[1]
-        ) / 30
+        game.scroll[0] += (game.player.rect().centerx - game.display.get_width() / 2 - game.scroll[0]) / 30
+        game.scroll[1] += (game.player.rect().centery - game.display.get_height() / 2 - game.scroll[1]) / 30
         render_scroll = (int(game.scroll[0]), int(game.scroll[1]))
         UI.render_game_elements(game, render_scroll)
         if seq is not None:
@@ -120,9 +116,7 @@ class Renderer:
         if self._avg_frame_ms is None:
             self._avg_frame_ms = work_ms
         else:
-            self._avg_frame_ms = (
-                self._alpha * work_ms + (1 - self._alpha) * self._avg_frame_ms
-            )
+            self._avg_frame_ms = self._alpha * work_ms + (1 - self._alpha) * self._avg_frame_ms
         if self.show_perf:
             try:
                 from scripts.settings import settings as _settings  # type: ignore
@@ -171,15 +165,9 @@ class Renderer:
     def _render_hud(self, game) -> None:
         from scripts.ui import UI
 
-        UI.render_game_ui_element(
-            game.display_2, f"{game.timer.text}", game.BASE_W - 70, 5
-        )
-        UI.render_game_ui_element(
-            game.display_2, f"{game.timer.best_time_text}", game.BASE_W - 70, 15
-        )
-        UI.render_game_ui_element(
-            game.display_2, f"Level: {game.level}", game.BASE_W // 2 - 40, 5
-        )
+        UI.render_game_ui_element(game.display_2, f"{game.timer.text}", game.BASE_W - 70, 5)
+        UI.render_game_ui_element(game.display_2, f"{game.timer.best_time_text}", game.BASE_W - 70, 15)
+        UI.render_game_ui_element(game.display_2, f"Level: {game.level}", game.BASE_W // 2 - 40, 5)
         if getattr(game, "player", None):
             lives = getattr(game.player, "lives", getattr(game.player, "lifes", 0))
             UI.render_game_ui_element(game.display_2, f"Lives: {lives}", 5, 5)

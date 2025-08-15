@@ -80,9 +80,7 @@ class AssetManager:
         return frames
 
     # Animations ---------------------------------------------------------
-    def get_animation(
-        self, rel_dir: str, img_dur: int = 5, loop: bool = True
-    ) -> Animation:
+    def get_animation(self, rel_dir: str, img_dur: int = 5, loop: bool = True) -> Animation:
         # Cache raw frames; always return a new Animation wrapper
         frames = self.get_image_frames(rel_dir)
         return Animation(frames, img_dur, loop)

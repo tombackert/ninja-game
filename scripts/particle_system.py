@@ -52,9 +52,7 @@ class ParticleSystem:
         self.particles.append(p)
         return p
 
-    def spawn_spark(
-        self, pos: Tuple[float, float], angle: float, speed: float
-    ) -> Spark:
+    def spawn_spark(self, pos: Tuple[float, float], angle: float, speed: float) -> Spark:
         s = Spark(pos, angle, speed)
         self.sparks.append(s)
         return s

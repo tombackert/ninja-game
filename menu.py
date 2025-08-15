@@ -81,9 +81,7 @@ class Menu:
         # Use cached level listing to avoid repeated directory scanning
         levels = list_levels()
 
-        level_index = (
-            levels.index(self.selected_level) if self.selected_level in levels else 0
-        )
+        level_index = levels.index(self.selected_level) if self.selected_level in levels else 0
         start_index = 0
         levels_per_page = 5
 
@@ -130,13 +128,11 @@ class Menu:
             UI.render_menu_title(self.screen, "Select Level", self.WIN_W // 2, 200)
 
             if msg_timer > 0:
-                UI.render_menu_msg(
-                    self.screen, "Level not unlocked!", self.WIN_W // 2, 600
-                )
+                UI.render_menu_msg(self.screen, "Level not unlocked!", self.WIN_W // 2, 600)
                 msg_timer -= 1
 
             level_options = []
-            for level in levels[start_index: start_index + levels_per_page]:
+            for level in levels[start_index : start_index + levels_per_page]:
                 if level == self.selected_level:
                     level_options.append(f"*Level {level:<2}")
                 else:
@@ -151,12 +147,8 @@ class Menu:
                 50,
                 30,
             )
-            UI.render_menu_ui_element(
-                self.screen, f"Level: {self.selected_level}", self.pl, self.pt
-            )
-            UI.render_menu_ui_element(
-                self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb
-            )
+            UI.render_menu_ui_element(self.screen, f"Level: {self.selected_level}", self.pl, self.pt)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
             UI.render_menu_ui_element(
                 self.screen,
                 "w/a to navigate",
@@ -192,10 +184,7 @@ class Menu:
         prices = list(self.cm.ITEMS.values())
 
         max_option_length = max(len(option) for option in options)
-        options = [
-            f"{options[i].ljust(max_option_length)}  ${prices[i]:<6}"
-            for i in range(len(options))
-        ]
+        options = [f"{options[i].ljust(max_option_length)}  ${prices[i]:<6}" for i in range(len(options))]
 
         selected_option = 0
         start_index = 0
@@ -240,9 +229,7 @@ class Menu:
                             w_msg = "Not enough coins!"
                             w_msg_timer = 60
                         else:
-                            w_msg = (
-                                f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
-                            )
+                            w_msg = f"Bought {item_name} for ${self.cm.ITEMS[item_name]}"
                             w_msg_timer = 60
 
                 if event.type == pygame.KEYUP:
@@ -252,9 +239,7 @@ class Menu:
 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, "Store", self.WIN_W // 2, 200)
-            UI.render_menu_ui_element(
-                self.screen, f"${self.cm.coins}", self.pl, self.pt
-            )
+            UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
 
             end_index = min(start_index + options_per_page, len(options))
             visible_options = options[start_index:end_index]
@@ -290,17 +275,13 @@ class Menu:
 
             item_name = options[selected_option].split("$")[0].strip()
             msg = f"{item_name}: {str(self.cm.get_amount(item_name)):<4}"
-            UI.render_menu_ui_element(
-                self.screen, msg, self.WIN_W - self.pr, self.pt, "right"
-            )
+            UI.render_menu_ui_element(self.screen, msg, self.WIN_W - self.pr, self.pt, "right")
 
             if w_msg_timer > 0:
                 UI.render_menu_msg(self.screen, w_msg, self.WIN_W // 2, 800)
                 w_msg_timer -= 1
 
-            UI.render_menu_ui_element(
-                self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb
-            )
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
             UI.render_menu_ui_element(
                 self.screen,
                 "w/a to navigate",
@@ -319,9 +300,7 @@ class Menu:
         skins = self.cm.SKINS
 
         max_option_length = max(len(weapons) for w in weapons)
-        weapons = [
-            f"{weapons[i].ljust(max_option_length):<12}" for i in range(len(weapons))
-        ]
+        weapons = [f"{weapons[i].ljust(max_option_length):<12}" for i in range(len(weapons))]
 
         max_wappon_length = max(len(skins) for s in skins)
         skins = [f"{skins[i].ljust(max_wappon_length):<15}" for i in range(len(skins))]
@@ -338,9 +317,7 @@ class Menu:
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
             UI.render_menu_subtitle(self.screen, "Weapons", self.WIN_W // 2 - 350, 320)
             UI.render_menu_subtitle(self.screen, "Skins", self.WIN_W // 2 + 350, 320)
-            UI.render_menu_ui_element(
-                self.screen, f"${self.cm.coins}", self.pl, self.pt
-            )
+            UI.render_menu_ui_element(self.screen, f"${self.cm.coins}", self.pl, self.pt)
             UI.render_menu_ui_element(
                 self.screen,
                 f"Skin: {self.cm.SKINS[settings.selected_skin]}",
@@ -359,9 +336,7 @@ class Menu:
                 self.WIN_W // 2 - 270,
                 self.WIN_H - self.pb,
             )
-            UI.render_menu_ui_element(
-                self.screen, "esc to menu", self.pl, self.WIN_H - self.pb
-            )
+            UI.render_menu_ui_element(self.screen, "esc to menu", self.pl, self.WIN_H - self.pb)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -423,9 +398,7 @@ class Menu:
                     skin_start = selected_skin
 
             weapon_options = []
-            for i in range(
-                weapon_start, min(weapon_start + options_per_page, len(weapons))
-            ):
+            for i in range(weapon_start, min(weapon_start + options_per_page, len(weapons))):
                 if i == settings.selected_weapon:
                     weapon_options.append(f"*{weapons[i]}")
                 else:
@@ -521,33 +494,21 @@ class Menu:
                         selected_option = (selected_option + 1) % len(options)
                     elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
                         if options[selected_option] == options[0]:
-                            settings.music_volume = max(
-                                0.0, settings.music_volume - 0.1
-                            )
+                            settings.music_volume = max(0.0, settings.music_volume - 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
                         elif options[selected_option] == options[1]:
-                            settings.sound_volume = max(
-                                0.0, settings.sound_volume - 0.1
-                            )
+                            settings.sound_volume = max(0.0, settings.sound_volume - 0.1)
                     elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                         if options[selected_option] == options[0]:
-                            settings.music_volume = min(
-                                1.0, settings.music_volume + 0.1
-                            )
+                            settings.music_volume = min(1.0, settings.music_volume + 0.1)
                             pygame.mixer.music.set_volume(settings.music_volume)
                         elif options[selected_option] == options[1]:
-                            settings.sound_volume = min(
-                                1.0, settings.sound_volume + 0.1
-                            )
+                            settings.sound_volume = min(1.0, settings.sound_volume + 0.1)
 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
-            UI.render_o_box(
-                self.screen, options, selected_option, self.WIN_W // 2, 300, 50
-            )
-            UI.render_menu_ui_element(
-                self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb
-            )
+            UI.render_o_box(self.screen, options, selected_option, self.WIN_W // 2, 300, 50)
+            UI.render_menu_ui_element(self.screen, "backspace to menu", self.pl, self.WIN_H - self.pb)
             UI.render_menu_ui_element(
                 self.screen,
                 "w/a to navigate",
@@ -569,18 +530,14 @@ class Menu:
 
             UI.render_menu_bg(self.screen, self.display_1, self.bg)
             UI.render_menu_title(self.screen, title, self.WIN_W // 2, 200)
-            UI.render_o_box(
-                self.screen, options, self.selected_option, self.WIN_W // 2, 300, 50
-            )
+            UI.render_o_box(self.screen, options, self.selected_option, self.WIN_W // 2, 300, 50)
             UI.render_menu_ui_element(
                 self.screen,
                 "w/a to navigate",
                 self.WIN_W // 2 - 100,
                 self.WIN_H - self.pb,
             )
-            UI.render_menu_ui_element(
-                self.screen, "esc to quit", self.pl, self.WIN_H - self.pb
-            )
+            UI.render_menu_ui_element(self.screen, "esc to quit", self.pl, self.WIN_H - self.pb)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -695,19 +652,13 @@ class Menu:
             UI.render_menu_bg(screen, display, bg)
             UI.render_menu_title(screen, title, game.WIN_W // 2, 200)
             UI.render_menu_ui_element(screen, f"{game.timer.text}", game.WIN_W - 130, 5)
-            UI.render_menu_ui_element(
-                screen, f"{game.timer.best_time_text}", game.WIN_W - 130, 25
-            )
-            UI.render_menu_ui_element(
-                screen, f"Level: {game.level}", game.WIN_W // 2 - 40, 5
-            )
+            UI.render_menu_ui_element(screen, f"{game.timer.best_time_text}", game.WIN_W - 130, 25)
+            UI.render_menu_ui_element(screen, f"Level: {game.level}", game.WIN_W // 2 - 40, 5)
             UI.render_menu_ui_element(screen, f"Lives: {game.player.lives}", 5, 5)
             UI.render_menu_ui_element(screen, f"Coins: ${game.cm.coins}", 5, 25)
             UI.render_menu_ui_element(screen, f"Ammo:  {game.cm.ammo}", 5, 45)
             UI.render_o_box(screen, options, selected_option, game.WIN_W // 2, 450, 50)
-            UI.render_menu_ui_element(
-                screen, "w/a to navigate", game.WIN_W // 2 - 100, game.WIN_H - 25
-            )
+            UI.render_menu_ui_element(screen, "w/a to navigate", game.WIN_W // 2 - 100, game.WIN_H - 25)
 
             if message_timer > 0:
                 UI.render_menu_msg(screen, message, game.WIN_W // 2, 700)

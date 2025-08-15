@@ -5,9 +5,7 @@ from scripts.ui import UI
 
 
 class SingleMenu:
-    def __init__(
-        self, title, options, actions, screen, display, bg, music, input_manager
-    ):
+    def __init__(self, title, options, actions, screen, display, bg, music, input_manager):
 
         self.title = title
         self.options = options
@@ -115,9 +113,7 @@ class DoubleMenu(SingleMenu):
         options2,
         actions2,
     ):
-        super().__init__(
-            title, options1, actions, screen, display, bg, input_manager, music
-        )
+        super().__init__(title, options1, actions, screen, display, bg, input_manager, music)
         self.options2 = options2
         self.actions2 = actions2
         self.options_index = 0
