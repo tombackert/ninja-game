@@ -10,20 +10,18 @@ class UI:
     GAME_UI_COLOR = "#2C8C99"
     PM_COLOR = "#449DD1"
     SELECTOR_COLOR = "#DD6E42"
-    # LOCK_IMG = pygame.image.load("data/images/gun.png")
-
-    # Simple in-memory LRU cache for UI images (Issue 4 + optional enhancements)
+    # Simple in-memory LRU cache for UI images
     _image_cache: "OrderedDict[tuple[str, float], pygame.Surface]" = OrderedDict()
     _cache_capacity: int = 64
     _cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
-    # Text outline cache (Issue 24)
+    # Text outline cache
     _text_cache: "OrderedDict[tuple[str, int, str, tuple[int,int,int], tuple[int,int,int]], pygame.Surface]" = (OrderedDict())
     _text_cache_capacity: int = 256
     _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
+    # ---------- Cache management helpers (restored) ----------
     @staticmethod
     def clear_image_cache():
-        """Clear cached UI images and text outline cache (for tests or memory reset)."""
         UI._image_cache.clear()
         UI._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
         UI._text_cache.clear()
@@ -31,15 +29,8 @@ class UI:
 
     @staticmethod
     def configure_image_cache(capacity: int | None = None, clear: bool = False):
-        """Configure cache capacity or clear contents.
-
-        Args:
-            capacity: New max number of cached (path, scale) variants.
-            clear: Whether to clear all cached entries & reset stats.
-        """
         if capacity is not None and capacity > 0:
             UI._cache_capacity = capacity
-            # If shrinking capacity, evict oldest until within limit
             while len(UI._image_cache) > UI._cache_capacity:
                 UI._image_cache.popitem(last=False)
                 UI._cache_stats["evictions"] += 1
@@ -48,7 +39,6 @@ class UI:
 
     @staticmethod
     def get_image_cache_stats():
-        """Return a shallow copy of current cache statistics."""
         return dict(
             UI._cache_stats
             | {"size": len(UI._image_cache), "capacity": UI._cache_capacity}
@@ -60,6 +50,104 @@ class UI:
             UI._text_cache_stats
             | {"size": len(UI._text_cache), "capacity": UI._text_cache_capacity}
         )
+
+    @staticmethod
+    def render_perf_overlay(
+        surface,
+        *,
+        work_ms: float,
+        frame_full_ms: float | None = None,
+        avg_work_ms: float | None = None,
+        fps: float | None = None,
+        theor_fps: float | None = None,
+        x: int = 5,
+        y: int = 5,
+        update_every: int = 10,
+    ):
+        """Render (throttled) performance HUD.
+
+        Note:
+            Earlier refactor misinterpreted `y` as an internal first-line offset
+            while always blitting the overlay at (0,0). Passing a large `y`
+            (e.g. bottom anchoring with BASE_H - 120) then caused all text to be
+            drawn outside the 120px-tall overlay, yielding an effectively empty
+            transparent surface (HUD appeared missing). We now treat (x,y) as the
+            on-screen anchor; internal text always starts at a small fixed inset.
+        """
+        if not hasattr(UI, "_perf_overlay_frame"):
+            UI._perf_overlay_frame = 0  # type: ignore[attr-defined]
+            UI._perf_overlay_cache = None  # type: ignore[attr-defined]
+        UI._perf_overlay_frame += 1  # type: ignore[attr-defined]
+        rebuild = (
+            UI._perf_overlay_cache is None  # type: ignore[attr-defined]
+            or (UI._perf_overlay_frame % update_every) == 1
+        )
+        if not rebuild and UI._perf_overlay_cache is not None:  # type: ignore[attr-defined]
+            # Fast path: reuse cached overlay surface at requested anchor.
+            surface.blit(UI._perf_overlay_cache, (x, y))  # type: ignore[attr-defined]
+            return
+        font = UI.get_font(8)
+        overlay = pygame.Surface((190, 120), pygame.SRCALPHA)
+
+        # Build rows first so we can size columns dynamically (prevents overlap).
+        rows: list[tuple[str, str]] = []
+        if frame_full_ms is not None:
+            rows.append(("Frame:", f"{frame_full_ms:.2f}ms"))
+        rows.append(("Work:", f"{work_ms:.2f}ms"))
+        if avg_work_ms is not None:
+            rows.append(("AvgWork:", f"{avg_work_ms:.2f}ms"))
+        if fps is not None:
+            rows.append(("FPS:", f"{fps:.1f}"))
+        if theor_fps is not None:
+            rows.append(("Theor:", f"{theor_fps:.0f}"))
+        img = UI.get_image_cache_stats()
+        txt = UI.get_text_cache_stats()
+
+        def ratio(stats: dict):
+            total = stats.get("hits", 0) + stats.get("misses", 0)
+            return (stats.get("hits", 0) / total * 100.0) if total else 0.0
+
+        rows.append(("ImgC:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
+        rows.append(("TxtC:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
+        rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
+
+        # Determine max label width for alignment (use fixed inner padding 5).
+        inner_x = 5
+        label_w = 0
+        for lbl, _ in rows:
+            w = font.render(lbl, True, UI.GAME_UI_COLOR).get_width()
+            if w > label_w:
+                label_w = w
+        value_x = inner_x + label_w + 4
+
+        line = 5
+        for lbl, val in rows:
+            UI.draw_text_with_outline(
+                surface=overlay,
+                font=font,
+                text=lbl,
+                x=inner_x,
+                y=line,
+                text_color=UI.GAME_UI_COLOR,
+            )
+            UI.draw_text_with_outline(
+                surface=overlay,
+                font=font,
+                text=val,
+                x=value_x,
+                y=line,
+                text_color=UI.GAME_UI_COLOR,
+            )
+            line += 8
+        # Small icon to exercise image cache in overlay path.
+        try:  # pragma: no cover - depends on asset existing
+            icon = UI.load_image_cached("data/images/projectile.png", scale=0.4)
+            overlay.blit(icon, (overlay.get_width() - icon.get_width() - 2, 2))
+        except Exception:  # pragma: no cover
+            pass
+        # Cache composed overlay for fast reuse.
+        UI._perf_overlay_cache = overlay  # type: ignore[attr-defined]
+        surface.blit(overlay, (x, y))
 
     @staticmethod
     def load_image_cached(path, scale=1):
@@ -151,7 +239,8 @@ class UI:
                 )
             surf.blit(base, (outline_pad, outline_pad))
             text_surf = surf
-            if len(UI._text_cache) >= UI._text_cache_capacity:
+            # Enforce capacity strictly (handles runtime capacity shrink)
+            while len(UI._text_cache) >= UI._text_cache_capacity:
                 UI._text_cache.popitem(last=False)
                 UI._text_cache_stats["evictions"] += 1
             UI._text_cache[key] = text_surf

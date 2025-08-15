@@ -52,8 +52,11 @@ class Renderer:
     """
 
     def __init__(self, show_perf: bool = True) -> None:
+        # Performance tracking
         self.show_perf = show_perf
-        self._last_frame_ms: float = 0.0
+        self._last_frame_ms = 0.0
+        self._avg_frame_ms = None  # moving average frame time (ms)
+        self._alpha = 0.1  # smoothing factor for EMA
 
     @property
     def last_frame_ms(self) -> float:
@@ -66,7 +69,9 @@ class Renderer:
         capture_sequence: Optional[List[str]] = None,
     ) -> None:
         seq = capture_sequence
-        t0 = time.perf_counter()
+        # Start timing (full frame). We'll measure 'work' up to just before present.
+        t_full_start = time.perf_counter()
+        t_work_start = t_full_start
         # 1. Clear primary off-screen buffer
         game.display.fill((0, 0, 0, 0))
         if seq is not None:
@@ -108,19 +113,41 @@ class Renderer:
         self._render_hud(game)
         if seq is not None:
             seq.append("hud")
-
-        # Performance metrics
-        t1 = time.perf_counter()
-        self._last_frame_ms = (t1 - t0) * 1000.0
+        # Performance metrics (work segment ends here, before post effects & present)
+        t_work_end = time.perf_counter()
+        work_ms = (t_work_end - t_work_start) * 1000.0
+        # Update EMA (based on work time for responsiveness insight)
+        if self._avg_frame_ms is None:
+            self._avg_frame_ms = work_ms
+        else:
+            self._avg_frame_ms = (
+                self._alpha * work_ms + (1 - self._alpha) * self._avg_frame_ms
+            )
         if self.show_perf:
-            UI.render_game_ui_element(
-                game.display_2, f"{self._last_frame_ms:.2f} ms", 5, game.BASE_H - 10
-            )
-            UI.render_game_ui_element(
-                game.display_2, f"FPS: {game.clock.get_fps():.1f}", 5, game.BASE_H - 20
-            )
-            if seq is not None:
-                seq.append("perf")
+            try:
+                from scripts.settings import settings as _settings  # type: ignore
+
+                perf_enabled = getattr(_settings, "show_perf_overlay", True)
+            except Exception:  # pragma: no cover
+                perf_enabled = True
+            if perf_enabled:
+                from scripts.ui import UI  # local import for cache stats
+
+                fps = game.clock.get_fps()
+                theor_fps = 1000.0 / work_ms if work_ms > 0 else None
+                # Pass previous full frame time (self._last_frame_ms) so overlay shows last complete frame.
+                UI.render_perf_overlay(
+                    game.display_2,
+                    work_ms=work_ms,
+                    frame_full_ms=self._last_frame_ms if self._last_frame_ms else None,
+                    avg_work_ms=self._avg_frame_ms,
+                    fps=fps,
+                    theor_fps=theor_fps,
+                    x=5,
+                    y=game.BASE_H - 120,
+                )
+                if seq is not None:
+                    seq.append("perf")
 
         # 7. Post effects (screenshake) then present
         Effects.screenshake(game)
@@ -134,6 +161,12 @@ class Renderer:
             target_surface.blit(game.display_2, (0, 0))
         if seq is not None:
             seq.append("blit")
+        # Now that the frame is presented (blit done), finalize full frame timing.
+        t_full_end = time.perf_counter()
+        full_ms = (t_full_end - t_full_start) * 1000.0
+        self._last_frame_ms = full_ms
+
+    # Full frame time available next frame via self._last_frame_ms
 
     def _render_hud(self, game) -> None:
         from scripts.ui import UI

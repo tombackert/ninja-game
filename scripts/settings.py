@@ -16,6 +16,8 @@ class Settings:
         self.selected_editor_level = 0
         self.selected_weapon = 0
         self.selected_skin = 0
+        # Performance / debug feature toggles
+        self.show_perf_overlay = True
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -137,6 +139,9 @@ class Settings:
                         "selected_weapon", self.selected_weapon
                     )
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
+                    self.show_perf_overlay = data.get(
+                        "show_perf_overlay", self.show_perf_overlay
+                    )
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(
@@ -166,6 +171,7 @@ class Settings:
             "selected_skin": self.selected_skin,
             "selected_weapon": self.selected_weapon,
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()},
+            "show_perf_overlay": self.show_perf_overlay,
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)

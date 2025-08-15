@@ -687,7 +687,7 @@ class OptionsState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self._ui = UI
         self.settings = settings
-        self.widget = ScrollableListWidget([], visible_rows=2, spacing=50, font_size=30)
+        self.widget = ScrollableListWidget([], visible_rows=3, spacing=50, font_size=30)
         self.request_back = False
         self.enter = False
 
@@ -705,18 +705,27 @@ class OptionsState(State):
                     pygame.mixer.music.set_volume(self.settings.music_volume)
                 elif self.widget.selected_index == 1:
                     self.settings.sound_volume = self.settings.sound_volume - 0.1
+                elif self.widget.selected_index == 2:
+                    self.settings.show_perf_overlay = (
+                        not self.settings.show_perf_overlay
+                    )
             elif a == "options_right":
                 if self.widget.selected_index == 0:
                     self.settings.music_volume = self.settings.music_volume + 0.1
                     pygame.mixer.music.set_volume(self.settings.music_volume)
                 elif self.widget.selected_index == 1:
                     self.settings.sound_volume = self.settings.sound_volume + 0.1
+                elif self.widget.selected_index == 2:
+                    self.settings.show_perf_overlay = (
+                        not self.settings.show_perf_overlay
+                    )
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
         self.widget.options = [
             f"Music Volume: {int(self.settings.music_volume * 100):3d}%",
             f"Sound Volume: {int(self.settings.sound_volume * 100):3d}%",
+            f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
         ]
 
     def render(self, surface: pygame.Surface) -> None:
