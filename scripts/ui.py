@@ -16,12 +16,18 @@ class UI:
     _image_cache: "OrderedDict[tuple[str, float], pygame.Surface]" = OrderedDict()
     _cache_capacity: int = 64
     _cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
+    # Text outline cache (Issue 24)
+    _text_cache: "OrderedDict[tuple[str, int, str, tuple[int,int,int], tuple[int,int,int]], pygame.Surface]" = (OrderedDict())
+    _text_cache_capacity: int = 256
+    _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
     @staticmethod
     def clear_image_cache():
-        """Clear cached UI images (for tests or memory reset)."""
+        """Clear cached UI images and text outline cache (for tests or memory reset)."""
         UI._image_cache.clear()
         UI._cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
+        UI._text_cache.clear()
+        UI._text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
     @staticmethod
     def configure_image_cache(capacity: int | None = None, clear: bool = False):
@@ -46,6 +52,13 @@ class UI:
         return dict(
             UI._cache_stats
             | {"size": len(UI._image_cache), "capacity": UI._cache_capacity}
+        )
+
+    @staticmethod
+    def get_text_cache_stats():
+        return dict(
+            UI._text_cache_stats
+            | {"size": len(UI._text_cache), "capacity": UI._text_cache_capacity}
         )
 
     @staticmethod
@@ -97,28 +110,57 @@ class UI:
         center=False,
         scale=1,
     ):
+        # Cache key uses font id (size via font.get_height()), text, colors
+        font_size = font.get_height()
+        key = (
+            text,
+            font_size,
+            f"{text_color}-{outline_color}-{scale}-{center}",
+            tuple(text_color),
+            tuple(outline_color),
+        )
+        cached = UI._text_cache.get(key)
+        if cached is not None:
+            UI._text_cache.move_to_end(key)
+            UI._text_cache_stats["hits"] += 1
+            text_surf = cached
+        else:
+            UI._text_cache_stats["misses"] += 1
+            base = font.render(text, True, text_color)
+            offsets = [
+                (-1 * scale, -1 * scale),
+                (-1 * scale, 0),
+                (-1 * scale, 1 * scale),
+                (0 * scale, -1 * scale),
+                (0 * scale, 1 * scale),
+                (1 * scale, -1 * scale),
+                (1 * scale, 0),
+                (1 * scale, 1 * scale),
+            ]
+            # Create surface large enough for outlines
+            w, h = base.get_width(), base.get_height()
+            outline_pad = scale + 1
+            surf = pygame.Surface(
+                (w + outline_pad * 2, h + outline_pad * 2), pygame.SRCALPHA
+            )
+            for ox, oy in offsets:
+                outline_surf = font.render(text, True, outline_color)
+                surf.blit(
+                    outline_surf,
+                    (ox + outline_pad, oy + outline_pad),
+                )
+            surf.blit(base, (outline_pad, outline_pad))
+            text_surf = surf
+            if len(UI._text_cache) >= UI._text_cache_capacity:
+                UI._text_cache.popitem(last=False)
+                UI._text_cache_stats["evictions"] += 1
+            UI._text_cache[key] = text_surf
 
-        text_surf = font.render(text, True, text_color)
-
+        draw_x, draw_y = x, y
         if center:
-            text_rect = text_surf.get_rect(center=(x, y))
-            x, y = text_rect.x, text_rect.y
-
-        offsets = [
-            (-1 * scale, -1 * scale),
-            (-1 * scale, 0),
-            (-1 * scale, 1 * scale),
-            (0 * scale, -1 * scale),
-            (0 * scale, 1 * scale),
-            (1 * scale, -1 * scale),
-            (1 * scale, 0),
-            (1 * scale, 1 * scale),
-        ]
-        for ox, oy in offsets:
-            outline_surf = font.render(text, True, outline_color)
-            surface.blit(outline_surf, (x + ox, y + oy))
-
-        surface.blit(text_surf, (x, y))
+            rect = text_surf.get_rect(center=(x, y))
+            draw_x, draw_y = rect.topleft
+        surface.blit(text_surf, (draw_x, draw_y))
 
     @staticmethod
     def render_game_elements(game, render_scroll):

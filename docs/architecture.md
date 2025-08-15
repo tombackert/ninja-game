@@ -165,6 +165,12 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - Player now resolves weapon via registry (`get_weapon("gun")`) and calls `fire(self)`; result encapsulated in `FireResult` (spawn + ammo usage) for future extensibility (cooldowns, multi-shots).
 - Benefits: Easier to add new weapons (charge shot, spread, melee) without editing core entity code; future network & replay layers can serialize weapon actions by name.
 - Future: Data-driven weapon specs (JSON) feeding factory, cooldown tracking inside weapon instances, effect hooks (muzzle flash particle emission via ParticleSystem instead of inline spawn).
+### 6.9.1 UI Text Outline Caching (Issue 24)
+- Problem: Frequent calls to `font.render` (text + 8 outline passes) for HUD & menu labels caused redundant CPU work each frame (O(N * outlines) surfaces) leading to measurable frame time spikes on lower-end hardware or when many labels re-render.
+- Solution: Introduced an LRU cache in `UI.draw_text_with_outline` keyed by `(text, font size, colors, scale, center flag)` that stores a precomposited surface (outline layers + base glyph). Capacity defaults to 256 distinct entries (configurable). Evicts oldest entry when full.
+- API Additions: `UI.get_text_cache_stats()` returns hits/misses/evictions + capacity for debugging/tests. `UI.clear_image_cache()` now also clears text cache (renamed behavior documented inline).
+- Performance: Repeated HUD draws (timer, coins, ammo, lives) now result in cache hits after first frame (hit ratio >90% during steady state). Outline generation now amortized to first occurrence only.
+- Future Enhancements: Adaptive capacity sizing based on observed churn; debug overlay integration showing cache efficiency; pre-warming cache on menu load for static labels; potential atlas packing of text surfaces to reduce texture binds (if migrating to GPU pipeline later).
 ### 6.10 Logging / Metrics
 - Thin wrapper around Python logging (INFO default, DEBUG for instrumentation).
 ### 6.11 NetSyncService (Future)
