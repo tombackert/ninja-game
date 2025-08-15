@@ -14,6 +14,7 @@ entities instead of raw `game` reference. During migration we still keep
 `entity.game` for backwards compatibility but new code should use
 `entity.services`.
 """
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, Tuple
@@ -29,7 +30,9 @@ class ProjectilePort(Protocol):
 
 
 class ParticlePort(Protocol):
-    def spawn_particle(self, p_type: str, pos: Tuple[float, float], velocity=(0, 0), frame: int = 0): ...
+    def spawn_particle(
+        self, p_type: str, pos: Tuple[float, float], velocity=(0, 0), frame: int = 0
+    ): ...
     def spawn_spark(self, pos: Tuple[float, float], angle: float, speed: float): ...
 
 
@@ -57,14 +60,20 @@ class ServiceContainer:
     def play(self, name: str, loops: int = 0) -> None:  # pragma: no cover - simple
         self.audio.play(name, loops=loops)
 
-    def spawn_projectile(self, x: float, y: float, vx: float, owner: str):  # pragma: no cover
+    def spawn_projectile(
+        self, x: float, y: float, vx: float, owner: str
+    ):  # pragma: no cover
         self.projectiles.spawn(x, y, vx, owner)
 
-    def emit_particle(self, p_type: str, pos: Tuple[float, float], velocity=(0, 0), frame: int = 0):  # pragma: no cover
+    def emit_particle(
+        self, p_type: str, pos: Tuple[float, float], velocity=(0, 0), frame: int = 0
+    ):  # pragma: no cover
         if self.particles:
             self.particles.spawn_particle(p_type, pos, velocity=velocity, frame=frame)
 
-    def emit_spark(self, pos: Tuple[float, float], angle: float, speed: float):  # pragma: no cover
+    def emit_spark(
+        self, pos: Tuple[float, float], angle: float, speed: float
+    ):  # pragma: no cover
         if self.particles:
             self.particles.spawn_spark(pos, angle, speed)
 

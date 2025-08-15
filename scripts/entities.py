@@ -32,7 +32,9 @@ from scripts.constants import (
 
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size, id, services: ServiceContainer | None = None):
+    def __init__(
+        self, game, e_type, pos, size, id, services: ServiceContainer | None = None
+    ):
         # Retain original game reference for legacy code; prefer services if provided.
         self.game = game
         self.services = services  # May be None until systems initialized
@@ -121,7 +123,9 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None):
+    def __init__(
+        self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None
+    ):
         super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
 
@@ -161,7 +165,11 @@ class Enemy(PhysicsEntity):
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+                        (
+                            self.services.projectiles.spawn
+                            if self.services
+                            else self.game.projectiles.spawn
+                        )(
                             self.rect().centerx - 15,
                             self.rect().centery,
                             direction,
@@ -178,7 +186,11 @@ class Enemy(PhysicsEntity):
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+                        (
+                            self.services.projectiles.spawn
+                            if self.services
+                            else self.game.projectiles.spawn
+                        )(
                             self.rect().centerx + 15,
                             self.rect().centery,
                             direction,
@@ -235,7 +247,16 @@ class Enemy(PhysicsEntity):
 
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size, id, lifes, respawn_pos, services: ServiceContainer | None = None):
+    def __init__(
+        self,
+        game,
+        pos,
+        size,
+        id,
+        lifes,
+        respawn_pos,
+        services: ServiceContainer | None = None,
+    ):
         """Player entity.
 
         Parameter 'lifes' kept for backward compatibility with existing code &
@@ -284,7 +305,11 @@ class Player(PhysicsEntity):
             else:
                 self.game.audio.play("shoot")
             direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
-            (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+            (
+                self.services.projectiles.spawn
+                if self.services
+                else self.game.projectiles.spawn
+            )(
                 self.rect().centerx + (7 * (-1 if self.flip else 1)),
                 self.rect().centery,
                 direction,
