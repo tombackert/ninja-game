@@ -56,6 +56,21 @@ Here are some ways you can help:
 - Add new features
 - I hope you enjoy playing Ninja Game!
 
+### Dev Tooling (Pre-commit Hooks)
+
+This repo ships a `.pre-commit-config.yaml` with fast quality gates (Ruff lint+format, Black, mypy (lenient), and basic hygiene hooks). To enable locally:
+
+```
+pip install pre-commit
+pre-commit install
+```
+
+On each commit only changed files are checked; auto-fixes (Ruff / Black) are applied and re-staged automatically. You can run all hooks manually with:
+
+```
+pre-commit run --all-files
+```
+
 
 ## Resources
 Here are some resources that you might find helpful:
