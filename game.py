@@ -141,7 +141,9 @@ class Game:
         # Performance overlay (legacy loop) – track moving average frame time
         self._avg_frame_ms = None
         self._perf_alpha = 0.1  # smoothing factor for EMA
-        self._last_full_frame_ms = None  # for overlay display (previous frame full time)
+        self._last_full_frame_ms = (
+            None  # for overlay display (previous frame full time)
+        )
 
     # Backward compatibility shim for old calls (will be removed):
     def update_sound_volumes(self):  # pragma: no cover - compatibility
@@ -324,6 +326,7 @@ class Game:
             theor_fps = 1000.0 / work_ms if work_ms > 0 else None
             fps = self.clock.get_fps()  # reflects previous frame timing
             from scripts.settings import settings as _settings  # local import safe
+
             if getattr(_settings, "show_perf_overlay", True):  # pragma: no branch
                 UI.render_perf_overlay(
                     self.display_2,

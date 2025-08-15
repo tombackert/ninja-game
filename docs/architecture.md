@@ -318,7 +318,7 @@ Additional issues to append to roadmap:
 | Networking (future) | Simulate latency & packet loss, assert convergence |
 | RL Harness | Step/reset reproducibility with fixed seed |
 
-Continuous integration will run all tests headless; performance benchmarks optional nightly.
+Continuous integration (GitHub Actions) runs all tests headless (SDL_VIDEODRIVER=dummy) on Ubuntu with Python 3.12. A minimal workflow file (ci.yml) installs pygame-ce and executes pytest. Performance / regression benchmarks may be added as an optional nightly job later.
 
 ---
 ## 15. Open Questions

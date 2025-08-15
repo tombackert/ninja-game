@@ -6,6 +6,7 @@
 [![PyPiVersion](https://img.shields.io/pypi/v/pygame-ce.svg?v=1)](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/t/tombackert/ninja-game)
 ![GitHub last commit](https://img.shields.io/github/last-commit/tombackert/ninja-game)
+![CI](https://github.com/tombackert/ninja-game/actions/workflows/ci.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 
@@ -33,6 +34,13 @@ This project is intended for anyone who is looking to dive into game dev, learn 
 3. Clone or fork the game: `git clone https://github.com/tombackert/ninja-game.git`
 4. Run the game
 5. Explore the code and experiment with different levels and features
+
+Headless (no window) test execution is configured in CI via SDL_VIDEODRIVER=dummy; you can replicate locally:
+
+```
+export SDL_VIDEODRIVER=dummy
+pytest -q
+```
 
 
 ## Contributing:
