@@ -7,10 +7,6 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from scripts.constants import JUMP_VELOCITY, DASH_DURATION_FRAMES  # noqa: E402
-from scripts.entities import Player  # noqa: E402
-from scripts.settings import settings  # noqa: E402
-from scripts.collectableManager import CollectableManager  # noqa: E402
-from scripts.tilemap import Tilemap  # noqa: E402
 from game import Game  # noqa: E402
 
 
@@ -34,7 +30,7 @@ def test_player_jump_sets_constant_velocity(monkeypatch):
 def test_player_dash_uses_duration_constant(monkeypatch):
     g = make_minimal_game()
     p = g.player
-    prev = p.dashing
+    # prev = p.dashing
     p.flip = False
     p.dash()
     assert p.dashing == DASH_DURATION_FRAMES

@@ -259,19 +259,13 @@ class GameState(State):
             Effects.transition(g)
 
     def render(self, surface: pygame.Surface) -> None:
-        # Compose displays onto provided surface with scaling to window size.
-        g = self._game
-        from scripts.ui import UI
+        # Delegate full frame composition to unified Renderer (Issue 14).
+        from scripts.renderer import Renderer
 
-        # Ensure timer UI (and later: best time, level etc.)
-        UI.render_game_ui_element(g.display_2, f"{g.timer.text}", g.BASE_W - 70, 5)
-
-        # Scale internal low-res buffer to target surface size (avoids quarter-size issue)
-        if g.display_2.get_size() != surface.get_size():
-            scaled = pygame.transform.scale(g.display_2, surface.get_size())
-            surface.blit(scaled, (0, 0))
-        else:
-            surface.blit(g.display_2, (0, 0))
+        if not hasattr(self, "_renderer"):
+            # Lazy construct; avoids cost during test discovery when GameState unused.
+            self._renderer = Renderer()
+        self._renderer.render(self._game, surface)
 
 
 class PauseState(State):

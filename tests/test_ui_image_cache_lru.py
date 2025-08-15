@@ -1,6 +1,5 @@
 import os
 import pygame
-import pytest
 from scripts.ui import UI
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")

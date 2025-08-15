@@ -9,7 +9,7 @@ own options list; higher level states decide which actions map to
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Callable, Sequence
 import pygame
 from scripts.ui import UI
@@ -66,7 +66,7 @@ class ScrollableListWidget:
     # Visible slice ---------------------------------------------------
     def visible_options(self) -> List[str]:
         return self.options[
-            self._scroll_offset : self._scroll_offset + self.visible_rows
+            self._scroll_offset: self._scroll_offset + self.visible_rows
         ]
 
     def visible_selected_local_index(self) -> int:

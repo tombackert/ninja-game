@@ -3,7 +3,6 @@ import math
 import random
 from collections import OrderedDict
 from scripts.particle import Particle
-from scripts.spark import Spark
 from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 
 

@@ -1,5 +1,4 @@
 import pygame
-import os
 import time
 
 from scripts.displayManager import DisplayManager
@@ -37,8 +36,6 @@ Note:
     be considered deprecated and will be deleted once all callers migrate
     to the state-driven architecture.
 """
-
-# from menu import Menu  # Removed: pause menu now handled by PauseState
 
 
 class Game:
@@ -185,7 +182,7 @@ class Game:
                 pygame.Rect(4 + tree["pos"][0], 4 + tree["pos"][1], 23, 13)
             )
 
-        ###### START LOAD LEVEL
+        # START LOAD LEVEL
         self.enemies = []
         self.players = []
 
@@ -224,7 +221,7 @@ class Game:
             # Set the current player if there are any players
             if self.players:
                 self.player = self.players[self.playerID]
-        ###### END LOAD LEVEL
+        # END LOAD LEVEL
 
         self.projectiles = []
         self.particles = []
@@ -340,7 +337,8 @@ class Game:
             pygame.display.update()
             self.clock.tick(60)
 
-            # If ESC pressed (legacy flag), exit loop (pause handled externally in new system)
+            # If ESC pressed (legacy flag),
+            # exit loop (pause handled externally in new system)
             if self.paused:
                 self.running = False
 

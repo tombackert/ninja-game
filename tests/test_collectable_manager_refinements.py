@@ -1,4 +1,5 @@
-import pygame, os
+import pygame
+import os
 from game import Game
 from scripts.collectableManager import CollectableManager
 

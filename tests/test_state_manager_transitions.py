@@ -1,12 +1,9 @@
 import os
-
-os.environ["NINJA_GAME_TESTING"] = "1"
-
 import pygame
-import pytest
-
 from scripts.state_manager import StateManager, MenuState, GameState, PauseState
 from scripts.input_router import InputRouter
+
+os.environ["NINJA_GAME_TESTING"] = "1"
 
 
 def pump(sm, router, events):
@@ -18,8 +15,8 @@ def pump(sm, router, events):
 
 def test_menu_to_game_and_pause_cycle(monkeypatch):
     pygame.init()
-    screen = pygame.display.set_mode((320, 180))
-    clock = pygame.time.Clock()
+    # screen = pygame.display.set_mode((320, 180))
+    # clock = pygame.time.Clock()
 
     sm = StateManager()
     router = InputRouter()
@@ -29,7 +26,8 @@ def test_menu_to_game_and_pause_cycle(monkeypatch):
     # Simulate pressing ENTER to start game
     events = [pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN})]
     pump(sm, router, events)
-    # update will set start_game flag which app loop would react to; simulate that transition manually
+    # update will set start_game flag which app loop would react to;
+    # simulate that transition manually
     if getattr(sm.current, "start_game", False):
         sm.set(GameState())
     assert isinstance(sm.current, GameState)

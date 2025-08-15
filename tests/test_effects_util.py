@@ -1,5 +1,5 @@
-import pygame, os
-import random
+import pygame
+import os
 from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 from game import Game
 

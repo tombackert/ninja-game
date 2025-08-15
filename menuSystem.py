@@ -1,15 +1,11 @@
 import pygame
 import sys
 import os
-from datetime import datetime
-from scripts.button import Button
 from scripts.displayManager import DisplayManager
 from scripts.settings import settings
-from scripts.tilemap import Tilemap
 from scripts.collectableManager import CollectableManager
-from scripts.ui import UI
 from scripts.inputManager import InputManager
-from scripts.genericMenu import SingleMenu, DoubleMenu
+from scripts.genericMenu import SingleMenu
 
 
 class MenuSystem:
@@ -27,7 +23,7 @@ class MenuSystem:
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
 
         self.bg = pygame.image.load("data/images/background-big.png")
-        self.music = pygame.mixer.music.load('data/music.wav')
+        self.music = pygame.mixer.music.load("data/music.wav")
 
         self.im = InputManager()
         self.cm = CollectableManager(None)
@@ -37,28 +33,54 @@ class MenuSystem:
         print("Main Menu")
         title = "Menu"
         options = ["Play", "Levels", "Store", "Accessoires", "Options", "Quit"]
-        actions = [self.play, self.create_levels_menu, self.store, self.accessoires, self.options, self.quit]
-        main_menu = SingleMenu(title, options, actions, self.screen, self.display, self.bg, self.music, self.im)
+        actions = [
+            self.play,
+            self.create_levels_menu,
+            self.store,
+            self.accessoires,
+            self.options,
+            self.quit,
+        ]
+        main_menu = SingleMenu(
+            title,
+            options,
+            actions,
+            self.screen,
+            self.display,
+            self.bg,
+            self.music,
+            self.im,
+        )
         main_menu.run()
 
     def play(self):
         from game import Game
+
         Game().run()
-    
+
     def create_levels_menu(self):
         print("Levels")
         title = "Levels"
-        
-        level_files = [f for f in os.listdir('data/maps') if f.endswith('.json')]
+
+        level_files = [f for f in os.listdir("data/maps") if f.endswith(".json")]
         level_files.sort()
-        levels = [int(f.split('.')[0]) for f in level_files]
+        levels = [int(f.split(".")[0]) for f in level_files]
         levels.sort()
-        
+
         options = [f"Level {level}" for level in levels]
         actions = [self.set_level(level) for level in levels]
-        
-        levels_menu = SingleMenu(title, options, actions, self.screen, self.display, self.bg, self.music, self.im)
-        
+
+        levels_menu = SingleMenu(
+            title,
+            options,
+            actions,
+            self.screen,
+            self.display,
+            self.bg,
+            self.music,
+            self.im,
+        )
+
         levels_menu.run()
         ms.create_main_menu()
 

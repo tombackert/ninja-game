@@ -5,6 +5,7 @@ import random
 
 import pygame
 
+
 def main(num_balls=1000, run_time=10):
     """
     Ein einfaches Performance-Testskript für Pygame-CE.
@@ -91,6 +92,7 @@ def main(num_balls=1000, run_time=10):
     print(f"Laufzeit:            {total_time:.2f} Sekunden")
     print(f"Gerenderte Frames:   {frames}")
     print(f"Durchschn. FPS:      {avg_fps:.2f}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,12 +1,10 @@
 import os
+import pytest
+from scripts.state_manager import StateManager, State
 
 os.environ["NINJA_GAME_TESTING"] = (
     "1"  # ensure Menu/Game constructors stay non-interactive
 )
-
-import pygame
-import pytest
-from scripts.state_manager import StateManager, State
 
 
 class DummyState(State):
@@ -57,7 +55,8 @@ def test_set_replaces_stack():
     sm.push(a)
     sm.push(b)
     sm.set(c)
-    # A exited referencing new root (c) because we pop in order, B exits referencing C, then C enters.
+    # A exited referencing new root (c) because we pop in order,
+    # B exits referencing C, then C enters.
     assert sm.current is c
     assert sm.stack_size() == 1
     assert t == [

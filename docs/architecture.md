@@ -33,6 +33,7 @@ GameApp (entry)
  │   ├─ AssetManager
  │   ├─ AudioService
  │   ├─ InputRouter
+ │   ├─ Renderer (unified frame composition)
  │   ├─ ProjectileSystem
  │   ├─ ParticleSystem
  │   ├─ Physics / CollisionHelpers
@@ -81,6 +82,27 @@ for frame:
   render(interp_ratio=accumulator/FIXED_TICK)
   present()
 ```
+### Rendering Pipeline (Renderer)
+Deterministic layer order centralised in `scripts/renderer.py` to eliminate
+scattered blit sequences and ease future headless/recorded runs:
+
+```
+clear -> background -> world -> effects_transition? -> compose -> hud -> perf? -> effects_post -> blit
+```
+
+Where:
+* clear: wipes primary off-screen buffer (`game.display`).
+* background: draws static / parallax backgrounds to `display_2`.
+* world: tiles, entities, projectiles, particles (delegated via UI helpers; to be migrated into dedicated systems later).
+* effects_transition: full-screen fades / level transition overlays (optional step if active).
+* compose: composite `display` (world layer) onto `display_2` (backdrop layer).
+* hud: timer, level, lives, coins, ammo, contextual overlays.
+* perf: frame ms / FPS (debug toggle, suppressed in tests by `show_perf=False`).
+* effects_post: screen shake or postprocessing adjustments before final present.
+* blit: scale (if needed) & present to actual window surface.
+
+Tests (`tests/test_renderer_order.py`) assert the subsequence ordering using the
+`capture_sequence` hook to remain resilient to optional phases (transition, perf).
 ### Simulation Tick Responsibilities
 1. Apply pending player input intents (movement, dash, shoot).
 2. Update physics (entities & projectiles) in deterministic order.

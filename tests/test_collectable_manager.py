@@ -1,7 +1,6 @@
 import os
 import json
 import pygame
-import pytest
 
 from scripts.collectableManager import CollectableManager, DATA_FILE
 from game import Game

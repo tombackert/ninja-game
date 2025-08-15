@@ -1,7 +1,5 @@
 import os
 import pygame
-import pytest
-
 from scripts.ui import UI
 
 # Initialize pygame for image operations (headless)
@@ -51,7 +49,8 @@ def test_cache_distinguishes_scale(monkeypatch):
     display = pygame.Surface((100, 100))
     UI.render_ui_img(display, TEST_IMG_PATH, 10, 10, scale=1)
     UI.render_ui_img(display, TEST_IMG_PATH, 20, 20, scale=2)
-    # Two different scale variants should each trigger a base load once (still 1 underlying disk read per variant)
+    # Two different scale variants should each trigger a base load once
+    # (still 1 underlying disk read per variant)
     assert load_calls["count"] == 2
 
 

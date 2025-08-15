@@ -1,7 +1,4 @@
-import os
-import json
-import time
-from scripts.level_cache import list_levels, invalidate_level_cache, MAPS_DIR
+from scripts.level_cache import list_levels, invalidate_level_cache
 
 
 def test_level_cache_basic(tmp_path, monkeypatch):
