@@ -118,7 +118,7 @@ class PerformanceHUD:
         """
         if not (self.enabled and self._last_sample):
             return
-        try:  
+        try:
             from scripts.ui import UI
 
             UI.render_perf_overlay(
