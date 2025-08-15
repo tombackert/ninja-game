@@ -3,6 +3,7 @@ import sys
 import os
 from scripts.displayManager import DisplayManager
 from scripts.settings import settings
+from scripts.progress_tracker import get_progress_tracker
 from scripts.collectableManager import CollectableManager
 from scripts.level_cache import list_levels
 from scripts.ui import UI
@@ -54,6 +55,7 @@ class Menu:
             pygame.mixer.music.play(-1)
 
         self.selected_level = settings.selected_level
+        self._progress = get_progress_tracker()
 
         self.paused = False
 
@@ -114,7 +116,7 @@ class Menu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     enter = True
                 if enter:
-                    if settings.is_level_playable(levels[level_index]):
+                    if self._progress.is_unlocked(levels[level_index]):
                         self.selected_level = levels[level_index]
                         settings.selected_level = self.selected_level
                     else:
@@ -164,7 +166,7 @@ class Menu:
 
             for i, level in enumerate(level_options):
                 current_level = levels[start_index + i]
-                if settings.is_level_playable(current_level):
+                if self._progress.is_unlocked(current_level):
                     UI.render_ui_img(
                         self.screen,
                         "data/images/padlock-o.png",

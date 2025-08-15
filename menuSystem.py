@@ -3,6 +3,7 @@ import sys
 import os
 from scripts.displayManager import DisplayManager
 from scripts.settings import settings
+from scripts.progress_tracker import get_progress_tracker
 from scripts.collectableManager import CollectableManager
 from scripts.inputManager import InputManager
 from scripts.genericMenu import SingleMenu
@@ -98,7 +99,8 @@ class MenuSystem:
         sys.exit()
 
     def set_level(self, level):
-        if settings.is_level_playable(level):
+        tracker = get_progress_tracker()
+        if tracker.is_unlocked(level):
             settings.selected_level = level
         else:
             print("Level not unlocked")

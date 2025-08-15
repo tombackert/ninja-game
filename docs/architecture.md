@@ -117,24 +117,11 @@ This fixed-step design enables: deterministic replays, rollback potential, RL ba
 ---
 ## 5. Constants & Configuration
 Centralized in `scripts/constants.py`:
-- Physics: gravity, max fall speed, horizontal friction.
-- Player: jump velocity, dash frames, dash speed curve.
-- Enemy: base speed factors per difficulty/level.
-- Timers: transition frames, projectile lifetime.
-- Networking (future): tick rate, snapshot interval, buffer sizes.
-- AI Training (future): max episode length, reward shaping scalars.
 
 All gameplay logic imports from this module—no magic numeric literals in domain code.
 
----
 ## 6. Systems Detail
 ### 6.1 AssetManager
-- Centralized lazy loading & caching of images / sounds / animation frames (Issue 15).
-- API: `get_image(rel_path)`, `get_image_frames(dir)`, `get_animation(dir, img_dur, loop)`, `get_sound(rel_path)`.
-- Returns new `Animation` wrappers each call (no shared frame counters) while sharing underlying frame lists in cache.
-- Headless-friendly: skips `convert()` if no video mode set (tests under SDL dummy driver).
-- Replaces scattered `pygame.image.load` / `pygame.mixer.Sound` calls in `game.py`; future steps will remove remaining direct util helpers.
-
 ### 6.2 AudioService
 - Implemented (Issue 16): centralized wrapper over `pygame.mixer`.
 - API: `play(name, loops=0)`, `play_music(track, loops=-1)`, `apply_volumes()`, `set_music_volume(v)`, `set_sound_volume(v)`.
@@ -166,17 +153,10 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 - High-level visual transformations (screen shake, transitions) parameterized; no direct game state mutation besides effect state.
 
 ### 6.7 SaveService
-- Versioned schema (adds `version` field).
-- Provides `save_run(snapshot)` and `load_run(path)` with migration map.
 
 ### 6.8 ProgressTracker
-- Scans available maps on startup.
-- Maintains unlocked level index; updates after completion event.
-
 ### 6.9 Logging / Metrics
 - Thin wrapper around Python logging (INFO default, DEBUG for instrumentation).
-- Frame time sampling; optionally exports CSV or JSON session logs.
-
 ### 6.10 NetSyncService (Future)
 - (Planned) Manages client prediction + server authoritative reconciliation:
   - Input buffering (sequence numbers).

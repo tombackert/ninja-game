@@ -319,13 +319,16 @@ class LevelsState(State):
         from scripts.ui import UI
         from scripts.level_cache import list_levels
         from scripts.settings import settings
+        from scripts.progress_tracker import get_progress_tracker
 
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
         self._ui = UI
         self.settings = settings
-        self.levels = list_levels()
+        self.progress = get_progress_tracker()
+        # Use tracker levels (already sorted) to populate list; fallback to direct scan if empty.
+        self.levels = self.progress.levels or list_levels()
         # Ensure currently selected level is visible
         selected = self.settings.selected_level
         if selected in self.levels:
@@ -358,7 +361,8 @@ class LevelsState(State):
     def update(self, dt: float) -> None:
         if self.enter:
             lvl = self.levels[self.widget.selected_index]
-            if self.settings.is_level_playable(lvl):
+            # Use tracker authoritative unlock state
+            if self.progress.is_unlocked(lvl):
                 self.settings.selected_level = lvl
                 self.message = f"Selected level {lvl}"
             else:
@@ -384,7 +388,7 @@ class LevelsState(State):
             lvl = self.levels[idx]
             icon = (
                 "data/images/padlock-o.png"
-                if self.settings.is_level_playable(lvl)
+                if self.progress.is_unlocked(lvl)
                 else "data/images/padlock-c.png"
             )
             UI.render_ui_img(
