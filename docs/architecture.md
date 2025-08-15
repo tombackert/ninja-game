@@ -185,6 +185,12 @@ All gameplay logic imports from this module—no magic numeric literals in domai
   - Rollback hooks (re-simulate stored inputs on corrected snapshot).
 
 ### 6.11 AIScheduler / PolicyService (Future)
+
+### 6.12 ServiceContainer (Entity Decoupling)
+- Implemented (Issue 19). Introduces thin `ServiceContainer` passed to entities encapsulating required ports: `AudioPort`, `ProjectilePort`, `ParticlePort`, `CollectablePort`.
+- Entities now accept optional `services` argument; legacy direct `game` access retained for a transition period.
+- Benefits: easier isolated unit tests (inject fakes), reduced implicit coupling, clear contract of what side effects an entity can perform.
+- Future: replace remaining direct `game.*` touches (particles append, screenshake) with service abstractions.
 - Orchestrates selection and execution of AI policies per entity.
 - Exposes synchronous `decide(entity, observation) -> action` and async vectorized batch (for RL inference acceleration).
 

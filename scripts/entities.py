@@ -6,6 +6,7 @@ import pygame
 from scripts.particle import Particle
 from scripts.spark import Spark
 from scripts.effects_util import spawn_hit_sparks
+from scripts.services import ServiceContainer, build_services
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
@@ -31,8 +32,10 @@ from scripts.constants import (
 
 
 class PhysicsEntity:
-    def __init__(self, game, e_type, pos, size, id):
+    def __init__(self, game, e_type, pos, size, id, services: ServiceContainer | None = None):
+        # Retain original game reference for legacy code; prefer services if provided.
         self.game = game
+        self.services = services  # May be None until systems initialized
         self.type = e_type
         self.pos = list(pos)
         self.size = size
@@ -118,8 +121,8 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size=(15, 8), id=0):
-        super().__init__(game, "enemy", pos, size, id)
+    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None):
+        super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
 
     def update(self, tilemap, movement=(0, 0)):
@@ -149,13 +152,16 @@ class Enemy(PhysicsEntity):
                 )
                 if abs(dis[1]) < 15:
                     if self.flip and dis[0] < 0:
-                        self.game.audio.play("shoot")
+                        if self.services:
+                            self.services.play("shoot")
+                        else:
+                            self.game.audio.play("shoot")
                         direction = -ENEMY_SHOOT_BASE * (
                             1
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        self.game.projectiles.spawn(
+                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
                             self.rect().centerx - 15,
                             self.rect().centery,
                             direction,
@@ -163,13 +169,16 @@ class Enemy(PhysicsEntity):
                         )
 
                     if not self.flip and dis[0] > 0:
-                        self.game.audio.play("shoot")
+                        if self.services:
+                            self.services.play("shoot")
+                        else:
+                            self.game.audio.play("shoot")
                         direction = ENEMY_SHOOT_BASE * (
                             1
                             + ENEMY_SHOOT_SCALE_LOG
                             * math.log(settings.selected_level + 1)
                         )
-                        self.game.projectiles.spawn(
+                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
                             self.rect().centerx + 15,
                             self.rect().centery,
                             direction,
@@ -188,7 +197,10 @@ class Enemy(PhysicsEntity):
         if abs(self.game.player.dashing) >= DASH_MIN_ACTIVE_ABS:
             if self.rect().colliderect(self.game.player.rect()):
                 self.game.screenshake = max(16, self.game.screenshake)
-                self.game.audio.play("hit")
+                if self.services:
+                    self.services.play("hit")
+                else:
+                    self.game.audio.play("hit")
                 self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
                 self.game.sparks.append(
@@ -223,7 +235,7 @@ class Enemy(PhysicsEntity):
 
 
 class Player(PhysicsEntity):
-    def __init__(self, game, pos, size, id, lifes, respawn_pos):
+    def __init__(self, game, pos, size, id, lifes, respawn_pos, services: ServiceContainer | None = None):
         """Player entity.
 
         Parameter 'lifes' kept for backward compatibility with existing code &
@@ -232,7 +244,7 @@ class Player(PhysicsEntity):
         property alias for old references until fully refactored.
         """
         self.skin = 0
-        super().__init__(game, "player", pos, size, id)
+        super().__init__(game, "player", pos, size, id, services=services)
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
@@ -267,9 +279,12 @@ class Player(PhysicsEntity):
             and self.shoot_cooldown == 0
             and settings.selected_weapon == 1
         ):
-            self.game.audio.play("shoot")
+            if self.services:
+                self.services.play("shoot")
+            else:
+                self.game.audio.play("shoot")
             direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
-            self.game.projectiles.spawn(
+            (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
                 self.rect().centerx + (7 * (-1 if self.flip else 1)),
                 self.rect().centery,
                 direction,
@@ -404,7 +419,10 @@ class Player(PhysicsEntity):
 
     def dash(self):
         if not self.dashing:
-            self.game.audio.play("dash")
+            if self.services:
+                self.services.play("dash")
+            else:
+                self.game.audio.play("dash")
             if self.flip:
                 self.dashing = -DASH_DURATION_FRAMES
             else:
