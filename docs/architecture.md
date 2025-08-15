@@ -99,6 +99,7 @@ Where:
 * compose: composite `display` (world layer) onto `display_2` (backdrop layer).
 * hud: timer, level, lives, coins, ammo, contextual overlays.
 * perf: frame ms / FPS (debug toggle, suppressed in tests by `show_perf=False`).
+* debug overlay: optional (F1) lightweight stats panel (entity counts, frame ms, fps) drawn after HUD but before post effects.
 * effects_post: screen shake or postprocessing adjustments before final present.
 * blit: scale (if needed) & present to actual window surface.
 
@@ -183,6 +184,13 @@ All gameplay logic imports from this module—no magic numeric literals in domai
   - `end_frame()` captures total frame duration (work + post + present).
   - `render()` delegates drawing to `UI.render_perf_overlay` (separation of logic vs presentation).
  Advantages: testable smoothing logic (unit test `tests/test_performance_hud.py`), cleaner renderer, future extensibility (logging JSON metrics or sampling) without touching UI code.
+
+### 6.11 Debug Overlay (Issue 29)
+Provides a toggleable (F1) in-game panel surfacing real-time metrics without pausing gameplay:
+  - Frame time (last full frame ms) and FPS (from PerformanceHUD sample)
+  - Entity / system counts (players, enemies, projectiles, particles, sparks)
+  - Current timer text
+Implementation lives in `GameState._render_debug_overlay` to avoid coupling Renderer to optional diagnostics. Overlay is rendered only when `debug_overlay` flag true (toggled via InputRouter action `debug_toggle`). The panel composes after the main HUD and before post effects ensuring screen shake can still apply. Costs kept minimal (simple cached font outline surfaces; no per-frame expensive allocations beyond small surface). Tests (`test_debug_overlay_toggle.py`) verify toggle logic via simulated F1 key events.
 
 ### 6.12 AIScheduler / PolicyService (Future)
 

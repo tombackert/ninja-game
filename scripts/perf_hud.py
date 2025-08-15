@@ -121,6 +121,7 @@ class PerformanceHUD:
         try:
             from scripts.ui import UI
 
+            game_counts = getattr(self, "_game_counts", None)
             UI.render_perf_overlay(
                 surface,
                 work_ms=self._last_sample.work_ms,
@@ -130,6 +131,7 @@ class PerformanceHUD:
                 theor_fps=self._last_sample.theor_fps,
                 x=x,
                 y=y,
+                game_counts=game_counts,
             )
         except Exception:  # pragma: no cover - overlay optional in headless tests
             pass

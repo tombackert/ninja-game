@@ -59,6 +59,7 @@ class UI:
         y: int = 5,
         update_every: int = 10,
         min_width: int = 190,
+        game_counts: dict | None = None,
     ):
         """Render (throttled) performance HUD.
 
@@ -95,6 +96,7 @@ class UI:
 
         # Build rows first so we can size columns dynamically (prevents overlap).
         rows: list[tuple[str, str]] = []
+        section_breaks: list[int] = []  # indices where a visual gap inserted
         if frame_full_ms is not None:
             rows.append(("Frame:", f"{frame_full_ms:.2f}ms"))
         rows.append(("Work:", f"{work_ms:.2f}ms"))
@@ -104,6 +106,7 @@ class UI:
             rows.append(("FPS:", f"{fps:.1f}"))
         if theor_fps is not None:
             rows.append(("TheoFPS:", f"{theor_fps:.0f}"))
+        section_breaks.append(len(rows))  # end of perf section
         img = UI.get_image_cache_stats()
         txt = UI.get_text_cache_stats()
 
@@ -114,6 +117,11 @@ class UI:
         rows.append(("ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
         rows.append(("TxtCache:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
         rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
+        section_breaks.append(len(rows))  # end of cache section
+        if game_counts:
+            for k in sorted(game_counts.keys()):
+                rows.append((f"{k.capitalize()}:", str(game_counts[k])))
+            section_breaks.append(len(rows))
 
         # Determine max label width for alignment (use fixed inner padding 5).
         inner_x = 5
@@ -134,10 +142,14 @@ class UI:
         icon_pad = 24
         dynamic_width = inner_x + label_w + 4 + value_w + 6 + icon_pad
         overlay_w = max(min_width, dynamic_width)
-        overlay = pygame.Surface((overlay_w, 120), pygame.SRCALPHA)
+
+        gaps = max(0, len(section_breaks) - 1)
+        dyn_height = 5 + len(rows) * 8 + gaps * 3 + 5
+        overlay_h = max(120, dyn_height)  # maintain minimum for layout stability
+        overlay = pygame.Surface((overlay_w, overlay_h), pygame.SRCALPHA)
 
         line = 5
-        for lbl, val in rows:
+        for idx, (lbl, val) in enumerate(rows):
             UI.draw_text_with_outline(
                 surface=overlay,
                 font=font,
@@ -155,6 +167,8 @@ class UI:
                 text_color=UI.GAME_UI_COLOR,
             )
             line += 8
+            if idx + 1 in section_breaks and idx + 1 != len(rows):
+                line += 3  # small gap between sections
         # Small icon to exercise image cache in overlay path.
         try:  # pragma: no cover - depends on asset existing
             icon = UI.load_image_cached("data/images/projectile.png", scale=0.4)

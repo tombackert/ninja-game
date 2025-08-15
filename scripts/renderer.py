@@ -102,16 +102,25 @@ class Renderer:
         if seq is not None:
             seq.append("compose")
 
-        # 6. HUD
-        self._render_hud(game)
+        # 6. HUD: 
+        game_counts = {
+            "players": len(getattr(game, "players", [])),
+            "enemies": len(getattr(game, "enemies", [])),
+            "projectiles": len(getattr(game, "projectiles", [])),
+            "particles": len(getattr(game, "particles", [])),
+            "sparks": len(getattr(game, "sparks", [])),
+        }
+        self._render_hud(game, game_counts=game_counts)
         if seq is not None:
             seq.append("hud")
-        # Mark end of work segment
+        # Mark end of work segment (work portion excludes optional perf overlay drawing)
         self.perf_hud.end_work_segment()
-        # Render perf overlay (uses previous frame's full time; current full time finalized after present)
-        self.perf_hud.render(game.display_2, x=5, y=game.BASE_H - 120)
-        if seq is not None and self.perf_hud.last_sample:
-            seq.append("perf")
+        state_ref = getattr(game, "state_ref", None)
+        if getattr(state_ref, "perf_enabled", False):
+            # Render performance overlay (timings + counts)
+            self.perf_hud.render(game.display_2, x=5, y=game.BASE_H - 120)
+            if seq is not None and self.perf_hud.last_sample:
+                seq.append("perf")
 
         # 7. Post effects (screenshake) then present
         Effects.screenshake(game)
@@ -130,7 +139,7 @@ class Renderer:
 
     # Full frame time available next frame via self._last_frame_ms
 
-    def _render_hud(self, game) -> None:
+    def _render_hud(self, game, game_counts=None) -> None:
         from scripts.ui import UI
 
         UI.render_game_ui_element(game.display_2, f"{game.timer.text}", game.BASE_W - 70, 5)
@@ -141,6 +150,13 @@ class Renderer:
             UI.render_game_ui_element(game.display_2, f"Lives: {lives}", 5, 5)
         UI.render_game_ui_element(game.display_2, f"${game.cm.coins}", 5, 15)
         UI.render_game_ui_element(game.display_2, f"Ammo:  {game.cm.ammo}", 5, 25)
+        # Pass counts to performance HUD via perf_hud.render call later
+        if game_counts is not None:
+            try:
+                # Attach for perf overlay rendering (perf_hud.render uses UI.render_perf_overlay)
+                self.perf_hud._game_counts = game_counts  # type: ignore[attr-defined]
+            except Exception:
+                pass
 
 
 __all__ = ["Renderer"]

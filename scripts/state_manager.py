@@ -212,10 +212,20 @@ class GameState(State):
     def __init__(self) -> None:
         from game import Game
 
+        # Underlying legacy Game object (entities, systems, assets)
         self._game = Game()
-        self._accum = 0.0  # basic accumulator if we later add fixed timestep
+        # Allow renderer to query state flags (performance HUD toggle) without tight coupling
+        try:
+            setattr(self._game, "state_ref", self)
+        except Exception:
+            pass
+        self._accum = 0.0  # placeholder for future fixed timestep accumulator
         self._initialized_audio = False
         self.request_pause = False
+        # Performance HUD (timings + counts) toggle (F1) - start disabled to match legacy debug overlay test expectation
+        self.perf_enabled = False
+        # Backward-compatible alias for existing test referencing debug_overlay
+        self.debug_overlay = self.perf_enabled
 
     @property
     def game(self):  # convenience
@@ -248,6 +258,9 @@ class GameState(State):
         for act in actions:
             if act == "pause_toggle":
                 self.request_pause = True
+            elif act == "debug_toggle":
+                self.perf_enabled = not self.perf_enabled
+                self.debug_overlay = self.perf_enabled  # keep alias in sync
 
     # Raw event handling (for continuous movement / jump / dash until migrated to action axes)
     def handle(self, events: Sequence[pygame.event.Event]) -> None:  # pragma: no cover - thin delegation

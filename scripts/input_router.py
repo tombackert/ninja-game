@@ -67,6 +67,7 @@ class InputRouter:
         ]
         game_rules: List[Rule] = [
             _key_rule(pygame.K_ESCAPE, "pause_toggle"),
+            _key_rule(pygame.K_F1, "debug_toggle"),
         ]
         pause_rules: List[Rule] = [
             _key_rule(pygame.K_ESCAPE, "pause_close"),
