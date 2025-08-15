@@ -6,7 +6,7 @@ import pygame
 from scripts.particle import Particle
 from scripts.spark import Spark
 from scripts.effects_util import spawn_hit_sparks
-from scripts.services import ServiceContainer, build_services
+from scripts.services import ServiceContainer
 from scripts.settings import settings
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (

@@ -47,6 +47,8 @@ class Tilemap:
         self.enemies = []
         self.players = []
         self.meta_data = {}
+        # Current save schema version (Issue 21)
+        self.version = 2
 
         self.save_dir = "data/saves"
         if not os.path.exists(self.save_dir):
@@ -128,7 +130,8 @@ class Tilemap:
             "tile_size": self.tile_size,
             "offgrid": self.offgrid_tiles,
         }
-
+        # Persist version inside meta_data for forward detection
+        meta_data["version"] = self.version
         game_state["meta_data"] = meta_data
         game_state["entities_data"] = entity_data
         game_state["map_data"] = tilemap_data
@@ -142,12 +145,36 @@ class Tilemap:
             log.error("Error saving tilemap", e)
             return False
 
+    def _migrate(self, data: dict) -> dict:
+        """Migrate legacy save data in-place returning upgraded dict.
+
+        Supported migrations:
+          - v1 -> v2: inject meta_data.version, ensure players use 'lives' key
+        """
+        meta = data.get("meta_data") or {}
+        detected_version = meta.get("version", 1)
+        if detected_version == 1:
+            # Add lives key if only legacy 'lifes' present
+            entities_data = data.get("entities_data", {})
+            for p in entities_data.get("players", []):
+                if "lives" not in p and "lifes" in p:
+                    p["lives"] = p["lifes"]
+            meta["version"] = 2
+            data["meta_data"] = meta
+            detected_version = 2
+        # Future migrations would chain here.
+        return data
+
     def load(self, path, load_entities=True):
         try:
             with open(path, "r") as f:
                 data = json.load(f)
 
+            # Perform migrations (Issue 21)
+            data = self._migrate(data)
+
             self.meta_data = data.get("meta_data", {})
+            self.version = self.meta_data.get("version", 1)
             self.level = self.meta_data.get("map", self.level)
 
             map_data = data.get("map_data", data)
@@ -172,20 +199,20 @@ class Tilemap:
                         lifes=lives_value,
                         respawn_pos=player_data["respawn_pos"],
                     )
-                    player.velocity = player_data["velocity"]
-                    player.air_time = player_data["air_time"]
-                    player.action = player_data["action"]
-                    player.flip = player_data["flip"]
-                    player.alive = player_data["alive"]
-                    player.respawn_pos = player_data["respawn_pos"]
+                    player.velocity = player_data.get("velocity", [0, 0])
+                    player.air_time = player_data.get("air_time", 0)
+                    player.action = player_data.get("action", "idle")
+                    player.flip = player_data.get("flip", False)
+                    player.alive = player_data.get("alive", True)
+                    player.respawn_pos = player_data.get("respawn_pos", [0, 0])
                     self.players.append(player)
 
                 for enemy_data in entities_data.get("enemies", []):
                     enemy = Enemy(
                         self.game, enemy_data["pos"], (8, 15), enemy_data["id"]
                     )
-                    enemy.velocity = enemy_data["velocity"]
-                    enemy.alive = enemy_data["alive"]
+                    enemy.velocity = enemy_data.get("velocity", [0, 0])
+                    enemy.alive = enemy_data.get("alive", True)
                     self.enemies.append(enemy)
 
             # print(f"Tilemap loaded from {path}")

@@ -265,7 +265,7 @@ Additions to baseline plan:
   "collectables": {...}
 }
 ```
-Backward compatibility: loader attempts legacy parse (v1) then upgrades to v2 by injecting missing fields with defaults.
+Backward compatibility: loader attempts legacy parse (v1) then upgrades to v2 by injecting missing fields with defaults. Issue 21 introduced explicit migration logic (`Tilemap._migrate`) which currently performs: v1 -> v2 (adds `meta_data.version`, normalizes `lifes` -> `lives`). Future schema bumps append additional conditional blocks preserving deterministic replay compatibility.
 
 ### Network Snapshot (Draft)
 ```
