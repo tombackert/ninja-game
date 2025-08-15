@@ -29,7 +29,7 @@ def main():
 
     sm = StateManager()
     router = InputRouter()
-    # Start in menu
+    # # # # Start in menu
     sm.set(MenuState())
 
     running = True
@@ -44,6 +44,8 @@ def main():
         current_name = sm.current.name if sm.current else ""
         actions = router.process(events, current_name)
         sm.handle_actions(actions)
+        # Provide raw events to current state (GameState uses this to update movement flags)
+        sm.handle(events)
 
         # State-driven transitions (minimal, non-invasive)
         cur = sm.current

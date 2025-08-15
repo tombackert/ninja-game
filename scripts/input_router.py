@@ -71,6 +71,12 @@ class InputRouter:
         pause_rules: List[Rule] = [
             _key_rule(pygame.K_ESCAPE, "pause_close"),
             _key_rule(pygame.K_m, "pause_menu"),
+            _key_rule(pygame.K_UP, "menu_up"),
+            _key_rule(pygame.K_w, "menu_up"),
+            _key_rule(pygame.K_DOWN, "menu_down"),
+            _key_rule(pygame.K_s, "menu_down"),
+            _key_rule(pygame.K_RETURN, "menu_select"),
+            _key_rule(pygame.K_KP_ENTER, "menu_select"),
         ]
         self._rules.update(
             {

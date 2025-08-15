@@ -214,43 +214,138 @@ class GameState(State):
 
         self._game = Game()
         self._accum = 0.0  # basic accumulator if we later add fixed timestep
+        self._initialized_audio = False
+        self.request_pause = False
 
     @property
     def game(self):  # convenience
         return self._game
 
+    # ------------------------------------------------------------------
+    # Lifecycle
+    def on_enter(self, previous: "State | None") -> None:  # pragma: no cover - simple side-effect
+        # Start background music / ambience (skip when under test to avoid mixer issues).
+        import os
+
+        if os.environ.get("NINJA_GAME_TESTING") != "1" and not self._initialized_audio:
+            try:  # Best-effort; audio is ancillary.
+                self._game.audio.play_music("data/music.wav", loops=-1)
+                self._game.audio.play("ambience", loops=-1)
+                self._initialized_audio = True
+            except Exception:  # pragma: no cover - audio optional in CI
+                pass
+
+    def on_exit(self, next_state: "State | None") -> None:  # pragma: no cover - simple persistence
+        # Persist collectables & best times when leaving game state entirely (not just pausing).
+        try:
+            self._game.cm.save_collectables()
+        except Exception:  # pragma: no cover
+            pass
+
     def handle_actions(self, actions: Sequence[str]) -> None:
+        # Reset per-frame toggles
         self.request_pause = False
         for act in actions:
             if act == "pause_toggle":
                 self.request_pause = True
 
+    # Raw event handling (for continuous movement / jump / dash until migrated to action axes)
+    def handle(self, events: Sequence[pygame.event.Event]) -> None:  # pragma: no cover - thin delegation
+        # Delegate to legacy KeyboardManager in batch-processing mode to update movement flags
+        km = getattr(self._game, "km", None)
+        if km and hasattr(km, "process_events"):
+            try:
+                km.process_events(events)
+            except Exception:
+                pass
+
     def update(self, dt: float) -> None:
+        """Full simulation step (logic-only; rendering handled in render()).
+
+        This migrates the legacy `Game.run` loop responsibilities into
+        a per-frame update suitable for the state-driven architecture.
+        Visual layering & HUD composition live in `Renderer`.
+        """
         g = self._game
-        # Partial migration: replicate subset of Game.run inner loop per frame.
-        # This will be iteratively completed in future issues.
         if not g.running:
+            return  # Game externally marked finished (future: transition to Menu)
+        # If a PauseState render is freezing this frame, skip simulation changes.
+        if getattr(g, "_paused_freeze", False):
             return
-        # Begin frame setup similar to Game.run
-        # Initial collectables loaded by Game;
-        # avoid reloading each frame to prevent ammo resets.
-        # Timer and screen prep
+
+        # --- Core time & housekeeping ---
         g.timer.update(g.level)
-        g.display.fill((0, 0, 0, 0))
-        g.display_2.blit(g.assets["background"], (0, 0))
         g.screenshake = max(0, g.screenshake - 1)
-        # Flag collisions / level completion (trimmed for brevity)
+
+        # --- Level completion / flag collision ---
         for flag_rect in getattr(g, "flags", []):
             if g.player.rect().colliderect(flag_rect):
                 g.endpoint = True
-        # Basic transition handling (no level advance to avoid side-effects yet)
-        if g.transition:
-            from scripts.effects import Effects
 
-            Effects.transition(g)
-        # Update projectiles each simulation update (partial migration scope)
+        from scripts.constants import (
+            TRANSITION_MAX,
+            DEAD_ANIM_FADE_START,
+            RESPAWN_DEAD_THRESHOLD,
+        )
+        from scripts.level_cache import list_levels
+        from scripts.settings import settings
+        from scripts.effects import Effects
+
+        if g.endpoint:
+            g.transition += 1
+            if g.transition > TRANSITION_MAX:
+                # Level advance logic
+                g.timer.update_best_time()
+                levels = list_levels()
+                try:
+                    current_level_index = levels.index(g.level)
+                except ValueError:
+                    current_level_index = 0
+                if current_level_index == len(levels) - 1:
+                    g.load_level(g.level)
+                else:
+                    next_level = levels[current_level_index + 1]
+                    g.level = next_level
+                    settings.set_level_to_playable(g.level)
+                    settings.selected_level = g.level
+                    g.load_level(g.level)
+        if g.transition < 0:
+            g.transition += 1
+
+        # --- Death / respawn handling ---
+        # (Note: legacy attribute 'lifes' renamed to 'lives' internally; we access both defensively.)
+        player_lives_attr = getattr(g.player, "lives", getattr(g.player, "lifes", 0))
+        if player_lives_attr < 1:
+            g.dead += 1
+        if g.dead:
+            g.dead += 1
+            if g.dead >= DEAD_ANIM_FADE_START:
+                g.transition = min(TRANSITION_MAX, g.transition + 1)
+            if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr >= 1:
+                g.load_level(g.level, player_lives_attr, respawn=True)
+            if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
+                g.load_level(g.level)
+
+        # --- Input (legacy direct keyboard polling) ---
+        # Retain existing KeyboardManager driven movement until action-based movement introduced.
+        if hasattr(g, "km"):
+            try:
+                # Only mouse polling here; keyboard handled via handle(events)
+                g.km.handle_mouse_input()
+            except Exception:  # pragma: no cover - input optional in headless tests
+                pass
+
+        # --- Transition visual state (logic portion) ---
+        if g.transition:
+            # Only the numeric transition value is advanced here; actual
+            # drawing of the transition effect occurs in Renderer.render.
+            pass
+
+        # --- Systems ---
         if hasattr(g, "projectiles") and hasattr(g.projectiles, "update"):
             g.projectiles.update(g.tilemap, g.players, g.enemies)
+
+        # Particle system update remains in renderer (coupled to render order)
 
     def render(self, surface: pygame.Surface) -> None:
         # Delegate full frame composition to unified Renderer (Issue 14).
@@ -267,21 +362,42 @@ class PauseState(State):
     name = "PauseState"
 
     def __init__(self) -> None:
+        from scripts.ui_widgets import ScrollableListWidget
+
         self._ticks = 0
         self.closed = False
         self.return_to_menu = False
+        self.quit_requested = False
         self._underlying: State | None = None  # set in on_enter
+        self.options = ["Resume", "Menu"]
+        self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=60, font_size=30)
+        # Background image (menu backdrop) for pause overlay decoration
+        try:
+            self.bg = pygame.image.load("data/images/background-big.png")
+        except Exception:  # pragma: no cover - asset optional in tests
+            self.bg = None
 
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
-            if act == "pause_close":
+            if act in ("menu_up",):
+                self.widget.move_up()
+            elif act in ("menu_down",):
+                self.widget.move_down()
+            elif act in ("pause_close",):  # ESC resume
                 self.closed = True
-            elif act == "pause_menu":
+            elif act == "pause_menu":  # legacy direct key -> menu
                 self.return_to_menu = True
                 self.closed = True
+            elif act == "menu_select":
+                choice = self.options[self.widget.selected_index]
+                if choice == "Resume":
+                    self.closed = True
+                elif choice == "Menu":
+                    self.return_to_menu = True
+                    self.closed = True
 
     def update(self, dt: float) -> None:
         self._ticks += 1
@@ -289,15 +405,55 @@ class PauseState(State):
     def render(self, surface: pygame.Surface) -> None:
         # Render underlying (frozen) game frame if available before overlay.
         if self._underlying and hasattr(self._underlying, "render"):
-            # Only call render (no update) to keep simulation paused.
-            self._underlying.render(surface)
-
+            # Freeze underlying simulation-driven updates inside render path.
+            underlying = self._underlying
+            game_obj = getattr(underlying, "game", None)
+            if game_obj is not None:
+                setattr(game_obj, "_paused_freeze", True)
+            # Render one frozen frame
+            underlying.render(surface)
+            if game_obj is not None:
+                setattr(game_obj, "_paused_freeze", False)
+        # Semi-transparent overlay
         overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 160))  # semi-transparent darkening
+        overlay.fill((0, 0, 0, 140))  # semi-transparent darkening
         surface.blit(overlay, (0, 0))
-        font = pygame.font.SysFont(None, 48)
-        text = font.render("PAUSED (ESC resume / M menu)", True, (255, 255, 255))
-        surface.blit(text, (surface.get_width() // 2 - text.get_width() // 2, 120))
+        # Optional faint menu background blended in
+        if self.bg:
+            try:
+                bg_scaled = pygame.transform.scale(self.bg, surface.get_size())
+                bg_scaled.set_alpha(60)
+                surface.blit(bg_scaled, (0, 0))
+            except Exception:  # pragma: no cover
+                pass
+        # Title
+        from scripts.ui import UI
+
+        font = UI.get_font(50)
+        UI.draw_text_with_outline(
+            surface=surface,
+            font=font,
+            text="Paused",
+            x=surface.get_width() // 2,
+            y=140,
+            center=True,
+            scale=3,
+        )
+        # Options list (centered)
+        self.widget.render(surface, surface.get_width() // 2, 260)
+        # Footer hint
+        UI.render_menu_ui_element(
+            surface,
+            "ENTER select / ESC resume",
+            surface.get_width() // 2 - 130,
+            surface.get_height() - 60,
+        )
+        UI.render_menu_ui_element(
+            surface,
+            "Up/Down navigate",
+            surface.get_width() // 2 - 110,
+            surface.get_height() - 40,
+        )
 
 
 # ---------------- Additional Menu Sub-States (Issue 12) -----------------

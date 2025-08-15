@@ -209,7 +209,7 @@ class UI:
         text,
         x,
         y,
-        text_color=(255, 255, 255),
+        text_color=PM_COLOR,
         outline_color=(0, 0, 0),
         center=False,
         scale=1,
