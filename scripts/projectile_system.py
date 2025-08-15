@@ -104,14 +104,21 @@ class ProjectileSystem:
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
                 for enemy in enemies.copy():
                     if enemy.rect().colliderect(rect):
-                        self._projectiles.remove(proj)
+                        if proj in self._projectiles:
+                            self._projectiles.remove(proj)
                         self.game.screenshake = max(16, self.game.screenshake)
                         self.game.audio.play("hit")
                         self.game.cm.coins += 1
                         spawn_hit_sparks(self.game, enemy.rect().center)
                         hits_enemy += 1
                         removed += 1
-                        # Enemy removal handled in enemy.update; we just trigger state.
+                        # Mark and remove enemy immediately for clarity
+                        if hasattr(enemy, "alive"):
+                            enemy.alive = False
+                        try:
+                            enemies.remove(enemy)
+                        except ValueError:
+                            pass
                         break
             else:  # enemy owned
                 # Player damage (skip if heavily dashing similar to old logic)

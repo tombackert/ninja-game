@@ -36,6 +36,7 @@ GameApp (entry)
  │   ├─ Renderer (unified frame composition)
  │   ├─ ProjectileSystem
  │   ├─ ParticleSystem
+ │   ├─ Weapon System (registry + behaviors)  # Issue 23
  │   ├─ Physics / CollisionHelpers
  │   ├─ Effects (screenshake, transitions)
  │   ├─ SaveService (settings, runs, collectables)
@@ -155,18 +156,27 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 ### 6.7 SaveService
 
 ### 6.8 ProgressTracker
-### 6.9 Logging / Metrics
+### 6.9 Weapon System (Issue 23)
+- Introduces pluggable weapon behaviors decoupled from `Player` hard-coded logic.
+- Components:
+  - `weapons/base.py` defines `Weapon` interface (`can_fire`, `fire`).
+  - `weapons/registry.py` simple name→instance registry (`register_weapon`, `get_weapon`).
+  - `weapons/gun.py` migrates prior projectile firing logic from `Player.shoot` into `GunWeapon`.
+- Player now resolves weapon via registry (`get_weapon("gun")`) and calls `fire(self)`; result encapsulated in `FireResult` (spawn + ammo usage) for future extensibility (cooldowns, multi-shots).
+- Benefits: Easier to add new weapons (charge shot, spread, melee) without editing core entity code; future network & replay layers can serialize weapon actions by name.
+- Future: Data-driven weapon specs (JSON) feeding factory, cooldown tracking inside weapon instances, effect hooks (muzzle flash particle emission via ParticleSystem instead of inline spawn).
+### 6.10 Logging / Metrics
 - Thin wrapper around Python logging (INFO default, DEBUG for instrumentation).
-### 6.10 NetSyncService (Future)
+### 6.11 NetSyncService (Future)
 - (Planned) Manages client prediction + server authoritative reconciliation:
   - Input buffering (sequence numbers).
   - State snapshots (compressed entity states).
   - Interpolation buffers for remote entities.
   - Rollback hooks (re-simulate stored inputs on corrected snapshot).
 
-### 6.11 AIScheduler / PolicyService (Future)
+### 6.12 AIScheduler / PolicyService (Future)
 
-### 6.12 ServiceContainer (Entity Decoupling)
+### 6.13 ServiceContainer (Entity Decoupling)
 - Implemented (Issue 19). Introduces thin `ServiceContainer` passed to entities encapsulating required ports: `AudioPort`, `ProjectilePort`, `ParticlePort`, `CollectablePort`.
 - Entities now accept optional `services` argument; legacy direct `game` access retained for a transition period.
 - Benefits: easier isolated unit tests (inject fakes), reduced implicit coupling, clear contract of what side effects an entity can perform.

@@ -242,7 +242,8 @@ class GameState(State):
         if not g.running:
             return
         # Begin frame setup similar to Game.run
-        g.cm.load_collectables()
+        # Initial collectables loaded by Game;
+        # avoid reloading each frame to prevent ammo resets.
         # Timer and screen prep
         g.timer.update(g.level)
         g.display.fill((0, 0, 0, 0))
@@ -327,7 +328,8 @@ class LevelsState(State):
         self._ui = UI
         self.settings = settings
         self.progress = get_progress_tracker()
-        # Use tracker levels (already sorted) to populate list; fallback to direct scan if empty.
+        # Use tracker levels (already sorted) to populate list;
+        # fallback to direct scan if empty.
         self.levels = self.progress.levels or list_levels()
         # Ensure currently selected level is visible
         selected = self.settings.selected_level

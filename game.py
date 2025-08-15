@@ -228,7 +228,6 @@ class Game:
         while self.running:
             start_frame_time = time.perf_counter()
 
-            self.cm.load_collectables()
             self.timer.update(self.level)
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets["background"], (0, 0))

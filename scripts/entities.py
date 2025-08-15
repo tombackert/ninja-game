@@ -22,7 +22,6 @@ from scripts.constants import (
     DASH_MIN_ACTIVE_ABS,
     DASH_SPEED,
     DASH_TRAIL_PARTICLE_SPEED,
-    PROJECTILE_SPEED,
     ENEMY_DIRECTION_BASE,
     ENEMY_DIRECTION_SCALE_LOG,
     ENEMY_SHOOT_BASE,
@@ -325,29 +324,21 @@ class Player(PhysicsEntity):
         self._lives = value
 
     def shoot(self):
-        if (
-            self.game.cm.gun
-            and self.game.cm.ammo > 0
-            and self.shoot_cooldown == 0
-            and settings.selected_weapon == 1
-        ):
-            if self.services:
-                self.services.play("shoot")
-            else:
-                self.game.audio.play("shoot")
-            direction = -PROJECTILE_SPEED if self.flip else PROJECTILE_SPEED
-            (
-                self.services.projectiles.spawn
-                if self.services
-                else self.game.projectiles.spawn
-            )(
-                self.rect().centerx + (7 * (-1 if self.flip else 1)),
-                self.rect().centery,
-                direction,
-                "player",
-            )
-            self.game.cm.ammo -= 1
-            self.shoot_cooldown = 10
+        from scripts.weapons import get_weapon  # local import to avoid circulars
+        from scripts.collectableManager import CollectableManager as cm
+
+        # Map selected index to weapon name list
+        try:
+            name = cm.WEAPONS[settings.selected_weapon]
+        except Exception:  # pragma: no cover - defensive
+            name = "Default"
+        # Registry uses lowercase canonical names
+        key = name.lower()
+        # Normalize some known names
+        if key == "default":
+            key = "none"
+        weapon = get_weapon(key if key in ("gun", "none") else "gun")
+        return weapon.fire(self)
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)
@@ -430,8 +421,14 @@ class Player(PhysicsEntity):
     def render(self, surf, offset=(0, 0)):
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
+        # Render gun overlay only if equipped weapon is gun
+        from scripts.collectableManager import CollectableManager as cm
 
-        if self.game.cm.gun and settings.selected_weapon == 1:
+        try:
+            gun_index = cm.WEAPONS.index("Gun")
+        except ValueError:  # pragma: no cover
+            gun_index = 1
+        if self.game.cm.gun and settings.selected_weapon == gun_index:
             if self.flip:
                 surf.blit(
                     pygame.transform.flip(self.game.assets["gun"], True, False),

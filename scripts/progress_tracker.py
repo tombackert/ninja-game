@@ -38,7 +38,8 @@ class ProgressTracker:
             self.levels = list_levels()
         # Ensure deterministic ordering
         self.levels.sort()
-        # Initialize unlocked set from settings legacy structure (skip during tests for determinism)
+        # Initialize unlocked set from settings legacy structure
+        # (skip during tests for determinism)
         if "PYTEST_CURRENT_TEST" not in os.environ:
             if settings.playable_levels:
                 # Migration: import every level flagged True (legacy behavior) so existing
@@ -51,10 +52,11 @@ class ProgressTracker:
                 # Fallback safety
                 self.unlocked.add(0)
         else:
-            # Test environment: start with only level 0 unlocked regardless of persisted settings.
+            # Test environment: start with only level 0 unlocked
+            # regardless of persisted settings.
             self.unlocked = {0}
-        # Developer override: if DEV_UNLOCK_LEVELS=1, treat all discovered levels unlocked.
-        # Suppress during automated tests (pytest) to keep deterministic expectations.
+        # Developer override: if DEV_UNLOCK_LEVELS=1,
+        # treat all discovered levels unlocked
         if (
             os.environ.get("DEV_UNLOCK_LEVELS") == "1"
             and "PYTEST_CURRENT_TEST" not in os.environ

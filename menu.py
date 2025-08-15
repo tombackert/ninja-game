@@ -136,7 +136,7 @@ class Menu:
                 msg_timer -= 1
 
             level_options = []
-            for level in levels[start_index : start_index + levels_per_page]:
+            for level in levels[start_index: start_index + levels_per_page]:
                 if level == self.selected_level:
                     level_options.append(f"*Level {level:<2}")
                 else:

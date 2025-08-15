@@ -82,7 +82,8 @@ class Settings:
         if level in self.playable_levels and not self.playable_levels[level]:
             self.playable_levels[level] = True
             self._dirty = True
-        # Delegate to progress tracker (lazy import to avoid circular import at module load)
+        # Delegate to progress tracker
+        # (lazy import to avoid circular import at module load)
         try:  # pragma: no cover - defensive
             if "PYTEST_CURRENT_TEST" in os.environ:
                 # Tests manage unlock flow explicitly; avoid side-effects
