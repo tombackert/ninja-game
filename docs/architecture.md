@@ -129,9 +129,11 @@ All gameplay logic imports from this module—no magic numeric literals in domai
 ---
 ## 6. Systems Detail
 ### 6.1 AssetManager
-- Lazy loads images, sounds, animations; caches references.
-- Provides `get_image(key)`, `get_animation(key)`, `get_sound(key)`.
-- Preload list for latency-sensitive assets.
+- Centralized lazy loading & caching of images / sounds / animation frames (Issue 15).
+- API: `get_image(rel_path)`, `get_image_frames(dir)`, `get_animation(dir, img_dur, loop)`, `get_sound(rel_path)`.
+- Returns new `Animation` wrappers each call (no shared frame counters) while sharing underlying frame lists in cache.
+- Headless-friendly: skips `convert()` if no video mode set (tests under SDL dummy driver).
+- Replaces scattered `pygame.image.load` / `pygame.mixer.Sound` calls in `game.py`; future steps will remove remaining direct util helpers.
 
 ### 6.2 AudioService
 - Abstracts mixer. Methods: `play_sfx(id)`, `play_music(track, loop=True)`, `set_volumes(music, sfx)`.

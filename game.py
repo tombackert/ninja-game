@@ -3,7 +3,7 @@ import time
 
 from scripts.displayManager import DisplayManager
 from scripts.entities import Player, Enemy
-from scripts.utils import load_image, load_images, Animation
+from scripts.asset_manager import AssetManager
 from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
 from scripts.timer import Timer
@@ -63,63 +63,52 @@ class Game:
         # Movement flags
         self.movement = [False, False]
 
-        # Load assets
+        # Asset Manager (Issue 15). Gradually replace direct util calls with manager.
+        am = AssetManager.get()
         self.assets = {
-            "decor": load_images("tiles/decor"),
-            "grass": load_images("tiles/grass"),
-            "large_decor": load_images("tiles/large_decor"),
-            "stone": load_images("tiles/stone"),
-            "player": load_image("entities/player.png"),
-            "background": load_image("background-big.png"),
-            "clouds": load_images("clouds"),
-            "enemy/idle": Animation(load_images("entities/enemy/idle"), img_dur=6),
-            "enemy/run": Animation(load_images("entities/enemy/run"), img_dur=4),
-            "player/default/idle": Animation(
-                load_images("entities/player/default/idle"), img_dur=6
+            "decor": am.get_image_frames("tiles/decor"),
+            "grass": am.get_image_frames("tiles/grass"),
+            "large_decor": am.get_image_frames("tiles/large_decor"),
+            "stone": am.get_image_frames("tiles/stone"),
+            "player": am.get_image("entities/player.png"),
+            "background": am.get_image("background-big.png"),
+            "clouds": am.get_image_frames("clouds"),
+            "enemy/idle": am.get_animation("entities/enemy/idle", img_dur=6),
+            "enemy/run": am.get_animation("entities/enemy/run", img_dur=4),
+            "player/default/idle": am.get_animation(
+                "entities/player/default/idle", img_dur=6
             ),
-            "player/default/run": Animation(
-                load_images("entities/player/default/run"), img_dur=4
+            "player/default/run": am.get_animation(
+                "entities/player/default/run", img_dur=4
             ),
-            "player/default/jump": Animation(
-                load_images("entities/player/default/jump")
+            "player/default/jump": am.get_animation("entities/player/default/jump"),
+            "player/default/slide": am.get_animation("entities/player/default/slide"),
+            "player/default/wall_slide": am.get_animation(
+                "entities/player/default/wall_slide"
             ),
-            "player/default/slide": Animation(
-                load_images("entities/player/default/slide")
+            "player/red/idle": am.get_animation("entities/player/red/idle", img_dur=6),
+            "player/red/run": am.get_animation("entities/player/red/run", img_dur=4),
+            "player/red/jump": am.get_animation("entities/player/red/jump"),
+            "player/red/slide": am.get_animation("entities/player/red/slide"),
+            "player/red/wall_slide": am.get_animation("entities/player/red/wall_slide"),
+            "particle/leaf": am.get_animation("particles/leaf", img_dur=20, loop=False),
+            "particle/particle": am.get_animation(
+                "particles/particle", img_dur=6, loop=False
             ),
-            "player/default/wall_slide": Animation(
-                load_images("entities/player/default/wall_slide")
-            ),
-            "player/red/idle": Animation(
-                load_images("entities/player/red/idle"), img_dur=6
-            ),
-            "player/red/run": Animation(
-                load_images("entities/player/red/run"), img_dur=4
-            ),
-            "player/red/jump": Animation(load_images("entities/player/red/jump")),
-            "player/red/slide": Animation(load_images("entities/player/red/slide")),
-            "player/red/wall_slide": Animation(
-                load_images("entities/player/red/wall_slide")
-            ),
-            "particle/leaf": Animation(
-                load_images("particles/leaf"), img_dur=20, loop=False
-            ),
-            "particle/particle": Animation(
-                load_images("particles/particle"), img_dur=6, loop=False
-            ),
-            "coin": Animation(load_images("collectables/coin"), img_dur=6),
-            "flag": load_images("tiles/collectables/flag"),
-            "gun": load_image("gun.png"),
-            "projectile": load_image("projectile.png"),
+            "coin": am.get_animation("collectables/coin", img_dur=6),
+            "flag": am.get_image_frames("tiles/collectables/flag"),
+            "gun": am.get_image("gun.png"),
+            "projectile": am.get_image("projectile.png"),
         }
 
         # Load sound effects and set volume based on settings
         self.sfx = {
-            "jump": pygame.mixer.Sound("data/sfx/jump.wav"),
-            "dash": pygame.mixer.Sound("data/sfx/dash.wav"),
-            "hit": pygame.mixer.Sound("data/sfx/hit.wav"),
-            "shoot": pygame.mixer.Sound("data/sfx/shoot.wav"),
-            "ambience": pygame.mixer.Sound("data/sfx/ambience.wav"),
-            "collect": pygame.mixer.Sound("data/sfx/collect.wav"),
+            "jump": am.get_sound("jump.wav"),
+            "dash": am.get_sound("dash.wav"),
+            "hit": am.get_sound("hit.wav"),
+            "shoot": am.get_sound("shoot.wav"),
+            "ambience": am.get_sound("ambience.wav"),
+            "collect": am.get_sound("collect.wav"),
         }
 
         self.update_sound_volumes()
