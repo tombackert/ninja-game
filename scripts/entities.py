@@ -66,51 +66,82 @@ class PhysicsEntity:
                     self.type + "/" + cm.SKIN_PATHS[self.skin] + "/" + self.action
                 ].copy()
 
-    def update(self, tilemap, movement=(0, 0)):
+    # --- Physics step granular methods (Issue 20) ---
+    def begin_update(self):
+        """Reset frame-specific collision flags.
+
+        Called at start of each update cycle. Split out so tests can drive
+        subsequent phases individually if desired.
+        """
         self.collisions = {"up": False, "down": False, "right": False, "left": False}
 
-        frame_movement = (
-            movement[0] + self.velocity[0],
-            movement[1] + self.velocity[1],
-        )
+    def compute_frame_movement(self, movement):
+        """Return tuple of (dx, dy) for this frame before collision response."""
+        return movement[0] + self.velocity[0], movement[1] + self.velocity[1]
 
+    def apply_horizontal_movement(self, tilemap, frame_movement):
         self.pos[0] += frame_movement[0]
         entity_rect = self.rect()
-        for rect in tilemap.physics_rects_around(self.pos):
-            if entity_rect.colliderect(rect):
-                if frame_movement[0] > 0:
-                    entity_rect.right = rect.left
-                    self.collisions["right"] = True
-                if frame_movement[0] < 0:
-                    entity_rect.left = rect.right
-                    self.collisions["left"] = True
-                self.pos[0] = entity_rect.x
+        if frame_movement[0] != 0:
+            for rect in tilemap.physics_rects_around(self.pos):  # narrow query
+                if entity_rect.colliderect(rect):
+                    if frame_movement[0] > 0:
+                        entity_rect.right = rect.left
+                        self.collisions["right"] = True
+                    else:  # frame_movement[0] < 0
+                        entity_rect.left = rect.right
+                        self.collisions["left"] = True
+                    self.pos[0] = entity_rect.x
 
+    def apply_vertical_movement(self, tilemap, frame_movement):
         self.pos[1] += frame_movement[1]
         entity_rect = self.rect()
-        for rect in tilemap.physics_rects_around(self.pos):
-            if entity_rect.colliderect(rect):
-                if frame_movement[1] > 0:
-                    entity_rect.bottom = rect.top
-                    self.collisions["down"] = True
-                if frame_movement[1] < 0:
-                    entity_rect.top = rect.bottom
-                    self.collisions["up"] = True
-                self.pos[1] = entity_rect.y
+        if frame_movement[1] != 0:
+            for rect in tilemap.physics_rects_around(self.pos):
+                if entity_rect.colliderect(rect):
+                    if frame_movement[1] > 0:
+                        entity_rect.bottom = rect.top
+                        self.collisions["down"] = True
+                    else:  # frame_movement[1] < 0
+                        entity_rect.top = rect.bottom
+                        self.collisions["up"] = True
+                    self.pos[1] = entity_rect.y
 
+    def update_orientation(self, movement):
         if movement[0] > 0:
             self.flip = False
-        if movement[0] < 0:
+        elif movement[0] < 0:
             self.flip = True
-
         self.last_movement = movement
 
-        # Gravity & vertical collision resolution
+    def apply_gravity(self):
         self.velocity[1] = min(MAX_FALL_SPEED, self.velocity[1] + GRAVITY_ACCEL)
         if self.collisions["down"] or self.collisions["up"]:
+            # Cancel vertical velocity if we contacted ceiling/floor this frame.
             self.velocity[1] = 0
 
+    def finalize_update(self):
         self.animation.update()
+
+    def update(self, tilemap, movement=(0, 0)):
+        """Composite update preserved for backward compatibility.
+
+        Steps:
+          1. begin_update -> reset collisions
+          2. compute_frame_movement
+          3. apply_horizontal_movement
+          4. apply_vertical_movement
+          5. update_orientation
+          6. apply_gravity (after collision resolution so we can nullify velocity)
+          7. finalize_update (animation advance)
+        """
+        self.begin_update()
+        frame_movement = self.compute_frame_movement(movement)
+        self.apply_horizontal_movement(tilemap, frame_movement)
+        self.apply_vertical_movement(tilemap, frame_movement)
+        self.update_orientation(movement)
+        self.apply_gravity()
+        self.finalize_update()
 
     def render(self, surf, offset=(0, 0)):
         surf.blit(

@@ -105,7 +105,7 @@ Tests (`tests/test_renderer_order.py`) assert the subsequence ordering using the
 `capture_sequence` hook to remain resilient to optional phases (transition, perf).
 ### Simulation Tick Responsibilities
 1. Apply pending player input intents (movement, dash, shoot).
-2. Update physics (entities & projectiles) in deterministic order.
+2. Update physics (entities & projectiles) in deterministic order. Entity physics is now decomposed into granular phases (`begin_update`, `compute_frame_movement`, `apply_horizontal_movement`, `apply_vertical_movement`, `update_orientation`, `apply_gravity`, `finalize_update`) to enable finer grained testing (Issue 20) and future insertion of rollback hooks or predictive rewinds between distinct sub-steps.
 3. Resolve collisions & game rules (damage, pickups, transitions).
 4. Spawn & update particles (logic; visual interpolation handled in render).
 5. Run AI policies (enemy decisions) – future.
