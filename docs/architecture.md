@@ -34,6 +34,7 @@ GameApp (entry)
  │   ├─ AudioService
  │   ├─ InputRouter
  │   ├─ Renderer (unified frame composition)
+ │   ├─ ReplayManager (run recording + ghost playback)
  │   ├─ ProjectileSystem
  │   ├─ ParticleSystem
  │   ├─ Weapon System (registry + behaviors)  # Issue 23
@@ -65,6 +66,9 @@ GameApp (entry)
 - Presentation depends on Domain + Systems (read-only access to state, commands via services).
 - Entities depend only on narrow service interfaces (e.g. `AudioPort`, `ParticlesPort`, `ProjectilesPort`, `Config`).
 - Systems are mostly independent (AssetManager, AudioService) and orchestrated by GameState.
+- ReplayManager observes simulation state (player position, animation metadata) but does not
+  mutate physics; Renderer invokes it for ghost drawing keeping dependencies one-way from
+  presentation to recording logic.
 - StateManager is ignorant of concrete internals; it only drives lifecycle methods.
 - Networking and AI modules plug into Systems layer with explicit ports.
 
@@ -192,9 +196,21 @@ Provides a toggleable (F1) in-game panel surfacing real-time metrics without pau
   - Current timer text
 Implementation lives in `GameState._render_debug_overlay` to avoid coupling Renderer to optional diagnostics. Overlay is rendered only when `debug_overlay` flag true (toggled via InputRouter action `debug_toggle`). The panel composes after the main HUD and before post effects ensuring screen shake can still apply. Costs kept minimal (simple cached font outline surfaces; no per-frame expensive allocations beyond small surface). Tests (`test_debug_overlay_toggle.py`) verify toggle logic via simulated F1 key events.
 
-### 6.12 AIScheduler / PolicyService (Future)
+### 6.12 ReplayManager & Ghosts (Issue 30)
+- `ReplayManager` (scripts/replay.py) records per-frame samples of the active player's position,
+  facing, and animation frame. Samples are persisted per-level (`data/replays/<level>.json`) when a
+  run completes, enabling long-term best-run ghosts.
+- `ReplayGhost` renders a translucent overlay ahead of the player using cached tinted sprites. The
+  renderer invokes it before drawing players so the hero remains visually on top.
+- The manager keeps the most recent run in-memory, so restarting a level immediately spawns a ghost
+  path for “race your previous self” scenarios even without a new PB. Persistence is optional—missing
+  replay files simply disable ghosts for that level.
+- Tests (`tests/test_replay_system.py`) cover recording, persistence, and playback index advancement
+  ensuring deterministic sequencing for future network/RL tooling.
 
-### 6.13 ServiceContainer (Entity Decoupling)
+### 6.13 AIScheduler / PolicyService (Future)
+
+### 6.14 ServiceContainer (Entity Decoupling)
 - Implemented (Issue 19). Introduces thin `ServiceContainer` passed to entities encapsulating required ports: `AudioPort`, `ProjectilePort`, `ParticlePort`, `CollectablePort`.
 - Entities now accept optional `services` argument; legacy direct `game` access retained for a transition period.
 - Benefits: easier isolated unit tests (inject fakes), reduced implicit coupling, clear contract of what side effects an entity can perform.

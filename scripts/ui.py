@@ -314,6 +314,12 @@ class UI:
             for player in game.players:
                 if player.id == game.playerID:
                     player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
+                    replay_mgr = getattr(game, "replay", None)
+                    if replay_mgr is not None:
+                        try:
+                            replay_mgr.capture_player(player)
+                        except Exception:
+                            pass
                 else:
                     player.update(game.tilemap, (0, 0))
                 if player.lives > 0:

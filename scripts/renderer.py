@@ -85,6 +85,13 @@ class Renderer:
         game.scroll[0] += (game.player.rect().centerx - game.display.get_width() / 2 - game.scroll[0]) / 30
         game.scroll[1] += (game.player.rect().centery - game.display.get_height() / 2 - game.scroll[1]) / 30
         render_scroll = (int(game.scroll[0]), int(game.scroll[1]))
+        # Render ghost before world to keep player on top
+        replay_mgr = getattr(game, "replay", None)
+        if replay_mgr:
+            try:
+                replay_mgr.advance_and_render(game.display, render_scroll)
+            except Exception:
+                pass
         UI.render_game_elements(game, render_scroll)
         if seq is not None:
             seq.append("world")

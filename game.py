@@ -26,6 +26,7 @@ from scripts.keyboardManager import KeyboardManager
 from scripts.effects import Effects
 from scripts.projectile_system import ProjectileSystem
 from scripts.particle_system import ParticleSystem
+from scripts.replay import ReplayManager
 
 """Legacy monolithic Game loop.
 
@@ -113,6 +114,9 @@ class Game:
         # Collectable Manager
         self.cm = CollectableManager(self)
         self.cm.load_collectables()
+
+        # Replay / ghost manager (Issue 30)
+        self.replay = ReplayManager(self)
 
         # Keyboard Manager
         self.km = KeyboardManager(self)
@@ -219,6 +223,13 @@ class Game:
         self.endpoint = False
 
         self.cm.load_collectables_from_tilemap(self.tilemap)
+        # Initialise replay state now that level and player exist
+        player_ref = getattr(self, "player", None)
+        if player_ref is not None:
+            try:
+                self.replay.on_level_load(self.level, player_ref)
+            except Exception:
+                pass
 
     def run(self):
         self.audio.play_music("data/music.wav", loops=-1)

@@ -16,8 +16,8 @@ class Settings:
         self.selected_editor_level = 0
         self.selected_weapon = 0
         self.selected_skin = 0
-        # Performance / debug feature toggles
         self.show_perf_overlay = True
+        self._ghost_enabled = True
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -66,6 +66,17 @@ class Settings:
         new_val = max(0, value)
         if new_val != self._selected_level:
             self._selected_level = new_val
+            self._dirty = True
+
+    @property
+    def ghost_enabled(self) -> bool:
+        return self._ghost_enabled
+
+    @ghost_enabled.setter
+    def ghost_enabled(self, value: bool) -> None:
+        new_val = bool(value)
+        if new_val != self._ghost_enabled:
+            self._ghost_enabled = new_val
             self._dirty = True
 
     def set_editor_level(self, value):
@@ -134,6 +145,7 @@ class Settings:
                     self.selected_weapon = data.get("selected_weapon", self.selected_weapon)
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
                     self.show_perf_overlay = data.get("show_perf_overlay", self.show_perf_overlay)
+                    self._ghost_enabled = bool(data.get("ghost_enabled", self._ghost_enabled))
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
@@ -162,6 +174,7 @@ class Settings:
             "selected_weapon": self.selected_weapon,
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()},
             "show_perf_overlay": self.show_perf_overlay,
+            "ghost_enabled": self._ghost_enabled,
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)

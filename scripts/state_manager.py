@@ -285,6 +285,7 @@ class GameState(State):
         # If a PauseState render is freezing this frame, skip simulation changes.
         if getattr(g, "_paused_freeze", False):
             return
+        replay_mgr = getattr(g, "replay", None)
 
         # --- Core time & housekeeping ---
         g.timer.update(g.level)
@@ -308,7 +309,13 @@ class GameState(State):
             g.transition += 1
             if g.transition > TRANSITION_MAX:
                 # Level advance logic
-                g.timer.update_best_time()
+                elapsed_ms = g.timer.elapsed_time
+                new_best = g.timer.update_best_time()
+                if replay_mgr:
+                    try:
+                        replay_mgr.commit_run(duration_ms=elapsed_ms, new_best=new_best)
+                    except Exception:
+                        pass
                 levels = list_levels()
                 try:
                     current_level_index = levels.index(g.level)
@@ -335,8 +342,18 @@ class GameState(State):
             if g.dead >= DEAD_ANIM_FADE_START:
                 g.transition = min(TRANSITION_MAX, g.transition + 1)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr >= 1:
+                if replay_mgr:
+                    try:
+                        replay_mgr.abort_current_run()
+                    except Exception:
+                        pass
                 g.load_level(g.level, player_lives_attr, respawn=True)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
+                if replay_mgr:
+                    try:
+                        replay_mgr.abort_current_run()
+                    except Exception:
+                        pass
                 g.load_level(g.level)
 
         # --- Input (legacy direct keyboard polling) ---
@@ -835,6 +852,8 @@ class OptionsState(State):
                     self.settings.sound_volume = self.settings.sound_volume - 0.1
                 elif self.widget.selected_index == 2:
                     self.settings.show_perf_overlay = not self.settings.show_perf_overlay
+                elif self.widget.selected_index == 3:
+                    self.settings.ghost_enabled = not self.settings.ghost_enabled
             elif a == "options_right":
                 if self.widget.selected_index == 0:
                     self.settings.music_volume = self.settings.music_volume + 0.1
@@ -843,13 +862,16 @@ class OptionsState(State):
                     self.settings.sound_volume = self.settings.sound_volume + 0.1
                 elif self.widget.selected_index == 2:
                     self.settings.show_perf_overlay = not self.settings.show_perf_overlay
+                elif self.widget.selected_index == 3:
+                    self.settings.ghost_enabled = not self.settings.ghost_enabled
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
         self.widget.options = [
             f"Music Volume: {int(self.settings.music_volume * 100):3d}%",
             f"Sound Volume: {int(self.settings.sound_volume * 100):3d}%",
-            f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
+            # f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
+            f"Ghosts: {'ON ' if self.settings.ghost_enabled else 'OFF'}",
         ]
 
     def render(self, surface: pygame.Surface) -> None:
