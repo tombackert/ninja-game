@@ -9,176 +9,176 @@ All issues must satisfy Definition of Done (see roadmap) and include automated t
 ### Context
 Remove erroneous return statement with undefined variable `size` in `menu.py` constructor causing potential confusion and unreachable code.
 ### Tasks
-- [ ] Remove stray `return` line from `Menu.__init__`
-- [ ] Verify no other constructors return accidental values
+- [x] Remove stray `return` line from `Menu.__init__`
+- [x] Verify no other constructors return accidental values
 ### Changes
 - `menu.py`
 ### Acceptance Criteria
-- [ ] `Menu()` instantiation runs without exceptions.
-- [ ] No constructor returns an unexpected non-None value.
+- [x] `Menu()` instantiation runs without exceptions.
+- [x] No constructor returns an unexpected non-None value.
 ### Risks
 Low.
 ### Test Cases
 1. Instantiate `Menu` headless (SDL_VIDEODRIVER=dummy) -> no exception.
 ### Definition of Done
-- [ ] Test added (simple import + construct)
-- [ ] Manual smoke: launch menu
+- [x] Test added (simple import + construct)
+- [x] Manual smoke: launch menu
 
 ### Issue 2: Naming Consistency lifes -> lives
 ### Context
 Standardize naming: rename `lifes` to `lives` for clarity and proper English.
 ### Tasks
-- [ ] Introduce property / adapter to keep backward compatibility for any serialized data
-- [ ] Rename UI labels and variable usages
-- [ ] Update save/load logic to map old key to new
+- [x] Introduce property / adapter to keep backward compatibility for any serialized data
+- [x] Rename UI labels and variable usages
+- [x] Update save/load logic to map old key to new
 ### Changes
 - `entities.py`, `game.py`, `menu.py`, `tilemap.py`, any save serialization code
 ### Acceptance Criteria
-- [ ] Game displays "Lives" consistently
-- [ ] Existing save files still load without crash
+- [x] Game displays "Lives" consistently
+- [x] Existing save files still load without crash
 ### Risks
 Legacy JSON key mismatch.
 ### Test Cases
 1. Simulate legacy JSON containing `lifes` → load → object has `lives` value
 2. Lives decrement on damage remains functional
 ### Definition of Done
-- [ ] Tests for migration + runtime behavior
-- [ ] Manual run verifying UI label
+- [x] Tests for migration + runtime behavior
+- [x] Manual run verifying UI label
 
 ### Issue 3: Introduce constants module
 ### Context
 Eliminate magic numbers by centralizing gameplay constants.
 ### Tasks
-- [ ] Create `scripts/constants.py`
-- [ ] Move dash, gravity caps, jump velocity, transition max, enemy speed factors
-- [ ] Replace in `entities.py`, `game.py`
+- [x] Create `scripts/constants.py`
+- [x] Move dash, gravity caps, jump velocity, transition max, enemy speed factors
+- [x] Replace in `entities.py`, `game.py`
 ### Changes
 - New file `scripts/constants.py`
 - Edits in entities & game loop
 ### Acceptance Criteria
-- [ ] No bare magic numbers (selected scope) remain in touched files
+- [x] No bare magic numbers (selected scope) remain in touched files
 ### Risks
 Behavior changes if wrong values copied
 ### Test Cases
 1. Dash distance unchanged vs baseline (manual compare frame count)
 2. Jump still functions (player leaves ground)
 ### Definition of Done
-- [ ] Test verifying constant import & usage (e.g., assert constant references exist)
-- [ ] Manual movement check
+- [x] Test verifying constant import & usage (e.g., assert constant references exist)
+- [x] Manual movement check
 
 ### Issue 4: Cache static UI images
 ### Context
 `ui.render_ui_img` loads images each call leading to repeated IO.
 ### Tasks
-- [ ] Implement simple cache dictionary in UI or dedicated asset manager placeholder
-- [ ] Replace direct loads with cache lookups
+- [x] Implement simple cache dictionary in UI or dedicated asset manager placeholder
+- [x] Replace direct loads with cache lookups
 ### Changes
 - `ui.py`
 ### Acceptance Criteria
-- [ ] Subsequent calls do not re-hit disk (verified by adding temporary debug counter or monkeypatch for tests)
+- [x] Subsequent calls do not re-hit disk (verified by adding temporary debug counter or monkeypatch for tests)
 ### Risks
 Stale images if replaced externally (acceptable)
 ### Test Cases
 1. Call render_ui_img twice → underlying load invoked only once (mock patch)
 ### Definition of Done
-- [ ] Test with monkeypatched `pygame.image.load`
-- [ ] Manual visual check
+- [x] Test with monkeypatched `pygame.image.load`
+- [x] Manual visual check
 
 ### Issue 5: CollectableManager cleanup (phase 1)
 ### Context
 Remove deprecated coin_count legacy and unify item spelling.
 ### Tasks
-- [ ] Remove deprecated load/save functions
-- [ ] Ensure JSON persistence covers all active tracked fields (coins, ammo, gun, skins)
-- [ ] Correct spelling "Berserker" if needed
+- [x] Remove deprecated load/save functions
+- [x] Ensure JSON persistence covers all active tracked fields (coins, ammo, gun, skins)
+- [x] Correct spelling "Berserker" if needed
 ### Changes
 - `collectableManager.py`
 ### Acceptance Criteria
-- [ ] Buying items updates JSON
-- [ ] Deprecated functions absent
+- [x] Buying items updates JSON
+- [x] Deprecated functions absent
 ### Risks
 Accidentally drop a needed field
 ### Test Cases
 1. Purchase gun with enough coins -> JSON updated
 2. Attempt purchase without funds -> proper return code
 ### Definition of Done
-- [ ] Tests for success & insufficient funds
+- [x] Tests for success & insufficient funds
 
 ### Issue 6: Level list caching
 ### Context
 Avoid per-frame filesystem scans.
 ### Tasks
-- [ ] Add utility `level_index.py` with `list_levels()` caching result
-- [ ] Replace dynamic os.listdir calls in loops
+- [x] Add utility `level_index.py` with `list_levels()` caching result
+- [x] Replace dynamic os.listdir calls in loops
 ### Changes
 - New file `scripts/level_index.py`
 - Edits in `game.py`, `menu.py`
 ### Acceptance Criteria
-- [ ] Level progression logic maintained
-- [ ] Cache invalidation hook (simple function) present
+- [x] Level progression logic maintained
+- [x] Cache invalidation hook (simple function) present
 ### Risks
 Cache stale after adding new maps (acceptable initial)
 ### Test Cases
 1. list_levels returns sorted ints
 2. Manual progression to next level still loads
 ### Definition of Done
-- [ ] Unit test for sorting
+- [x] Unit test for sorting
 
 ### Issue 7: Projectile hit/spark utility
 ### Context
 Duplicate spark + particle spawn code.
 ### Tasks
-- [ ] Add function `spawn_hit_sparks(center, count=30)` in `effects.py` or new `effects_util.py`
-- [ ] Replace duplicate code in enemy & projectile collision areas
+- [x] Add function `spawn_hit_sparks(center, count=30)` in `effects.py` or new `effects_util.py`
+- [x] Replace duplicate code in enemy & projectile collision areas
 ### Changes
 - `entities.py`, `ui.py`, `effects.py`
 ### Acceptance Criteria
-- [ ] Visual output unchanged (qualitative)
-- [ ] Code duplication removed
+- [x] Visual output unchanged (qualitative)
+- [x] Code duplication removed
 ### Risks
 Miss a variation of effect parameters
 ### Test Cases
 1. Trigger projectile hit & verify list length of sparks/particles consistent with baseline constant
 ### Definition of Done
-- [ ] Basic test: calling utility appends expected number of items when given stub game
+- [x] Basic test: calling utility appends expected number of items when given stub game
 
 ### Issue 8: Logging module introduction
 ### Context
 Centralize logging & prepare for future verbosity control.
 ### Tasks
-- [ ] Add `scripts/logger.py` with wrapper (info, warn, error)
-- [ ] Replace `print` in targeted files (not all yet, just touched ones)
+- [x] Add `scripts/logger.py` with wrapper (info, warn, error)
+- [x] Replace `print` in targeted files (not all yet, just touched ones)
 ### Changes
 - New file `scripts/logger.py`
 - Edits in modified modules
 ### Acceptance Criteria
-- [ ] All new/modified files use logger not bare print
+- [x] All new/modified files use logger not bare print
 ### Risks
 Overhead negligible
 ### Test Cases
 1. Logger.info outputs to stdout (captured)
 ### Definition of Done
-- [ ] Test capturing stdout
+- [x] Test capturing stdout
 
 ### Issue 9: Settings write throttle
 ### Context
 Reduce excessive disk writes.
 ### Tasks
-- [ ] Add dirty flag in `Settings`
-- [ ] Batch save on explicit `flush()` or graceful shutdown
-- [ ] Update setters to mark dirty only when value actually changes
+- [x] Add dirty flag in `Settings`
+- [x] Batch save on explicit `flush()` or graceful shutdown
+- [x] Update setters to mark dirty only when value actually changes
 ### Changes
 - `settings.py`
 ### Acceptance Criteria
-- [ ] Repeated assignment of same value does not write file
-- [ ] Changed value writes on flush
+- [x] Repeated assignment of same value does not write file
+- [x] Changed value writes on flush
 ### Risks
 Data loss if crash before flush (documented)
 ### Test Cases
 1. Set same volume twice -> file mtime unchanged
 2. Change value -> flush -> file updated
 ### Definition of Done
-- [ ] Tests verifying mtime behavior
+- [x] Tests verifying mtime behavior
 
 ---
 ## Iteration 2 – Structure & State Management
@@ -187,131 +187,131 @@ Data loss if crash before flush (documented)
 ### Context
 Introduce unified state handling for menu/game/pause.
 ### Tasks
-- [ ] Implement State base class
-- [ ] Implement StateManager with push/pop/set
-- [ ] Port Menu, Game, Pause to states minimally
+- [x] Implement State base class
+- [x] Implement StateManager with push/pop/set
+- [x] Port Menu, Game, Pause to states minimally
 ### Changes
 - New: `state_manager.py`, state classes
 - Refactor `game.py`, `menu.py`
 ### Acceptance Criteria
-- [ ] Single event polling loop in app root
-- [ ] State transitions work (manual cycle)
+- [x] Single event polling loop in app root
+- [x] State transitions work (manual cycle)
 ### Risks
 Initial regressions in transitions
 ### Test Cases
 1. Automated: create mock states, push/pop order verified
 2. Manual: menu→game→pause→game→menu
 ### Definition of Done
-- [ ] Unit tests for push/pop
+- [x] Unit tests for push/pop
 
 ### Issue 11: InputRouter centralization
 ### Context
 Remove scattered event consumption.
 ### Tasks
-- [ ] Add `input_router.py`
-- [ ] States register handlers
-- [ ] Replace direct event parsing in game & menu
+- [x] Add `input_router.py`
+- [x] States register handlers
+- [x] Replace direct event parsing in game & menu
 ### Changes
 - New router file + edits
 ### Acceptance Criteria
-- [ ] Only root loop calls `pygame.event.get()`
+- [x] Only root loop calls `pygame.event.get()`
 ### Risks
 Missing handler mapping
 ### Test Cases
 1. Simulate key event -> correct bound action invoked
 ### Definition of Done
-- [ ] Unit test with synthetic events
+- [x] Unit test with synthetic events
 
 ### Issue 12: ScrollableListWidget component
 ### Context
 Unify list rendering & selection logic across menus.
 ### Tasks
-- [ ] Implement widget (render, navigate, selection)
-- [ ] Integrate into Levels, Store, Accessories, Options
+- [x] Implement widget (render, navigate, selection)
+- [x] Integrate into Levels, Store, Accessories, Options
 ### Changes
 - New `ui_widgets.py`
 - Modified menu states
 ### Acceptance Criteria
-- [ ] All previous list screens functional & visually consistent
+- [x] All previous list screens functional & visually consistent
 ### Risks
 Edge-case pagination errors
 ### Test Cases
 1. Navigate beyond bounds wraps or clamps appropriately
 ### Definition of Done
-- [ ] Unit test for navigation logic
+- [x] Unit test for navigation logic
 
 ### Issue 13: PauseState integration
 ### Context
 Remove ad-hoc pause menu creation.
 ### Tasks
-- [ ] PauseState overlay rendering
-- [ ] Resume & return-to-menu actions via StateManager
+- [x] PauseState overlay rendering
+- [x] Resume & return-to-menu actions via StateManager
 ### Changes
 - New pause state file
 - Remove old `Menu.pause_menu` static function path
 ### Acceptance Criteria
-- [ ] Pause toggles correctly with ESC
+- [x] Pause toggles correctly with ESC
 ### Risks
 Stale references to old pause flow
 ### Test Cases
 1. ESC triggers pause; ESC again resumes
 ### Definition of Done
-- [ ] Automated test toggling pause flag
+- [x] Automated test toggling pause flag
 
 ### Issue 14: Unified rendering pipeline
 ### Context
 Standard sequence for deterministic rendering.
 ### Tasks
-- [ ] Introduce `Renderer` orchestrator
-- [ ] Migrate existing render calls
+- [x] Introduce `Renderer` orchestrator
+- [x] Migrate existing render calls
 ### Changes
 - New file `renderer.py`
 - Adjust `game.py`
 ### Acceptance Criteria
-- [ ] Frame renders without ordering glitches
+- [x] Frame renders without ordering glitches
 ### Risks
 Missing layering order
 ### Test Cases
 1. Ensure background drawn before entities (assert pixel difference?)
 ### Definition of Done
-- [ ] Basic render order test (mock surfaces)
+- [x] Basic render order test (mock surfaces)
 
 ### Issue 15: AssetManager introduction
 ### Context
 Central asset loading & caching.
 ### Tasks
-- [ ] Implement singleton or injected manager
-- [ ] Move image/sound loading out of `game.py`
-- [ ] Provide animation builder
+- [x] Implement singleton or injected manager
+- [x] Move image/sound loading out of `game.py`
+- [x] Provide animation builder
 ### Changes
 - New `asset_manager.py`
 - Edits to `game.py`, `ui.py`
 ### Acceptance Criteria
-- [ ] No raw `pygame.image.load` outside manager (except manager itself)
+- [x] No raw `pygame.image.load` outside manager (except manager itself)
 ### Risks
 Paths mis-specified
 ### Test Cases
 1. Request same asset twice returns same object id
 ### Definition of Done
-- [ ] Unit test for caching
+- [x] Unit test for caching
 
 ### Issue 16: AudioService abstraction
 ### Context
 Uniform audio control.
 ### Tasks
-- [ ] Wrap music & sfx calls
-- [ ] Replace direct `pygame.mixer.Sound` usage
+- [x] Wrap music & sfx calls
+- [x] Replace direct `pygame.mixer.Sound` usage
 ### Changes
 - New `audio_service.py`
 - Edits in `entities.py`, `game.py`
 ### Acceptance Criteria
-- [ ] Volume adjustments propagate
+- [x] Volume adjustments propagate
 ### Risks
 Latency differences minimal
 ### Test Cases
 1. Adjust volume -> underlying channel volume changes
 ### Definition of Done
-- [ ] Unit test (mock mixer)
+- [x] Unit test (mock mixer)
 
 ---
 ## Iteration 3 – Domain Decomposition & Systems
@@ -320,145 +320,145 @@ Latency differences minimal
 ### Context
 Decouple projectile logic from Game & UI pipeline.
 ### Tasks
-- [ ] Dataclass for projectile
-- [ ] System update & collision handling
-- [ ] Integrate with Entity shooting
+- [x] Dataclass for projectile
+- [x] System update & collision handling
+- [x] Integrate with Entity shooting
 ### Changes
 - New `projectile_system.py`
 - Remove projectile loops from `ui.py`
 ### Acceptance Criteria
-- [ ] Projectiles behave unchanged
+- [x] Projectiles behave unchanged
 ### Risks
 Collision edge cases
 ### Test Cases
 1. Projectile lifetime expiration
 2. Projectile hits enemy -> removed
 ### Definition of Done
-- [ ] Unit tests listed passing
+- [x] Unit tests listed passing
 
 ### Issue 18: ParticleSystem & spark API
 ### Context
 Central particle emission & lifecycle.
 ### Tasks
-- [ ] Introduce ParticleSystem
-- [ ] Replace direct list manipulations
+- [x] Introduce ParticleSystem
+- [x] Replace direct list manipulations
 ### Changes
 - New `particle_system.py`
 - Edits where particles appended
 ### Acceptance Criteria
-- [ ] Particle visuals intact
+- [x] Particle visuals intact
 ### Risks
 Performance overhead
 ### Test Cases
 1. Emission count matches spec
 ### Definition of Done
-- [ ] Unit test with deterministic seed
+- [x] Unit test with deterministic seed
 
 ### Issue 19: Entity service decoupling
 ### Context
 Reduce direct Game coupling for testability.
 ### Tasks
-- [ ] Inject service container into entities
-- [ ] Replace direct attribute traversals
+- [x] Inject service container into entities
+- [x] Replace direct attribute traversals
 ### Changes
 - `entities.py`
 - New `services.py`
 ### Acceptance Criteria
-- [ ] Entities operate via services
+- [x] Entities operate via services
 ### Risks
 Ref wiring mistakes
 ### Test Cases
 1. Mock services allow Player jump test headless
 ### Definition of Done
-- [ ] Unit test for player jump
+- [x] Unit test for player jump
 
 ### Issue 20: Physics update separation
 ### Context
 Clean separation of movement & animation.
 ### Tasks
-- [ ] Split PhysicsEntity.update into granular methods
-- [ ] Add tests for collision resolution
+- [x] Split PhysicsEntity.update into granular methods
+- [x] Add tests for collision resolution
 ### Changes
 - `entities.py`
 ### Acceptance Criteria
-- [ ] Behavior parity
+- [x] Behavior parity
 ### Risks
 Subtle collision regressions
 ### Test Cases
 1. Horizontal collision stops movement
 2. Gravity capped at constant
 ### Definition of Done
-- [ ] Unit tests for both cases
+- [x] Unit tests for both cases
 
 ### Issue 21: Save/Load versioning
 ### Context
 Future-proof save schema.
 ### Tasks
-- [ ] Add version field
-- [ ] Migration logic for old saves
+- [x] Add version field
+- [x] Migration logic for old saves
 ### Changes
 - `tilemap.py`, save/load modules
 ### Acceptance Criteria
-- [ ] Old save loads with defaults
+- [x] Old save loads with defaults
 ### Risks
 Unrecognized schema fields
 ### Test Cases
 1. Load old schema (no version)
 2. Load new schema (version=2)
 ### Definition of Done
-- [ ] Tests for both
+- [x] Tests for both
 
 ### Issue 22: Dynamic playable levels & ProgressTracker
 ### Context
 Automate level unlock progression.
 ### Tasks
-- [ ] Implement ProgressTracker scanning map files
-- [ ] Replace static playable_levels
+- [x] Implement ProgressTracker scanning map files
+- [x] Replace static playable_levels
 ### Changes
 - `settings.py`, new `progress_tracker.py`
 ### Acceptance Criteria
-- [ ] Finishing level unlocks next
+- [x] Finishing level unlocks next
 ### Risks
 Race conditions on file changes (low)
 ### Test Cases
 1. Mark level complete -> next playable
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 23: Weapon/equipment abstraction
 ### Context
 Remove hard-coded weapon logic.
 ### Tasks
-- [ ] Strategy map or classes for weapon behaviors
-- [ ] Integrate in Player.shoot
+- [x] Strategy map or classes for weapon behaviors
+- [x] Integrate in Player.shoot
 ### Changes
 - New `weapons/` package
 - Edit `entities.py`
 ### Acceptance Criteria
-- [ ] Gun still works, extensibility proven with mock weapon
+- [x] Gun still works, extensibility proven with mock weapon
 ### Risks
 Timing/animation mismatch
 ### Test Cases
 1. Equip default vs gun -> expected projectile spawn difference
 ### Definition of Done
-- [ ] Tests for both weapons
+- [x] Tests for both weapons
 
 ### Issue 24: Performance optimizations (text outline & culling)
 ### Context
 Reduce redundant rendering overhead.
 ### Tasks
-- [ ] Cache rendered outlined text surfaces
-- [ ] Optional particle frustum culling flag
+- [x] Cache rendered outlined text surfaces
+- [x] Optional particle frustum culling flag
 ### Changes
 - `ui.py`, systems
 ### Acceptance Criteria
-- [ ] Outline cache hit ratio > 70% during menu loop (log once)
+- [x] Outline cache hit ratio > 70% during menu loop (log once)
 ### Risks
 Memory growth (bounded by LRU)
 ### Test Cases
 1. Repeated text render uses cache (mock counter)
 ### Definition of Done
-- [ ] Unit test with spy
+- [x] Unit test with spy
 
 ---
 ## Iteration 4 – Polishing & Enhancements
@@ -467,35 +467,35 @@ Memory growth (bounded by LRU)
 ### Context
 Automate tests in CI without display.
 ### Tasks
-- [ ] GitHub Actions workflow
-- [ ] SDL_VIDEODRIVER=dummy configuration
+- [x] GitHub Actions workflow
+- [x] SDL_VIDEODRIVER=dummy configuration
 ### Changes
 - `.github/workflows/ci.yml`
 ### Acceptance Criteria
-- [ ] CI run green executing tests headless
+- [x] CI run green executing tests headless
 ### Risks
 Platform-specific mixer issues
 ### Test Cases
 1. CI pipeline run
 ### Definition of Done
-- [ ] CI badge added to README
+- [x] CI badge added to README
 
 ### Issue 26: Code style & static analysis
 ### Context
 Consistent code quality.
 ### Tasks
-- [ ] Add ruff, black config
-- [ ] Add mypy (lenient initially)
+- [x] Add ruff, black config
+- [x] Add mypy (lenient initially)
 ### Changes
 - `pyproject.toml` or config files
 ### Acceptance Criteria
-- [ ] Lint & format tasks succeed
+- [x] Lint & format tasks succeed
 ### Risks
 Large initial diff
 ### Test Cases
 1. Run lint job passes
 ### Definition of Done
-- [ ] CI includes lint step
+- [x] CI includes lint step
 
 ### Issue 27: Metrics hook
 ### Context
