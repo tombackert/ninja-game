@@ -1,5 +1,6 @@
 import pygame
 import pytest
+
 from scripts.asset_manager import AssetManager
 
 

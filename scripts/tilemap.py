@@ -1,12 +1,14 @@
-import pygame
 import json
-from scripts.entities import Enemy, Player
-from scripts.settings import settings
-from scripts.utils import Animation
-from datetime import datetime
 import os
 import traceback
+from datetime import datetime
+
+import pygame
+
+from scripts.entities import Enemy, Player
 from scripts.logger import get_logger
+from scripts.settings import settings
+from scripts.utils import Animation
 
 log = get_logger("tilemap")
 

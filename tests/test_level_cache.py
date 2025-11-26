@@ -1,4 +1,4 @@
-from scripts.level_cache import list_levels, invalidate_level_cache
+from scripts.level_cache import invalidate_level_cache, list_levels
 
 
 def test_level_cache_basic(tmp_path, monkeypatch):

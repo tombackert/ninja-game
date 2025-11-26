@@ -1,8 +1,9 @@
 # timer.py
-import pygame
 import json
 import os
 from datetime import datetime
+
+import pygame
 
 BEST_TIMES_FILE = "data/best_times.json"
 

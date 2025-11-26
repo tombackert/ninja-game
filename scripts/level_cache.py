@@ -7,9 +7,9 @@ changes, or manually via invalidate_level_cache().
 """
 
 from __future__ import annotations
+
 import os
-from typing import List
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 MAPS_DIR = "data/maps"
 

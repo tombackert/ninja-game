@@ -1,7 +1,9 @@
-import pygame
 import os
-from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
+
+import pygame
+
 from game import Game
+from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 pygame.init()

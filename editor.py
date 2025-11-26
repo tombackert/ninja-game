@@ -1,13 +1,13 @@
+import sys
+
 import pygame
 import pygame.font
-import sys
-from scripts.utils import load_images, load_image
-from scripts.tilemap import Tilemap
-from scripts.entities import Player
-from scripts.entities import Enemy
-from scripts.settings import settings
-from scripts.displayManager import DisplayManager
 
+from scripts.displayManager import DisplayManager
+from scripts.entities import Enemy, Player
+from scripts.settings import settings
+from scripts.tilemap import Tilemap
+from scripts.utils import load_image, load_images
 
 MAP_NAME = "20"  # Default target map (may not exist). Will fallback to first available.
 CURRENT_MAP = "data/maps/" + str(MAP_NAME) + ".json"

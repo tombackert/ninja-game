@@ -6,17 +6,18 @@ and tuning usage.
 """
 
 from __future__ import annotations
+
 import math
 import random
 from typing import Tuple
 
-from scripts.spark import Spark
-from scripts.particle import Particle
 from scripts.constants import (
     SPARK_COUNT_ENEMY_HIT,
-    SPARK_PARTICLE_SPEED_MAX,
     SPARK_COUNT_PROJECTILE,
+    SPARK_PARTICLE_SPEED_MAX,
 )
+from scripts.particle import Particle
+from scripts.spark import Spark
 
 
 def spawn_hit_sparks(game, center: Tuple[float, float], count: int | None = None):

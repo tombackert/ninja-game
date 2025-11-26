@@ -1,7 +1,9 @@
 import os
+
 import pygame
-from scripts.state_manager import StateManager, GameState
+
 from scripts.input_router import InputRouter
+from scripts.state_manager import GameState, StateManager
 
 os.environ["NINJA_GAME_TESTING"] = "1"
 

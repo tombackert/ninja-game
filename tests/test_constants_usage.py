@@ -6,8 +6,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from scripts.constants import JUMP_VELOCITY, DASH_DURATION_FRAMES  # noqa: E402
 from game import Game  # noqa: E402
+from scripts.constants import DASH_DURATION_FRAMES, JUMP_VELOCITY  # noqa: E402
 
 
 def make_minimal_game():

@@ -1,5 +1,6 @@
 import pygame
 import pytest
+
 from scripts.audio_service import AudioService
 from scripts.settings import settings
 

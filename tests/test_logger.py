@@ -1,5 +1,6 @@
-from scripts.logger import get_logger
 import io
+
+from scripts.logger import get_logger
 
 
 def test_logger_info_output():

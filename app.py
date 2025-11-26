@@ -6,19 +6,22 @@ pause request which results in a PauseState being pushed.
 """
 
 from __future__ import annotations
+
 import os
+
 import pygame
-from scripts.state_manager import (
-    StateManager,
-    GameState,
-    PauseState,
-    MenuState,
-    LevelsState,
-    StoreState,
-    AccessoriesState,
-    OptionsState,
-)
+
 from scripts.input_router import InputRouter
+from scripts.state_manager import (
+    AccessoriesState,
+    GameState,
+    LevelsState,
+    MenuState,
+    OptionsState,
+    PauseState,
+    StateManager,
+    StoreState,
+)
 
 
 def main():

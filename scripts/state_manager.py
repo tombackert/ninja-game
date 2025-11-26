@@ -26,10 +26,13 @@ Design Notes:
 """
 
 from __future__ import annotations
+
 from typing import List, Sequence
+
 import pygame
-from scripts.ui_widgets import ScrollableListWidget
+
 from scripts.logger import get_logger
+from scripts.ui_widgets import ScrollableListWidget
 
 _state_log = get_logger("state")
 
@@ -297,13 +300,12 @@ class GameState(State):
                 g.endpoint = True
 
         from scripts.constants import (
-            TRANSITION_MAX,
             DEAD_ANIM_FADE_START,
             RESPAWN_DEAD_THRESHOLD,
+            TRANSITION_MAX,
         )
         from scripts.level_cache import list_levels
         from scripts.settings import settings
-        from scripts.effects import Effects
 
         if g.endpoint:
             g.transition += 1
@@ -494,10 +496,10 @@ class LevelsState(State):
 
     def __init__(self) -> None:
         from scripts.displayManager import DisplayManager
-        from scripts.ui import UI
         from scripts.level_cache import list_levels
-        from scripts.settings import settings
         from scripts.progress_tracker import get_progress_tracker
+        from scripts.settings import settings
+        from scripts.ui import UI
 
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
@@ -598,10 +600,10 @@ class StoreState(State):
     name = "StoreState"
 
     def __init__(self) -> None:
-        from scripts.displayManager import DisplayManager
-        from scripts.ui import UI
         from scripts.collectableManager import CollectableManager
+        from scripts.displayManager import DisplayManager
         from scripts.settings import settings
+        from scripts.ui import UI
 
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
@@ -693,10 +695,10 @@ class AccessoriesState(State):
     name = "AccessoriesState"
 
     def __init__(self) -> None:
-        from scripts.displayManager import DisplayManager
-        from scripts.ui import UI
         from scripts.collectableManager import CollectableManager
+        from scripts.displayManager import DisplayManager
         from scripts.settings import settings
+        from scripts.ui import UI
 
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
@@ -824,8 +826,8 @@ class OptionsState(State):
 
     def __init__(self) -> None:
         from scripts.displayManager import DisplayManager
-        from scripts.ui import UI
         from scripts.settings import settings
+        from scripts.ui import UI
 
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)

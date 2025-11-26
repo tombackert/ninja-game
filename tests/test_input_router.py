@@ -1,5 +1,7 @@
 import os
+
 import pygame
+
 from scripts.input_router import InputRouter
 
 os.environ["NINJA_GAME_TESTING"] = "1"

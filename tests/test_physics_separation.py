@@ -1,11 +1,12 @@
 import os
+
 import pygame
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ["NINJA_GAME_TESTING"] = "1"
 
+from scripts.constants import GRAVITY_ACCEL, MAX_FALL_SPEED  # noqa: E402
 from scripts.entities import PhysicsEntity  # noqa: E402
-from scripts.constants import MAX_FALL_SPEED, GRAVITY_ACCEL  # noqa: E402
 
 
 class DummyTilemap:

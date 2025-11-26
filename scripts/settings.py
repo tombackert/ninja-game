@@ -1,5 +1,6 @@
 import json
 import os
+
 from scripts.logger import get_logger
 
 log = get_logger("settings")

@@ -41,12 +41,12 @@ Tests (added in `tests/test_projectile_system.py`) cover:
 
 from __future__ import annotations
 
-from typing import Iterator, List, Dict, Any
+from typing import Any, Dict, Iterator, List
 
 import pygame
 
-from .constants import PROJECTILE_LIFETIME_FRAMES, DASH_MIN_ACTIVE_ABS
-from .effects_util import spawn_projectile_sparks, spawn_hit_sparks
+from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
+from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
 
 
 class ProjectileSystem:

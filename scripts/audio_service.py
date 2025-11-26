@@ -14,9 +14,12 @@ Design:
 """
 
 from __future__ import annotations
-from typing import Dict
+
 import os
+from typing import Dict
+
 import pygame
+
 from scripts.asset_manager import AssetManager
 from scripts.settings import settings
 

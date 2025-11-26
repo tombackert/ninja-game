@@ -19,8 +19,10 @@ Design notes:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Iterable, List, Tuple
+
 from scripts.particle import Particle
 from scripts.spark import Spark
 

@@ -3,22 +3,11 @@ import random
 
 import pygame
 
-from scripts.particle import Particle
-from scripts.spark import Spark
-from scripts.effects_util import spawn_hit_sparks
-from scripts.services import ServiceContainer
-from scripts.settings import settings
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
-    GRAVITY_ACCEL,
-    MAX_FALL_SPEED,
-    HORIZONTAL_FRICTION,
-    WALL_SLIDE_MAX_SPEED,
-    JUMP_VELOCITY,
-    WALL_JUMP_HORIZONTAL_VEL,
-    WALL_JUMP_VERTICAL_VEL,
-    DASH_DURATION_FRAMES,
+    AIR_TIME_FATAL,
     DASH_DECEL_TRIGGER_FRAME,
+    DASH_DURATION_FRAMES,
     DASH_MIN_ACTIVE_ABS,
     DASH_SPEED,
     DASH_TRAIL_PARTICLE_SPEED,
@@ -26,8 +15,19 @@ from scripts.constants import (
     ENEMY_DIRECTION_SCALE_LOG,
     ENEMY_SHOOT_BASE,
     ENEMY_SHOOT_SCALE_LOG,
-    AIR_TIME_FATAL,
+    GRAVITY_ACCEL,
+    HORIZONTAL_FRICTION,
+    JUMP_VELOCITY,
+    MAX_FALL_SPEED,
+    WALL_JUMP_HORIZONTAL_VEL,
+    WALL_JUMP_VERTICAL_VEL,
+    WALL_SLIDE_MAX_SPEED,
 )
+from scripts.effects_util import spawn_hit_sparks
+from scripts.particle import Particle
+from scripts.services import ServiceContainer
+from scripts.settings import settings
+from scripts.spark import Spark
 
 
 class PhysicsEntity:
@@ -295,8 +295,8 @@ class Player(PhysicsEntity):
         self._lives = value
 
     def shoot(self):
-        from scripts.weapons import get_weapon  # local import to avoid circulars
         from scripts.collectableManager import CollectableManager as cm
+        from scripts.weapons import get_weapon  # local import to avoid circulars
 
         # Map selected index to weapon name list
         try:

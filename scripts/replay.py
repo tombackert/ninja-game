@@ -12,10 +12,12 @@ Design goals:
 """
 
 from __future__ import annotations
+
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
-import json
+
 import pygame
 
 from scripts.settings import settings as global_settings

@@ -1,8 +1,10 @@
 from __future__ import annotations
-from .base import Weapon, FireResult
+
+from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import PROJECTILE_SPEED
 from scripts.settings import settings
-from scripts.collectableManager import CollectableManager as cm
+
+from .base import FireResult, Weapon
 
 
 class GunWeapon(Weapon):

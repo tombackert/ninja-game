@@ -1,8 +1,8 @@
 import pygame
 import pytest
 
-from scripts.renderer import Renderer
 from game import Game
+from scripts.renderer import Renderer
 
 
 @pytest.fixture(scope="module")

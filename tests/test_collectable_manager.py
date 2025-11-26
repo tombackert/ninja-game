@@ -1,9 +1,10 @@
-import os
 import json
+import os
+
 import pygame
 
-from scripts.collectableManager import CollectableManager, DATA_FILE
 from game import Game
+from scripts.collectableManager import DATA_FILE, CollectableManager
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 pygame.init()

@@ -16,6 +16,7 @@ entities instead of raw `game` reference. During migration we still keep
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Protocol, Tuple
 

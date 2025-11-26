@@ -22,10 +22,13 @@ Future Extensions (Roadmap):
 """
 
 from __future__ import annotations
-from typing import Dict, List
+
 import os
+from typing import Dict, List
+
 import pygame
-from scripts.utils import Animation, BASE_IMG_PATH
+
+from scripts.utils import BASE_IMG_PATH, Animation
 
 IMG_ROOT = BASE_IMG_PATH  # 'data/images/'
 SFX_ROOT = "data/sfx/"

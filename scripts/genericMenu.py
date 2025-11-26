@@ -1,5 +1,7 @@
-import pygame
 import sys
+
+import pygame
+
 from scripts.settings import settings
 from scripts.ui import UI
 

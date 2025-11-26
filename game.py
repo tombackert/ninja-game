@@ -1,32 +1,32 @@
 # Deprecated legacy game loop for backward compatibility.!!!!
 
 
-import pygame
-import time
 
-from scripts.displayManager import DisplayManager
-from scripts.entities import Player, Enemy
+import pygame
+
 from scripts.asset_manager import AssetManager
 from scripts.audio_service import AudioService
-from scripts.tilemap import Tilemap
 from scripts.clouds import Clouds
-from scripts.timer import Timer
-from scripts.constants import (
-    TRANSITION_START,
-    TRANSITION_MAX,
-    LEAF_SPAWNER_CLOUD_COUNT,
-    DEAD_ANIM_FADE_START,
-    RESPAWN_DEAD_THRESHOLD,
-)
-from scripts.settings import settings
 from scripts.collectableManager import CollectableManager
-from scripts.level_cache import list_levels
-from scripts.ui import UI
-from scripts.keyboardManager import KeyboardManager
+from scripts.constants import (
+    DEAD_ANIM_FADE_START,
+    LEAF_SPAWNER_CLOUD_COUNT,
+    RESPAWN_DEAD_THRESHOLD,
+    TRANSITION_MAX,
+    TRANSITION_START,
+)
+from scripts.displayManager import DisplayManager
 from scripts.effects import Effects
-from scripts.projectile_system import ProjectileSystem
+from scripts.entities import Enemy, Player
+from scripts.keyboardManager import KeyboardManager
+from scripts.level_cache import list_levels
 from scripts.particle_system import ParticleSystem
+from scripts.projectile_system import ProjectileSystem
 from scripts.replay import ReplayManager
+from scripts.settings import settings
+from scripts.tilemap import Tilemap
+from scripts.timer import Timer
+from scripts.ui import UI
 
 """Legacy monolithic Game loop.
 

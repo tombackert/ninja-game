@@ -1,5 +1,7 @@
 import os
+
 import pygame
+
 from scripts.ui import UI
 
 # Initialize pygame for image operations (headless)

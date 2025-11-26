@@ -24,8 +24,9 @@ Design Notes:
 """
 
 from __future__ import annotations
+
 from typing import List, Optional
-import time
+
 import pygame
 
 try:  # Local logger (not mandatory for tests)

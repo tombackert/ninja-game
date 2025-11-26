@@ -1,7 +1,7 @@
-import sys
-import time
 import platform
 import random
+import sys
+import time
 
 import pygame
 

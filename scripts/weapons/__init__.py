@@ -4,9 +4,9 @@ Provides abstraction for weapon behaviors so Player and enemies call
 polymorphic objects instead of hard-coded branching on selected_weapon.
 """
 
-from .base import Weapon, FireResult, NoneWeapon
-from .registry import get_weapon, register_weapon, list_weapons
+from .base import FireResult, NoneWeapon, Weapon
 from .gun import GunWeapon
+from .registry import get_weapon, list_weapons, register_weapon
 
 # Register built-ins on import
 register_weapon("none", NoneWeapon())  # no-op default

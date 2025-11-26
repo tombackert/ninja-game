@@ -1,8 +1,9 @@
 import os
+
 import pygame
 
-from scripts.projectile_system import ProjectileSystem
 from scripts.constants import PROJECTILE_LIFETIME_FRAMES
+from scripts.projectile_system import ProjectileSystem
 
 
 class DummyTilemap:

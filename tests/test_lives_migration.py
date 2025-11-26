@@ -4,8 +4,8 @@ import os
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ["NINJA_GAME_TESTING"] = "1"
 
-from scripts.entities import Player  # noqa: E402
 from game import Game  # noqa: E402
+from scripts.entities import Player  # noqa: E402
 
 
 def test_player_lives_property_alias():

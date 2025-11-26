@@ -1,4 +1,5 @@
 import os
+
 from scripts.progress_tracker import ProgressTracker
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")

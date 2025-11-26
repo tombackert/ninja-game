@@ -18,11 +18,13 @@ Tests will assert:
 """
 
 from __future__ import annotations
+
+import os
 from dataclasses import dataclass, field
 from typing import List, Set
-from scripts.logger import get_logger
-import os
+
 from scripts.level_cache import list_levels
+from scripts.logger import get_logger
 from scripts.settings import settings
 
 log = get_logger("progress")

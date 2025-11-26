@@ -1,7 +1,8 @@
-import os
 import json
+import os
 from dataclasses import dataclass
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
+
 from scripts.collectables import Collectables
 
 COIN_IMAGE_PATH = "collectables/coin.png"

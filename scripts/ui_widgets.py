@@ -9,9 +9,12 @@ own options list; higher level states decide which actions map to
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Callable, Sequence
+from typing import Callable, List, Sequence
+
 import pygame
+
 from scripts.ui import UI
 
 ActivateCallback = Callable[[str, int], None]

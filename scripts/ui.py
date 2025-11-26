@@ -1,6 +1,8 @@
-import pygame
 import random
 from collections import OrderedDict
+
+import pygame
+
 from scripts.particle import Particle
 
 

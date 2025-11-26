@@ -1,6 +1,8 @@
 import os
+
 import pytest
-from scripts.state_manager import StateManager, State
+
+from scripts.state_manager import State, StateManager
 
 os.environ["NINJA_GAME_TESTING"] = "1"  # ensure Menu/Game constructors stay non-interactive
 
