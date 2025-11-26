@@ -113,7 +113,7 @@ class ReplayGhost:
         self.recording = recording
         self._assets = assets or {}
         self._index = 0
-        self._tint_cache: Dict[tuple[str, int], pygame.Surface] = {}
+        self._tint_cache: Dict[tuple, pygame.Surface] = {}
         self._base_frame_cache: Dict[str, tuple[List[pygame.Surface], int]] = {}
         if self.recording.frames:
             self._prepare_animation_cache()
