@@ -681,18 +681,18 @@ Schema churn; performance overhead
 ### Context
 Expose gym-like API for RL training.
 ### Tasks
-- [ ] `TrainingEnv.reset()` builds initial snapshot
-- [ ] `TrainingEnv.step(action_dict)` advances fixed ticks
+- [x] `TrainingEnv.reset()` builds initial snapshot
+- [x] `TrainingEnv.step(action_dict)` advances fixed ticks
 ### Changes
 - `training_env.py`
 ### Acceptance Criteria
-- [ ] Deterministic sequence with fixed seed
+- [x] Deterministic sequence with fixed seed
 ### Risks
 Drift if actions not applied consistently
 ### Test Cases
 1. Two seeded runs produce identical reward sequence
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 38: RewardShaper Module
 ### Context
