@@ -698,18 +698,18 @@ Drift if actions not applied consistently
 ### Context
 Pluggable reward shaping logic.
 ### Tasks
-- [ ] Implement default shaping (progress, survival)
-- [ ] Configurable weights
+- [x] Implement default shaping (progress, survival)
+- [x] Configurable weights
 ### Changes
 - `reward_shaper.py`
 ### Acceptance Criteria
-- [ ] Reward matches documented formula
+- [x] Reward matches documented formula
 ### Risks
 Overfitting shaping early
 ### Test Cases
 1. Known scenario -> expected reward value
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 39: NetSyncService Scaffolding
 ### Context
