@@ -609,20 +609,20 @@ Time sink
 ### Context
 Provide a single seeded RNG stream (and optional substreams) to ensure deterministic simulation (supports rollback, replays, RL).
 ### Tasks
-- [ ] Implement RNG wrapper (seed, get_state, set_state)
-- [ ] Replace `random.random()` calls in gameplay with service usage
+- [x] Implement RNG wrapper (seed, get_state, set_state)
+- [x] Replace `random.random()` calls in gameplay with service usage
 ### Changes
 - `rng_service.py`
 - Edits in `entities.py`, `effects.py`, particle spawning
 ### Acceptance Criteria
-- [ ] All randomness goes through service
-- [ ] Can snapshot & restore RNG state producing identical next values
+- [x] All randomness goes through service
+- [x] Can snapshot & restore RNG state producing identical next values
 ### Risks
 Missed direct random usage causing nondeterminism
 ### Test Cases
 1. Capture state → generate N values → restore → regenerate → sequences match
 ### Definition of Done
-- [ ] Unit test for state roundtrip
+- [x] Unit test for state roundtrip
 
 ### Issue 34: SimulationSnapshot DTO & Serializer
 ### Context
