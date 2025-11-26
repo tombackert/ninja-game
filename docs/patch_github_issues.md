@@ -732,18 +732,18 @@ Premature complexity
 ### Context
 Register & invoke behavioral policies (scripted or learned) per enemy.
 ### Tasks
-- [ ] Service with registry {policy_name: callable}
-- [ ] Enemy references selected policy each tick
+- [x] Service with registry {policy_name: callable}
+- [x] Enemy references selected policy each tick
 ### Changes
 - `policy_service.py`, `entities.py`
 ### Acceptance Criteria
-- [ ] Switch policy at runtime alters behavior deterministically
+- [x] Switch policy at runtime alters behavior deterministically
 ### Risks
 Policy side-effects
 ### Test Cases
 1. Two different policies produce different action sequence given same observation
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 41: Prediction & Reconciliation
 ### Context
