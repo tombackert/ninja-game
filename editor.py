@@ -58,12 +58,7 @@ class Editor:
                 candidates = [f for f in os.listdir(map_dir) if f.endswith(".json")]
             except FileNotFoundError:
                 candidates = []
-            numeric = []
-            for f in candidates:
-                try:
-                    numeric.append(int(f.split(".")[0]))
-                except Exception:
-                    continue
+            numeric = [int(f.split(".")[0]) for f in candidates if f.split(".")[0].isdigit()]
             if numeric:
                 numeric.sort()
                 fallback = numeric[0]
