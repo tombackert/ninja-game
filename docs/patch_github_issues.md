@@ -628,20 +628,20 @@ Missed direct random usage causing nondeterminism
 ### Context
 Capture full deterministic state for rollback, networking, replay.
 ### Tasks
-- [ ] Define dataclasses for snapshot
-- [ ] Implement serialize/deserialize (JSON or binary first pass)
-- [ ] Integrate snapshot production in GameState
+- [x] Define dataclasses for snapshot
+- [x] Implement serialize/deserialize (JSON or binary first pass)
+- [x] Integrate snapshot production in GameState
 ### Changes
 - `snapshot.py`
 - `game_state.py`
 ### Acceptance Criteria
-- [ ] Snapshot roundtrip equality (hash or deep compare)
+- [x] Snapshot roundtrip equality (hash or deep compare)
 ### Risks
 Floating point drift; large payload size
 ### Test Cases
 1. Create snapshot -> serialize -> deserialize -> compare hashed canonical form
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 35: Rollback Buffer
 ### Context
