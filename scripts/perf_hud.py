@@ -46,11 +46,14 @@ class PerformanceSample:
 class PerformanceHUD:
     enabled: bool = True
     alpha: float = 0.1  # EMA smoothing factor for work segment
+    log_path: Optional[str] = None
     _t_full_start: float = field(default=0.0, init=False, repr=False)
     _t_work_start: float = field(default=0.0, init=False, repr=False)
     _last_full_ms: float = field(default=0.0, init=False)
     _avg_work_ms: Optional[float] = field(default=None, init=False)
     _last_sample: Optional[PerformanceSample] = field(default=None, init=False)
+    _csv_file: Optional[object] = field(default=None, init=False, repr=False)
+    _csv_writer: Optional[object] = field(default=None, init=False, repr=False)
 
     def begin_frame(self) -> None:
         if not self.enabled:
@@ -102,6 +105,46 @@ class PerformanceHUD:
             else:
                 fps = None
             self._last_sample.fps = fps
+            
+            if self.log_path:
+                self._log_sample()
+
+    def _log_sample(self) -> None:
+        if not self._last_sample:
+            return
+        
+        # Lazy init file
+        if self._csv_file is None:
+            import csv
+            import json
+            import os
+            
+            file_exists = os.path.isfile(self.log_path)
+            try:
+                self._csv_file = open(self.log_path, "a", newline="")
+                self._csv_writer = csv.writer(self._csv_file)
+                if not file_exists:
+                    self._csv_writer.writerow(["timestamp", "work_ms", "full_ms", "fps", "counts"])
+            except Exception:
+                # Silently fail if file can't be opened to avoid crashing game
+                self.log_path = None 
+                return
+
+        import json
+        import time
+        
+        counts = getattr(self, "_game_counts", {})
+        try:
+            row = [
+                time.time(),
+                f"{self._last_sample.work_ms:.3f}",
+                f"{self._last_sample.full_ms:.3f}" if self._last_sample.full_ms else "",
+                f"{self._last_sample.fps:.2f}" if self._last_sample.fps else "",
+                json.dumps(counts)
+            ]
+            self._csv_writer.writerow(row)
+        except Exception:
+            pass
 
     @property
     def last_sample(self) -> Optional[PerformanceSample]:

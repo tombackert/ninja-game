@@ -53,9 +53,11 @@ class Renderer:
     """
 
     def __init__(self, show_perf: bool = True) -> None:
+        import os
         from scripts.perf_hud import PerformanceHUD  # local import
 
-        self.perf_hud = PerformanceHUD(enabled=show_perf)
+        log_file = os.environ.get("PERF_LOG_FILE")
+        self.perf_hud = PerformanceHUD(enabled=show_perf, log_path=log_file)
 
     @property
     def last_frame_ms(self) -> float:
