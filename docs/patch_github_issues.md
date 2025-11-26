@@ -647,18 +647,18 @@ Floating point drift; large payload size
 ### Context
 Store fixed number of past snapshots + inputs for correction.
 ### Tasks
-- [ ] Ring buffer implementation
-- [ ] API: push(snapshot, inputs), get(tick)
+- [x] Ring buffer implementation
+- [x] API: push(snapshot, inputs), get(tick)
 ### Changes
 - `rollback_buffer.py`
 ### Acceptance Criteria
-- [ ] O(1) access & insertion
+- [x] O(1) access & insertion
 ### Risks
 Memory usage if snapshot large
 ### Test Cases
 1. Insert > capacity -> oldest evicted
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 36: FeatureExtractor Module
 ### Context
