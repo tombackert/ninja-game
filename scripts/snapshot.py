@@ -47,11 +47,11 @@ class SnapshotService:
         rng_state = RNGService.get().get_state()
         
         # Capture Players
-        players = []
+        players: List[EntitySnapshot] = []
         for p in game.players:
             # Handle both property and direct attribute for lives during migration
             lives_val = getattr(p, "lives", getattr(p, "lifes", 0))
-            snap = EntitySnapshot(
+            player_snap = EntitySnapshot(
                 type="player",
                 id=p.id,
                 pos=list(p.pos),
@@ -65,12 +65,12 @@ class SnapshotService:
                 dashing=p.dashing,
                 shoot_cooldown=p.shoot_cooldown,
             )
-            players.append(snap)
+            players.append(player_snap)
 
         # Capture Enemies
-        enemies = []
+        enemies: List[EntitySnapshot] = []
         for e in game.enemies:
-            snap = EntitySnapshot(
+            enemy_snap = EntitySnapshot(
                 type="enemy",
                 id=e.id,
                 pos=list(e.pos),
@@ -79,20 +79,20 @@ class SnapshotService:
                 action=e.action,
                 walking=e.walking,
             )
-            enemies.append(snap)
+            enemies.append(enemy_snap)
 
         # Capture Projectiles
-        projectiles = []
+        projectiles: List[ProjectileSnapshot] = []
         if hasattr(game, "projectiles"):
             # Iterate over the system (yields dicts)
             for p in game.projectiles:
-                snap = ProjectileSnapshot(
+                proj_snap = ProjectileSnapshot(
                     pos=list(p["pos"]),
                     velocity=p["vel"][0],
                     timer=p["age"],
                     owner=p["owner"]
                 )
-                projectiles.append(snap)
+                projectiles.append(proj_snap)
 
         return SimulationSnapshot(
             tick=0,  # TODO: Game needs a global tick counter
@@ -148,11 +148,11 @@ class SnapshotService:
             # Rehydrate dicts directly into the system's private list
             # to avoid side effects of spawn() (sparks/sounds).
             if hasattr(game.projectiles, "_projectiles"):
-                for p_snap in snapshot.projectiles:
+                for proj_snap in snapshot.projectiles:
                     proj = {
-                        "pos": list(p_snap.pos),
-                        "vel": [p_snap.velocity, 0.0],
-                        "age": p_snap.timer,
-                        "owner": p_snap.owner
+                        "pos": list(proj_snap.pos),
+                        "vel": [proj_snap.velocity, 0.0],
+                        "age": proj_snap.timer,
+                        "owner": proj_snap.owner
                     }
                     game.projectiles._projectiles.append(proj)

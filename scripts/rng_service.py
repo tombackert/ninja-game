@@ -12,7 +12,7 @@ class RNGService:
     def __init__(self, seed: int | float | str | bytes | bytearray | None = None):
         self._generator = random.Random(seed)
         self._seed_val = seed
-        log.info(f"RNG initialized with seed: {seed}")
+        log.info(f"RNG initialized with seed: {seed!r}")
 
     @classmethod
     def get(cls) -> "RNGService":
@@ -27,7 +27,7 @@ class RNGService:
     def seed(self, a: int | float | str | bytes | bytearray | None = None) -> None:
         self._seed_val = a
         self._generator.seed(a)
-        log.debug(f"RNG re-seeded: {a}")
+        log.debug(f"RNG re-seeded: {a!r}")
 
     def random(self) -> float:
         """Return the next random floating point number in the range [0.0, 1.0)."""

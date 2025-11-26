@@ -4,7 +4,7 @@ from game import Game
 from scripts.feature_extractor import FeatureExtractor
 from scripts.reward_shaper import RewardShaper
 from scripts.rng_service import RNGService
-from scripts.snapshot import SnapshotService
+from scripts.snapshot import SimulationSnapshot, SnapshotService
 
 
 class TrainingEnv:

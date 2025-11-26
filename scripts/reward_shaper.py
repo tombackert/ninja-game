@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from scripts.snapshot import SimulationSnapshot
 
@@ -9,7 +9,7 @@ class RewardShaper:
     This module allows pluggable reward functions for RL training.
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = {
             "survival_reward": 0.01,  # Reward per step alive
             "death_penalty": -10.0,

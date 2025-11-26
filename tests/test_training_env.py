@@ -37,6 +37,6 @@ def test_training_env_step():
     
     assert "self" in obs
     assert isinstance(reward, float)
-    assert done == False
+    assert not done
     assert info["tick"] == 1
     assert reward == 0.01  # Default survival reward
