@@ -24,6 +24,7 @@ from scripts.constants import (
 )
 from scripts.effects_util import spawn_hit_sparks
 from scripts.particle import Particle
+from scripts.policy_service import PolicyService
 from scripts.rng_service import RNGService
 from scripts.services import ServiceContainer
 from scripts.settings import settings
@@ -152,64 +153,44 @@ class Enemy(PhysicsEntity):
     def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None):
         super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
+        self.policy = PolicyService.get("scripted_enemy")
 
     def update(self, tilemap, movement=(0, 0)):
-        rng = RNGService.get()
-        if self.walking:
-            if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
-                if self.collisions["right"] or self.collisions["left"]:
-                    self.flip = not self.flip
-                else:
-                    direction = ENEMY_DIRECTION_BASE * (
-                        1 + ENEMY_DIRECTION_SCALE_LOG * math.log(settings.selected_level + 1)
-                    )
-                    movement = (
-                        movement[0] - direction if self.flip else direction,
-                        movement[1],
-                    )
+        # Delegate behavior to policy
+        decision = self.policy.decide(self, self.game)
+        
+        # Apply movement intent
+        intent_movement = decision.get("movement", (0, 0))
+        # Combine with external movement (if any) or replace?
+        # Usually update's movement arg is external forces.
+        combined_movement = (movement[0] + intent_movement[0], movement[1] + intent_movement[1])
+        
+        # Apply shooting intent
+        if decision.get("shoot"):
+            if self.services:
+                self.services.play("shoot")
             else:
-                self.flip = not self.flip
-            self.walking = max(0, self.walking - 1)
-            if not self.walking:
-                dis = (
-                    self.game.player.pos[0] - self.pos[0],
-                    self.game.player.pos[1] - self.pos[1],
+                self.game.audio.play("shoot")
+            
+            shoot_dir = decision.get("shoot_direction", 0)
+            if shoot_dir != 0:
+                direction = shoot_dir * ENEMY_SHOOT_BASE * (
+                    1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
                 )
-                if abs(dis[1]) < 15:
-                    if self.flip and dis[0] < 0:
-                        if self.services:
-                            self.services.play("shoot")
-                        else:
-                            self.game.audio.play("shoot")
-                        direction = -ENEMY_SHOOT_BASE * (
-                            1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
-                        )
-                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
-                            self.rect().centerx - 15,
-                            self.rect().centery,
-                            direction,
-                            "enemy",
-                        )
+                # Ensure we spawn slightly offset to avoid self-hit immediately if not careful,
+                # though ProjectileSystem handles owner check.
+                # Original logic used centerx +/- 15.
+                spawn_x = self.rect().centerx + (15 if shoot_dir > 0 else -15)
+                (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+                    spawn_x,
+                    self.rect().centery,
+                    direction,
+                    "enemy",
+                )
 
-                    if not self.flip and dis[0] > 0:
-                        if self.services:
-                            self.services.play("shoot")
-                        else:
-                            self.game.audio.play("shoot")
-                        direction = ENEMY_SHOOT_BASE * (
-                            1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
-                        )
-                        (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
-                            self.rect().centerx + 15,
-                            self.rect().centery,
-                            direction,
-                            "enemy",
-                        )
-        elif rng.random() < 0.01:
-            self.walking = rng.randint(30, 120)
-
-        super().update(tilemap, movement=movement)
-        if movement[0] != 0:
+        super().update(tilemap, movement=combined_movement)
+        
+        if combined_movement[0] != 0:
             self.set_action("run")
         else:
             self.set_action("idle")
