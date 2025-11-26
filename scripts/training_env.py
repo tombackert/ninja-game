@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple
 
 from game import Game
 from scripts.feature_extractor import FeatureExtractor
+from scripts.reward_shaper import RewardShaper
 from scripts.rng_service import RNGService
 from scripts.snapshot import SnapshotService
 
@@ -24,6 +25,9 @@ class TrainingEnv:
         
         # Helpers
         self.extractor = FeatureExtractor()
+        self.reward_shaper = RewardShaper() # Initialize RewardShaper
+        self.prev_snap: SimulationSnapshot | None = None # Store previous snapshot for reward calculation
+        
         self.action_map = [
             [],                 # 0: No-op
             ["left"],           # 1: Left
@@ -48,11 +52,12 @@ class TrainingEnv:
         # Ensure player exists
         if not self.game.players:
             # Defensive: level might be empty
+            self.prev_snap = None
             return self.extractor._empty_observation()
 
         # Capture initial state
-        snap = SnapshotService.capture(self.game)
-        obs = self.extractor.extract(snap, entity_id=self.game.player.id)
+        self.prev_snap = SnapshotService.capture(self.game) # Store initial snapshot
+        obs = self.extractor.extract(self.prev_snap, entity_id=self.game.player.id)
         return obs
 
     def step(self, action_idx: int) -> Tuple[Dict[str, Any], float, bool, Dict[str, Any]]:
@@ -136,27 +141,38 @@ class TrainingEnv:
             
         # Check termination
         done = False
-        reward = 0.1 # Survival reward
+        level_cleared = False
+        player_dead = False
         
         if p.lives <= 0 or self.game.dead:
             done = True
-            reward = -10.0
+            player_dead = True
         
         if self.game.endpoint: # Level clear
             done = True
-            reward = 100.0
+            level_cleared = True
             
         if self.steps >= self.max_steps:
             done = True
             
-        # Capture result
-        snap = SnapshotService.capture(self.game)
-        obs = self.extractor.extract(snap, entity_id=p.id)
+        # Capture current state for observation and reward calculation
+        current_snap = SnapshotService.capture(self.game)
+        obs = self.extractor.extract(current_snap, entity_id=p.id)
         
+        # Prepare info dict for reward shaper
         info = {
             "lives": p.lives,
             "coins": self.game.cm.coins,
-            "tick": self.steps
+            "tick": self.steps,
+            "done": done,
+            "level_cleared": level_cleared,
+            "player_dead": player_dead,
         }
+        
+        # Calculate reward
+        reward = self.reward_shaper.calculate(self.prev_snap, current_snap, info) # type: ignore
+        
+        # Update previous snapshot for next step
+        self.prev_snap = current_snap
         
         return obs, reward, done, info
