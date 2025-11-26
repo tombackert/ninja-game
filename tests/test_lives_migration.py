@@ -26,7 +26,7 @@ def test_tilemap_save_uses_lives_key(tmp_path):
     # in headless test modifications)
     g.load_level(g.level)
     if not tm.players:
-        p = Player(g, [0, 0], (8, 15), 0, lifes=3, respawn_pos=[0, 0])
+        p = Player(g, [0, 0], (8, 15), 0, lives=3, respawn_pos=[0, 0])
         tm.players.append(p)
     tm.save(str(path))
     data = json.loads(path.read_text())

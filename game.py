@@ -189,7 +189,7 @@ class Game:
                         spawner["pos"],
                         (8, 15),
                         player_id,
-                        lifes=lives,
+                        lives=lives,
                         respawn_pos=list(spawner["pos"]),
                     )
                     player.skin = skin
@@ -266,15 +266,15 @@ class Game:
             if self.transition < 0:
                 self.transition += 1
 
-            if self.player.lifes < 1:
+            if self.player.lives < 1:
                 self.dead += 1
             if self.dead:
                 self.dead += 1
                 if self.dead >= DEAD_ANIM_FADE_START:
                     self.transition = min(TRANSITION_MAX, self.transition + 1)
-                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes >= 1:
-                    self.load_level(self.level, self.player.lifes, respawn=True)
-                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lifes < 1:
+                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lives >= 1:
+                    self.load_level(self.level, self.player.lives, respawn=True)
+                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lives < 1:
                     self.load_level(self.level)
 
             # Camera smoothing
@@ -298,7 +298,7 @@ class Game:
             UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
             UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
             UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
-            UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lifes}", 5, 5)
+            UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lives}", 5, 5)
             UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
             UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
 

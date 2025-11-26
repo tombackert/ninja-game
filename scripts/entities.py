@@ -254,16 +254,15 @@ class Player(PhysicsEntity):
         pos,
         size,
         id,
-        lifes,
+        lives,
         respawn_pos,
         services: ServiceContainer | None = None,
     ):
         """Player entity.
 
-        Parameter 'lifes' kept for backward compatibility with existing code &
-        serialized saves. Internally we migrate to the proper English term
-        'lives'. Access via self.lives; legacy attribute 'lifes' provided as
-        property alias for old references until fully refactored.
+        Parameter 'lives' replaces legacy 'lifes'.
+        Internally we migrate to the proper English term 'lives'.
+        Legacy attribute 'lifes' provided as property alias for old references.
         """
         self.skin = 0
         super().__init__(game, "player", pos, size, id, services=services)
@@ -272,7 +271,7 @@ class Player(PhysicsEntity):
         self.wall_slide = False
         self.dashing = 0
         # Store canonical field _lives and expose property alias.
-        self._lives = lifes
+        self._lives = lives
         self.respawn_pos = respawn_pos
         self.shoot_cooldown = 10
 

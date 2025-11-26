@@ -197,7 +197,7 @@ class Tilemap:
                         player_data["pos"],
                         (8, 15),
                         player_data["id"],
-                        lifes=lives_value,
+                        lives=lives_value,
                         respawn_pos=player_data["respawn_pos"],
                     )
                     player.velocity = player_data.get("velocity", [0, 0])

@@ -183,7 +183,7 @@ class Editor:
                                 [tile_pos[0], tile_pos[1]],
                                 (8, 15),
                                 self.tilemap.get_player_count(),
-                                lifes=3,
+                                lives=3,
                                 respawn_pos=(tile_pos[0], tile_pos[1]),
                             )
                         )
@@ -203,7 +203,7 @@ class Editor:
                                     [tile_pos[0], tile_pos[1]],
                                     (8, 15),
                                     self.tilemap.get_player_count(),
-                                    lifes=3,
+                                    lives=3,
                                     respawn_pos=(tile_pos[0], tile_pos[1]),
                                 )
                             )
