@@ -1,9 +1,9 @@
-import random
 from collections import OrderedDict
 
 import pygame
 
 from scripts.particle import Particle
+from scripts.rng_service import RNGService
 
 
 class UI:
@@ -285,11 +285,12 @@ class UI:
     @staticmethod
     def render_game_elements(game, render_scroll):
         # Leaf particles
+        rng = RNGService.get()
         for rect in game.leaf_spawners:
-            if random.random() * 49999 < rect.width * rect.height:
+            if rng.random() * 49999 < rect.width * rect.height:
                 pos = (
-                    rect.x + random.random() * rect.width,
-                    rect.y + random.random() * rect.height,
+                    rect.x + rng.random() * rect.width,
+                    rect.y + rng.random() * rect.height,
                 )
                 game.particles.append(
                     Particle(
@@ -297,7 +298,7 @@ class UI:
                         "leaf",
                         pos,
                         velocity=[-0.1, 0.3],
-                        frame=random.randint(0, 20),
+                        frame=rng.randint(0, 20),
                     )
                 )
 

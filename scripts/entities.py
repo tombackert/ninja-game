@@ -1,5 +1,4 @@
 import math
-import random
 
 import pygame
 
@@ -25,6 +24,7 @@ from scripts.constants import (
 )
 from scripts.effects_util import spawn_hit_sparks
 from scripts.particle import Particle
+from scripts.rng_service import RNGService
 from scripts.services import ServiceContainer
 from scripts.settings import settings
 from scripts.spark import Spark
@@ -154,6 +154,7 @@ class Enemy(PhysicsEntity):
         self.walking = 0
 
     def update(self, tilemap, movement=(0, 0)):
+        rng = RNGService.get()
         if self.walking:
             if tilemap.solid_check((self.rect().centerx + (-7 if self.flip else 7), self.pos[1] + 23)):
                 if self.collisions["right"] or self.collisions["left"]:
@@ -204,8 +205,8 @@ class Enemy(PhysicsEntity):
                             direction,
                             "enemy",
                         )
-        elif random.random() < 0.01:
-            self.walking = random.randint(30, 120)
+        elif rng.random() < 0.01:
+            self.walking = rng.randint(30, 120)
 
         super().update(tilemap, movement=movement)
         if movement[0] != 0:
@@ -223,8 +224,8 @@ class Enemy(PhysicsEntity):
                     self.game.audio.play("hit")
                 self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
-                self.game.sparks.append(Spark(self.rect().center, 0, 5 + random.random()))
-                self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + random.random()))
+                self.game.sparks.append(Spark(self.rect().center, 0, 5 + rng.random()))
+                self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + rng.random()))
                 return True
 
     # Collision with player projectiles handled centrally in ProjectileSystem.update
@@ -312,6 +313,7 @@ class Player(PhysicsEntity):
 
     def update(self, tilemap, movement=(0, 0)):
         super().update(tilemap, movement=movement)
+        rng = RNGService.get()
         if self.shoot_cooldown > 0:
             self.shoot_cooldown -= 1
 
@@ -346,8 +348,8 @@ class Player(PhysicsEntity):
 
         if abs(self.dashing) in {DASH_DURATION_FRAMES, DASH_MIN_ACTIVE_ABS}:
             for i in range(20):
-                angle = random.random() * math.pi * 2
-                speed = random.random() * 0.5 + 0.5
+                angle = rng.random() * math.pi * 2
+                speed = rng.random() * 0.5 + 0.5
                 pvelocity = [math.cos(angle) * speed, math.sin(angle) * speed]
                 self.game.particles.append(
                     Particle(
@@ -355,7 +357,7 @@ class Player(PhysicsEntity):
                         "particle",
                         self.rect().center,
                         velocity=pvelocity,
-                        frame=random.randint(0, 7),
+                        frame=rng.randint(0, 7),
                     )
                 )
         if self.dashing > 0:
@@ -367,7 +369,7 @@ class Player(PhysicsEntity):
             if abs(self.dashing) == DASH_DECEL_TRIGGER_FRAME:
                 self.velocity[0] *= 0.1
             pvelocity = [
-                abs(self.dashing) / self.dashing * random.random() * DASH_TRAIL_PARTICLE_SPEED,
+                abs(self.dashing) / self.dashing * rng.random() * DASH_TRAIL_PARTICLE_SPEED,
                 0,
             ]
             self.game.particles.append(
@@ -376,7 +378,7 @@ class Player(PhysicsEntity):
                     "particle",
                     self.rect().center,
                     velocity=pvelocity,
-                    frame=random.randint(0, 7),
+                    frame=rng.randint(0, 7),
                 )
             )
 

@@ -69,6 +69,11 @@ class Game:
         # Movement flags
         self.movement = [False, False]
 
+        # Initialize RNG service to ensure it's ready for gameplay
+        from scripts.rng_service import RNGService
+
+        RNGService.get()
+
         # Asset Manager (Issue 15). Gradually replace direct util calls with manager.
         am = AssetManager.get()
         self.assets = {

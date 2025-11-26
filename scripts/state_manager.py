@@ -240,6 +240,11 @@ class GameState(State):
         # Start background music / ambience (skip when under test to avoid mixer issues).
         import os
 
+        # Initialize RNG service to ensure it's ready for gameplay
+        from scripts.rng_service import RNGService
+
+        RNGService.get()
+
         if os.environ.get("NINJA_GAME_TESTING") != "1" and not self._initialized_audio:
             try:  # Best-effort; audio is ancillary.
                 self._game.audio.play_music("data/music.wav", loops=-1)
