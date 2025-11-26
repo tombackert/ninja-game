@@ -715,18 +715,18 @@ Overfitting shaping early
 ### Context
 Prepare networking: message schemas & basic server/client loop (local stub).
 ### Tasks
-- [ ] Define message types (Input, Snapshot, Ack)
-- [ ] Implement local loopback transport for early tests
+- [x] Define message types (Input, Snapshot, Ack)
+- [x] Implement local loopback transport for early tests
 ### Changes
 - `network/messages.py`, `network/netsync_service.py`
 ### Acceptance Criteria
-- [ ] Can send snapshot & receive acknowledgment locally
+- [x] Can send snapshot & receive acknowledgment locally
 ### Risks
 Premature complexity
 ### Test Cases
 1. Loopback send/receive roundtrip
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 40: PolicyService Integration
 ### Context
