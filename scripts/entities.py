@@ -156,6 +156,7 @@ class Enemy(PhysicsEntity):
         self.policy = PolicyService.get("scripted_enemy")
 
     def update(self, tilemap, movement=(0, 0)):
+        rng = RNGService.get()
         # Delegate behavior to policy
         decision = self.policy.decide(self, self.game)
         
