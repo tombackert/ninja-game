@@ -664,18 +664,18 @@ Memory usage if snapshot large
 ### Context
 Produce structured observation for RL & AI decisions.
 ### Tasks
-- [ ] Define observation schema
-- [ ] Deterministic extraction using snapshot
+- [x] Define observation schema
+- [x] Deterministic extraction using snapshot
 ### Changes
 - `feature_extractor.py`
 ### Acceptance Criteria
-- [ ] Stable output for identical snapshot
+- [x] Stable output for identical snapshot
 ### Risks
 Schema churn; performance overhead
 ### Test Cases
 1. Two extractions of same snapshot identical
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 37: Training Environment Wrapper
 ### Context
