@@ -403,11 +403,12 @@ class PauseState(State):
         self._underlying: State | None = None  # set in on_enter
         self.options = ["Resume", "Menu"]
         self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=60, font_size=30)
+        self.bg: pygame.Surface | None = None
         # Background image (menu backdrop) for pause overlay decoration
         try:
             self.bg = pygame.image.load("data/images/background-big.png")
         except Exception:  # pragma: no cover - asset optional in tests
-            self.bg = None
+            pass
 
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
