@@ -749,18 +749,18 @@ Policy side-effects
 ### Context
 Client-side prediction with rollback on authoritative correction.
 ### Tasks
-- [ ] Apply predicted inputs locally
-- [ ] On snapshot mismatch: rollback & re-sim inputs
+- [x] Apply predicted inputs locally
+- [x] On snapshot mismatch: rollback & re-sim inputs
 ### Changes
 - Extend `netsync_service.py`, use `rollback_buffer`
 ### Acceptance Criteria
-- [ ] Divergence corrected within N frames in test harness
+- [x] Divergence corrected within N frames in test harness
 ### Risks
 Edge timing glitches
 ### Test Cases
 1. Inject artificial latency & corrections -> final state matches authoritative
 ### Definition of Done
-- [ ] Automated test harness
+- [x] Automated test harness
 
 ### Issue 42: Replay / Ghost via Snapshots
 ### Context
