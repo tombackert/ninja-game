@@ -1,7 +1,6 @@
 # Deprecated legacy game loop for backward compatibility.!!!!
 
 
-
 import pygame
 
 from scripts.asset_manager import AssetManager

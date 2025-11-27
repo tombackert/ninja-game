@@ -31,10 +31,10 @@ def test_training_env_determinism():
 def test_training_env_step():
     env = TrainingEnv()
     env.reset()
-    
+
     # Step with action
     obs, reward, done, info = env.step(3)  # Jump
-    
+
     assert "self" in obs
     assert isinstance(reward, float)
     assert not done

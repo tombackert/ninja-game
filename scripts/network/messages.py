@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 import json
 
+
 @dataclass
 class Message:
     type: str
@@ -15,15 +16,18 @@ class Message:
         data = json.loads(json_str)
         return Message(type=data['type'], payload=data['payload'])
 
+
 @dataclass
 class InputMessage:
     tick: int
     inputs: List[str]
 
+
 @dataclass
 class SnapshotMessage:
     tick: int
-    snapshot_data: Dict[str, Any] # Serialized SimulationSnapshot
+    snapshot_data: Dict[str, Any]  # Serialized SimulationSnapshot
+
 
 @dataclass
 class AckMessage:

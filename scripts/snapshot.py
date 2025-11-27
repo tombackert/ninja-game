@@ -45,7 +45,7 @@ class SnapshotService:
     @staticmethod
     def capture(game) -> SimulationSnapshot:
         rng_state = RNGService.get().get_state()
-        
+
         # Capture Players
         players: List[EntitySnapshot] = []
         for p in game.players:
@@ -87,10 +87,7 @@ class SnapshotService:
             # Iterate over the system (yields dicts)
             for p in game.projectiles:
                 proj_snap = ProjectileSnapshot(
-                    pos=list(p["pos"]),
-                    velocity=p["vel"][0],
-                    timer=p["age"],
-                    owner=p["owner"]
+                    pos=list(p["pos"]), velocity=p["vel"][0], timer=p["age"], owner=p["owner"]
                 )
                 projectiles.append(proj_snap)
 
@@ -102,14 +99,14 @@ class SnapshotService:
             projectiles=projectiles,
             score=game.cm.coins if hasattr(game, "cm") else 0,
             dead_count=game.dead,
-            transition=game.transition
+            transition=game.transition,
         )
 
     @staticmethod
     def restore(game, snapshot: SimulationSnapshot) -> None:
         # Restore RNG
         RNGService.get().set_state(snapshot.rng_state)
-        
+
         # Restore Globals
         game.dead = snapshot.dead_count
         game.transition = snapshot.transition
@@ -123,7 +120,7 @@ class SnapshotService:
                 p.pos = list(p_snap.pos)
                 p.velocity = list(p_snap.velocity)
                 p.flip = p_snap.flip
-                p.set_action(p_snap.action) 
+                p.set_action(p_snap.action)
                 # Set lives (using canonical setter)
                 p.lives = p_snap.lives
                 p.air_time = p_snap.air_time
@@ -131,7 +128,7 @@ class SnapshotService:
                 p.wall_slide = p_snap.wall_slide
                 p.dashing = p_snap.dashing
                 p.shoot_cooldown = p_snap.shoot_cooldown
-        
+
         # Restore Enemies
         for i, e_snap in enumerate(snapshot.enemies):
             if i < len(game.enemies):
@@ -153,6 +150,6 @@ class SnapshotService:
                         "pos": list(proj_snap.pos),
                         "vel": [proj_snap.velocity, 0.0],
                         "age": proj_snap.timer,
-                        "owner": proj_snap.owner
+                        "owner": proj_snap.owner,
                     }
                     game.projectiles._projectiles.append(proj)

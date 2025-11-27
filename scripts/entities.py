@@ -159,24 +159,24 @@ class Enemy(PhysicsEntity):
         rng = RNGService.get()
         # Delegate behavior to policy
         decision = self.policy.decide(self, self.game)
-        
+
         # Apply movement intent
         intent_movement = decision.get("movement", (0, 0))
         # Combine with external movement (if any) or replace?
         # Usually update's movement arg is external forces.
         combined_movement = (movement[0] + intent_movement[0], movement[1] + intent_movement[1])
-        
+
         # Apply shooting intent
         if decision.get("shoot"):
             if self.services:
                 self.services.play("shoot")
             else:
                 self.game.audio.play("shoot")
-            
+
             shoot_dir = decision.get("shoot_direction", 0)
             if shoot_dir != 0:
-                direction = shoot_dir * ENEMY_SHOOT_BASE * (
-                    1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1)
+                direction = (
+                    shoot_dir * ENEMY_SHOOT_BASE * (1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1))
                 )
                 # Ensure we spawn slightly offset to avoid self-hit immediately if not careful,
                 # though ProjectileSystem handles owner check.
@@ -190,7 +190,7 @@ class Enemy(PhysicsEntity):
                 )
 
         super().update(tilemap, movement=combined_movement)
-        
+
         if combined_movement[0] != 0:
             self.set_action("run")
         else:

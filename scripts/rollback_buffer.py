@@ -32,7 +32,7 @@ class RollbackBuffer:
     def push(self, snapshot: SimulationSnapshot, inputs: List[str]) -> None:
         """Add a frame to the buffer, overwriting oldest if full."""
         tick = snapshot.tick
-        
+
         # If we are overwriting, remove old mapping
         index = tick % self.capacity
         existing = self.buffer[index]
@@ -41,13 +41,13 @@ class RollbackBuffer:
             if old_tick in self._tick_to_index:
                 del self._tick_to_index[old_tick]
                 if self.oldest_tick == old_tick:
-                    self.oldest_tick = None # Will be updated next push effectively or remains vague
+                    self.oldest_tick = None  # Will be updated next push effectively or remains vague
 
         # Insert new
         self.buffer[index] = FrameData(snapshot, inputs)
         self._tick_to_index[tick] = index
         self.newest_tick = tick
-        
+
         # Maintain oldest tracker (simple approx or precise?)
         # Precise: If we just deleted oldest, the new oldest is tick - capacity + 1 (roughly)
         # But since we mod, it's implicitly managed.

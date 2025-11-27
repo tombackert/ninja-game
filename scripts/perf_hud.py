@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Any
 
 
 @dataclass
@@ -52,8 +52,8 @@ class PerformanceHUD:
     _last_full_ms: float = field(default=0.0, init=False)
     _avg_work_ms: Optional[float] = field(default=None, init=False)
     _last_sample: Optional[PerformanceSample] = field(default=None, init=False)
-    _csv_file: Optional[object] = field(default=None, init=False, repr=False)
-    _csv_writer: Optional[object] = field(default=None, init=False, repr=False)
+    _csv_file: Optional[Any] = field(default=None, init=False, repr=False)
+    _csv_writer: Optional[Any] = field(default=None, init=False, repr=False)
 
     def begin_frame(self) -> None:
         if not self.enabled:
@@ -105,20 +105,20 @@ class PerformanceHUD:
             else:
                 fps = None
             self._last_sample.fps = fps
-            
+
             if self.log_path:
                 self._log_sample()
 
     def _log_sample(self) -> None:
-        if not self._last_sample:
+        if not self._last_sample or not self.log_path:
             return
-        
+
         # Lazy init file
         if self._csv_file is None:
             import csv
             import json
             import os
-            
+
             file_exists = os.path.isfile(self.log_path)
             try:
                 self._csv_file = open(self.log_path, "a", newline="")
@@ -127,12 +127,15 @@ class PerformanceHUD:
                     self._csv_writer.writerow(["timestamp", "work_ms", "full_ms", "fps", "counts"])
             except Exception:
                 # Silently fail if file can't be opened to avoid crashing game
-                self.log_path = None 
+                self.log_path = None
                 return
+
+        if self._csv_writer is None:
+            return
 
         import json
         import time
-        
+
         counts = getattr(self, "_game_counts", {})
         try:
             row = [
@@ -140,7 +143,7 @@ class PerformanceHUD:
                 f"{self._last_sample.work_ms:.3f}",
                 f"{self._last_sample.full_ms:.3f}" if self._last_sample.full_ms else "",
                 f"{self._last_sample.fps:.2f}" if self._last_sample.fps else "",
-                json.dumps(counts)
+                json.dumps(counts),
             ]
             self._csv_writer.writerow(row)
         except Exception:

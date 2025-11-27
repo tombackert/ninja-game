@@ -25,7 +25,7 @@ class RewardShaper:
         self,
         prev_snap: SimulationSnapshot,
         current_snap: SimulationSnapshot,
-        info: Dict[str, Any], # Contains additional flags like 'done', 'level_cleared', 'player_dead'
+        info: Dict[str, Any],  # Contains additional flags like 'done', 'level_cleared', 'player_dead'
     ) -> float:
         """Calculate reward based on changes between snapshots and info."""
         reward = 0.0

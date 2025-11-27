@@ -13,6 +13,9 @@ gemini*
 # Gameplay specific data ignores
 data/saves/
 data/replays/
-data/collectables*
-data/best_times*
+data/collectables.json
+data/best_times.json
+data/settings.json
+
+# Test specifiv ignores
 performance_data.csv

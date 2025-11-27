@@ -121,9 +121,7 @@ class UI:
         rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
         section_breaks.append(len(rows))  # end of cache section
         if game_counts:
-            rows.extend(
-                (f"{k.capitalize()}:", str(game_counts[k])) for k in sorted(game_counts.keys())
-            )
+            rows.extend((f"{k.capitalize()}:", str(game_counts[k])) for k in sorted(game_counts.keys()))
             section_breaks.append(len(rows))
 
         # Determine max label width for alignment (use fixed inner padding 5).

@@ -2,16 +2,20 @@ from typing import Callable, List, Optional
 import time
 from scripts.network.messages import Message, InputMessage, SnapshotMessage, AckMessage
 
+
 class Transport:
     """Abstract transport layer."""
+
     def send(self, message: Message):
         raise NotImplementedError
 
     def receive(self) -> Optional[Message]:
         raise NotImplementedError
 
+
 class LocalLoopbackTransport(Transport):
     """Simulates network by placing messages in a local queue."""
+
     def __init__(self):
         self.queue: List[Message] = []
 
@@ -25,12 +29,13 @@ class LocalLoopbackTransport(Transport):
             return self.queue.pop(0)
         return None
 
+
 class NetSyncService:
     """Manages network synchronization."""
-    
+
     def __init__(self, transport: Transport):
         self.transport = transport
-        self.peer_transport: Optional[Transport] = None # For loopback connecting
+        self.peer_transport: Optional[Transport] = None  # For loopback connecting
 
     def send_input(self, tick: int, inputs: List[str]):
         msg = Message(type='input', payload={'tick': tick, 'inputs': inputs})
