@@ -70,6 +70,21 @@ class InputRouter:
         game_rules: List[Rule] = [
             _key_rule(pygame.K_ESCAPE, "pause_toggle"),
             _key_rule(pygame.K_F1, "debug_toggle"),
+            # Added generic movement/action bindings for replay capture
+            _key_rule(pygame.K_LEFT, "left", pygame.KEYDOWN),
+            _key_rule(pygame.K_a, "left", pygame.KEYDOWN),
+            _key_rule(pygame.K_RIGHT, "right", pygame.KEYDOWN),
+            _key_rule(pygame.K_d, "right", pygame.KEYDOWN),
+            _key_rule(pygame.K_UP, "jump", pygame.KEYDOWN),
+            _key_rule(pygame.K_w, "jump", pygame.KEYDOWN),
+            _key_rule(pygame.K_SPACE, "jump", pygame.KEYDOWN),
+            _key_rule(pygame.K_x, "dash", pygame.KEYDOWN),
+            _key_rule(pygame.K_c, "shoot", pygame.KEYDOWN),
+            
+            _key_rule(pygame.K_LEFT, "stop_left", pygame.KEYUP),
+            _key_rule(pygame.K_a, "stop_left", pygame.KEYUP),
+            _key_rule(pygame.K_RIGHT, "stop_right", pygame.KEYUP),
+            _key_rule(pygame.K_d, "stop_right", pygame.KEYUP),
         ]
         pause_rules: List[Rule] = [
             _key_rule(pygame.K_ESCAPE, "pause_close"),

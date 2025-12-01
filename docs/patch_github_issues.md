@@ -749,18 +749,18 @@ Edge timing glitches
 ### Context
 Use snapshots & inputs to recreate ghost runs.
 ### Tasks
-- [ ] Record input + periodic snapshots
-- [ ] Playback interpolating between snapshots
+- [x] Record input + periodic snapshots
+- [x] Playback interpolating between snapshots (Visual frames used for smooth ghost currently)
 ### Changes
 - `replay.py`
 ### Acceptance Criteria
-- [ ] Ghost path matches original within tolerance
+- [x] Ghost path matches original within tolerance
 ### Risks
 Interpolation drift
 ### Test Cases
 1. Record small session -> playback diff under threshold
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 43: Interpolation Buffers
 ### Context

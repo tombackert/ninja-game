@@ -92,7 +92,7 @@ class Renderer:
         replay_mgr = getattr(game, "replay", None)
         if replay_mgr:
             try:
-                replay_mgr.advance_and_render(game.display, render_scroll)
+                replay_mgr.render_ghost(game.display, render_scroll)
             except Exception:
                 pass
         UI.render_game_elements(game, render_scroll)

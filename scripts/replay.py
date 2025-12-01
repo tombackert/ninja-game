@@ -1,34 +1,27 @@
-"""Replay and ghost playback system (Issue 30).
+"""Replay and ghost playback system.
 
-Provides lightweight recording of the local player's trajectory together
-with a translucent ghost playback for subsequent runs. Records are stored
-per-level so that best runs can be surfaced later (e.g. speedrunning, QA).
-
-Design goals:
-    * Zero runtime overhead when unused (graceful fallbacks if assets missing)
-    * Deterministic playback tied to recorded frame samples (position, flip, anim)
-    * Persistence of best runs while keeping most recent run in-memory for
-      immediate ghost comparison after a restart.
+Updated to support input-based recording (for replays) and interpolated
+ghosts using sparse snapshots.
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Any
 
 import pygame
 
 from scripts.settings import settings as global_settings
+from scripts.snapshot import SimulationSnapshot, SnapshotService
+from scripts.network.messages import InputMessage
 
-REPLAY_VERSION = 1
-
+REPLAY_VERSION = 2  # Bumped for new schema
 
 @dataclass(slots=True)
 class FrameSample:
-    """Single frame of replay data."""
-
+    """Single frame of replay data (Visual Ghost)."""
     x: float
     y: float
     flip: bool
@@ -54,125 +47,146 @@ class FrameSample:
             anim_frame=int(payload.get("anim", 0)),
         )
 
+@dataclass
+class ReplayData:
+    """Full replay container (Inputs + Snapshots)."""
+    level: str
+    skin: str
+    seed: int
+    duration_frames: int
+    inputs: List[Dict[str, Any]] = field(default_factory=list) # List of InputMessage dicts
+    snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict) # tick -> snapshot dict (sparse)
+    # Visual fallback for lightweight ghosts (legacy support or optimization)
+    visual_frames: List[FrameSample] = field(default_factory=list) 
 
-class ReplayRecording:
-    """In-memory representation of a single run."""
-
-    def __init__(self, level: str, skin_path: str, *, duration_ms: int = 0) -> None:
-        self.level = level
-        self.skin_path = skin_path
-        self.duration_ms = duration_ms
-        self.frames: List[FrameSample] = []
-
-    def append_player(self, player) -> None:
-        action = getattr(player, "action", "idle") or "idle"
-        animation = getattr(player, "animation", None)
-        frame_value = int(getattr(animation, "frame", 0)) if animation else 0
-        self.frames.append(
-            FrameSample(
-                x=float(player.pos[0]),
-                y=float(player.pos[1]),
-                flip=bool(getattr(player, "flip", False)),
-                action=action,
-                anim_frame=frame_value,
-            )
-        )
-
-    # Serialization helpers -------------------------------------------------
     def to_json(self) -> dict:
         return {
             "version": REPLAY_VERSION,
             "level": self.level,
-            "skin": self.skin_path,
-            "duration_ms": int(self.duration_ms),
-            "frames": [sample.to_dict() for sample in self.frames],
+            "skin": self.skin,
+            "seed": self.seed,
+            "duration_frames": self.duration_frames,
+            "inputs": self.inputs,
+            "snapshots": self.snapshots,
+            "visual_frames": [f.to_dict() for f in self.visual_frames],
         }
 
     @classmethod
-    def from_json(cls, payload: dict) -> "ReplayRecording":
-        level = str(payload.get("level", "0"))
-        skin = str(payload.get("skin", "default"))
-        rec = cls(level, skin, duration_ms=int(payload.get("duration_ms", 0)))
-        frames = payload.get("frames", [])
-        for item in frames:
-            rec.frames.append(FrameSample.from_dict(item))
-        return rec
+    def from_json(cls, data: dict) -> "ReplayData":
+        rd = cls(
+            level=str(data.get("level", "0")),
+            skin=str(data.get("skin", "default")),
+            seed=int(data.get("seed", 0)),
+            duration_frames=int(data.get("duration_frames", 0)),
+            inputs=data.get("inputs", []),
+            snapshots=data.get("snapshots", {}),
+        )
+        frames = data.get("visual_frames", []) # Legacy key 'frames' mapped to visual_frames?
+        if not frames and "frames" in data:
+             frames = data["frames"]
+        
+        rd.visual_frames = [FrameSample.from_dict(f) for f in frames]
+        return rd
 
-    def clone(self) -> "ReplayRecording":
-        dup = ReplayRecording(self.level, self.skin_path, duration_ms=self.duration_ms)
-        dup.frames = [FrameSample(f.x, f.y, f.flip, f.action, f.anim_frame) for f in self.frames]
-        return dup
+
+class ReplayRecording:
+    """Active recording session wrapper."""
+    def __init__(self, level: str, skin: str, seed: int):
+        self.data = ReplayData(level=level, skin=skin, seed=seed, duration_frames=0)
+        self.start_tick = 0
+
+    def capture_frame(self, tick: int, player: Any, inputs: List[str], snapshot: Optional[Any] = None):
+        # 1. Visual capture (every frame, or sparse if we wanted)
+        # Maintaining every-frame visual capture for now to ensure smooth ghost without interpolation complexity yet
+        self.data.visual_frames.append(self._extract_sample(player))
+        
+        # 2. Input capture
+        self.data.inputs.append({"tick": tick, "inputs": inputs})
+        
+        # 3. Snapshot capture (sparse)
+        if snapshot:
+            # SnapshotService.serialize returns a dict (JSON compatible)
+            # We assume snapshot is already a SimulationSnapshot object
+            # But wait, SnapshotService.serialize takes a snapshot object.
+            # If 'snapshot' passed here is the object, we serialize it.
+            serialized = SnapshotService.serialize(snapshot)
+            self.data.snapshots[str(tick)] = serialized
+
+        self.data.duration_frames += 1
+
+    def _extract_sample(self, player: Any) -> FrameSample:
+        action = getattr(player, "action", "idle") or "idle"
+        animation = getattr(player, "animation", None)
+        frame_value = int(getattr(animation, "frame", 0)) if animation else 0
+        return FrameSample(
+            x=float(player.pos[0]),
+            y=float(player.pos[1]),
+            flip=bool(getattr(player, "flip", False)),
+            action=action,
+            anim_frame=frame_value,
+        )
 
 
 class ReplayGhost:
-    """Ghost entity backed by recorded frame samples."""
-
+    """Renders a ghost from ReplayData.
+    
+    Currently uses 'visual_frames' for direct playback.
+    Future: Use 'snapshots' + interpolation if visual_frames are sparse.
+    """
     _TINT_COLOR = (100, 220, 255, 180)
 
-    def __init__(self, recording: ReplayRecording, assets: Dict[str, object] | None) -> None:
-        self.recording = recording
-        self._assets = assets or {}
-        self._index = 0
+    def __init__(self, data: ReplayData, assets: Dict[str, Any]):
+        self.data = data
+        self.assets = assets
+        self.index = 0
         self._tint_cache: Dict[tuple, pygame.Surface] = {}
         self._base_frame_cache: Dict[str, tuple[List[pygame.Surface], int]] = {}
-        if self.recording.frames:
+        if self.data.visual_frames:
             self._prepare_animation_cache()
 
-    # Public helpers --------------------------------------------------------
-    def reset(self) -> None:
-        self._index = 0
-
-    def step_and_render(self, surface: pygame.Surface, offset: tuple[int, int]) -> None:
-        if not self.recording.frames:
+    def step_and_render(self, surface: pygame.Surface, offset: tuple[int, int]):
+        if not self.data.visual_frames:
             return
-        frame = self.recording.frames[min(self._index, len(self.recording.frames) - 1)]
+        
+        frame = self.data.visual_frames[min(self.index, len(self.data.visual_frames) - 1)]
         img = self._frame_image(frame)
-        if img is None:
-            fallback = pygame.Surface((14, 22), pygame.SRCALPHA)
-            pygame.draw.ellipse(fallback, (120, 220, 255, 140), fallback.get_rect())
-            surface.blit(fallback, (frame.x - offset[0], frame.y - offset[1]))
-        else:
+        
+        if img:
             surface.blit(img, (frame.x - offset[0], frame.y - offset[1]))
-        if self._index < len(self.recording.frames) - 1:
-            self._index += 1
+        
+        if self.index < len(self.data.visual_frames) - 1:
+            self.index += 1
 
-    def current_frame(self) -> Optional[FrameSample]:
-        if not self.recording.frames:
-            return None
-        return self.recording.frames[min(self._index, len(self.recording.frames) - 1)]
-
-    # Internal helpers ------------------------------------------------------
-    def _prepare_animation_cache(self) -> None:
-        unique_actions = {frame.action for frame in self.recording.frames}
-        base_prefix = f"player/{self.recording.skin_path}/"
+    def _prepare_animation_cache(self):
+        unique_actions = {f.action for f in self.data.visual_frames}
+        base_prefix = f"player/{self.data.skin}/"
         for action in unique_actions:
             key = base_prefix + action
-            asset = self._assets.get(key)
-            if asset is None:
-                continue
-            images = getattr(asset, "images", None)
-            img_dur = getattr(asset, "img_duration", 1)
-            if images and isinstance(images, Iterable):
+            asset = self.assets.get(key)
+            if asset:
+                images = getattr(asset, "images", [])
+                img_dur = getattr(asset, "img_duration", 1)
                 self._base_frame_cache[action] = (list(images), int(max(1, img_dur)))
 
     def _frame_image(self, frame: FrameSample) -> Optional[pygame.Surface]:
         cache_entry = self._base_frame_cache.get(frame.action)
-        if not cache_entry:
-            return None
+        if not cache_entry: return None
         frames, img_dur = cache_entry
-        if not frames:
-            return None
+        if not frames: return None
+        
         idx = max(0, min(len(frames) - 1, frame.anim_frame // img_dur))
         tint_key = (frame.action, idx)
         tinted = self._tint_cache.get(tint_key)
+        
         if tinted is None:
             base = frames[idx]
             tinted = base.copy()
-            tint_surface = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
-            tint_surface.fill(self._TINT_COLOR)
-            tinted.blit(tint_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            tint_surf = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
+            tint_surf.fill(self._TINT_COLOR)
+            tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             tinted.set_alpha(self._TINT_COLOR[3])
             self._tint_cache[tint_key] = tinted
+            
         if frame.flip:
             flip_key = (frame.action, idx, "flip")
             flipped = self._tint_cache.get(flip_key)
@@ -181,143 +195,114 @@ class ReplayGhost:
                 self._tint_cache[flip_key] = flipped
             return flipped
         return tinted
-
-    # Debug helpers ---------------------------------------------------------
-    def debug_index(self) -> int:
-        return self._index
+    
+    def reset(self):
+        self.index = 0
 
 
 class ReplayManager:
-    """Coordinates recording and ghost playback for the active Game instance."""
-
-    def __init__(self, game, storage_dir: str | Path | None = None, settings_obj=None) -> None:
+    def __init__(self, game, storage_dir=None):
         self.game = game
         self.storage_dir = Path(storage_dir) if storage_dir else Path("data/replays")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.last_runs_dir = self.storage_dir / "last_runs"
         self.last_runs_dir.mkdir(parents=True, exist_ok=True)
-        self.settings = settings_obj or global_settings
-        self.current_level: Optional[str] = None
+        
         self.recording: Optional[ReplayRecording] = None
-        self.best_recording: Optional[ReplayRecording] = None
-        self.last_recording: Optional[ReplayRecording] = None
-        self._pending_playback: Optional[ReplayRecording] = None
         self.ghost: Optional[ReplayGhost] = None
+        self.best_data: Optional[ReplayData] = None
+        self.last_data: Optional[ReplayData] = None
+        
+        self.tick_counter = 0
 
-    # Level lifecycle ------------------------------------------------------
-    def on_level_load(self, level: int | str, player) -> None:
-        self.current_level = str(level)
-        self.recording = None
-        self.best_recording = None
-        self.last_recording = None
-        playback_source = None
-        self.ghost = None
-        if not self._ghosts_enabled():
-            self._pending_playback = None
-            return
+    def on_level_load(self, level: int | str, player: Any):
+        level_str = str(level)
+        from scripts.rng_service import RNGService
+        seed = RNGService.get().get_state()[1][0] # Hacky extraction of seed or just use 0 if not accessible
+        # Better:
+        # seed = RNGService.get_seed() # If available
+        seed = 0 # Placeholder
+        
+        skin = self._get_skin(player)
+        
+        # Start recording
+        if self._ghosts_enabled():
+            self.recording = ReplayRecording(level_str, skin, seed)
+            self.tick_counter = 0
+            
+            # Load best run
+            self.best_data = self._load(level_str, "best")
+            self.last_data = self._load(level_str, "last")
+            
+            # Prioritize last run if it was same level (instant retry), else best
+            source = None
+            if self.last_data and self.last_data.level == level_str:
+                source = self.last_data
+            elif self.best_data and self.best_data.level == level_str:
+                source = self.best_data
+            
+            if source:
+                self.ghost = ReplayGhost(source, getattr(self.game, "assets", {}))
+                self.ghost.reset()
 
-        skin_path = self._skin_path_for_player(player)
-        self.recording = ReplayRecording(self.current_level, skin_path)
-        self.best_recording = self._load_from_disk(self.current_level, kind="best")
-        self.last_recording = self._load_from_disk(self.current_level, kind="last")
-        if self._pending_playback and self._pending_playback.level == self.current_level:
-            playback_source = self._pending_playback
-        elif self.best_recording and self.best_recording.level == self.current_level:
-            playback_source = self.best_recording
-        elif self.last_recording and self.last_recording.level == self.current_level:
-            playback_source = self.last_recording
-        self._pending_playback = None
-        if playback_source and playback_source.frames:
-            self.ghost = ReplayGhost(playback_source.clone(), getattr(self.game, "assets", {}))
-            self.ghost.reset()
+    def update(self, player: Any, inputs: List[str]):
+        """Called every frame to capture state."""
+        if not self.recording: return
+        if getattr(self.game, "dead", 0): return
+        
+        # Capture snapshot every 60 frames (1s)
+        snap = None
+        if self.tick_counter % 60 == 0:
+            # Snapshots might be heavy, ensure we don't lag
+            try:
+                snap = SnapshotService.capture(self.game)
+            except Exception:
+                pass
+        
+        self.recording.capture_frame(self.tick_counter, player, inputs, snap)
+        self.tick_counter += 1
 
-    def abort_current_run(self) -> None:
-        if self.recording:
-            self.recording = ReplayRecording(self.recording.level, self.recording.skin_path)
-
-    # Frame sampling -------------------------------------------------------
-    def capture_player(self, player) -> None:
-        if not self._ghosts_enabled() or not self.recording or not self.recording.level:
-            return
-        if getattr(self.game, "dead", 0):
-            return
-        self.recording.append_player(player)
-
-    # Completion -----------------------------------------------------------
-    def commit_run(self, *, duration_ms: int, new_best: bool) -> None:
-        if not self._ghosts_enabled() or not self.recording or not self.recording.frames:
-            return
-        self.recording.duration_ms = duration_ms
-        committed = self.recording.clone()
-        self._pending_playback = committed.clone()
-        self.last_recording = committed.clone()
-        self._save_to_disk(committed, kind="last")
+    def commit_run(self, new_best: bool):
+        if not self.recording or self.recording.data.duration_frames < 10: return
+        
+        data = self.recording.data
+        self.last_data = data
+        self._save(data, "last")
+        
         if new_best:
-            self._save_to_disk(committed, kind="best")
-            self.best_recording = committed.clone()
-        # Prepare for next run (maintain same skin)
-        self.recording = ReplayRecording(self.current_level or "0", committed.skin_path)
+            self.best_data = data
+            self._save(data, "best")
 
-    # Rendering ------------------------------------------------------------
-    def advance_and_render(self, render_surface: pygame.Surface, offset: tuple[int, int]) -> None:
-        if not self._ghosts_enabled() or not self.ghost:
-            return
-        self.ghost.step_and_render(render_surface, offset)
+    def render_ghost(self, surface, offset):
+        if self.ghost and self._ghosts_enabled():
+            self.ghost.step_and_render(surface, offset)
 
-    # Persistence ----------------------------------------------------------
-    def _replay_path(self, level: str, *, kind: str = "best") -> Path:
-        if kind == "best":
-            return self.storage_dir / f"{level}.json"
-        return self.last_runs_dir / f"{level}.json"
+    def _save(self, data: ReplayData, kind: str):
+        path = self._path(data.level, kind)
+        with path.open("w") as f:
+            json.dump(data.to_json(), f)
 
-    def _save_to_disk(self, recording: ReplayRecording, *, kind: str = "best") -> None:
-        path = self._replay_path(recording.level, kind=kind)
-        with path.open("w", encoding="utf-8") as fh:
-            json.dump(recording.to_json(), fh, indent=2)
-
-    def _load_from_disk(self, level: str, *, kind: str = "best") -> Optional[ReplayRecording]:
-        path = self._replay_path(level, kind=kind)
-        if not path.exists():
-            return None
+    def _load(self, level: str, kind: str) -> Optional[ReplayData]:
+        path = self._path(level, kind)
+        if not path.exists(): return None
         try:
-            with path.open("r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            return ReplayRecording.from_json(data)
-        except (json.JSONDecodeError, OSError):  # pragma: no cover - defensive
+            with path.open("r") as f:
+                return ReplayData.from_json(json.load(f))
+        except Exception:
             return None
 
-    # Utility --------------------------------------------------------------
-    def _skin_path_for_player(self, player) -> str:
-        try:
-            from scripts.collectableManager import CollectableManager as CM
-
-            skins = CM.SKIN_PATHS
-            idx = int(getattr(player, "skin", 0))
-            if 0 <= idx < len(skins):
-                return skins[idx]
-        except Exception:  # pragma: no cover - fallback
-            pass
-        return "default"
-
-    # Test helpers ---------------------------------------------------------
-    def ghost_current_frame(self) -> Optional[FrameSample]:
-        if not self.ghost:
-            return None
-        return self.ghost.current_frame()
-
-    def ghost_index(self) -> int:
-        if not self.ghost:
-            return 0
-        return self.ghost.debug_index()
-
-    def has_ghost(self) -> bool:
-        return self._ghosts_enabled() and self.ghost is not None
+    def _path(self, level: str, kind: str) -> Path:
+        return (self.storage_dir if kind == "best" else self.last_runs_dir) / f"{level}.json"
 
     def _ghosts_enabled(self) -> bool:
+        return bool(getattr(global_settings, "ghost_enabled", True))
+
+    def _get_skin(self, player) -> str:
         try:
-            return bool(getattr(self.settings, "ghost_enabled", True))
-        except Exception:  # pragma: no cover - defensive
-            return True
+            from scripts.collectableManager import CollectableManager as CM
+            idx = int(getattr(player, "skin", 0))
+            return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
+        except:
+            return "default"
 
-
-__all__ = ["ReplayManager", "ReplayRecording", "ReplayGhost", "FrameSample"]
+__all__ = ["ReplayManager", "ReplayRecording", "ReplayGhost", "ReplayData"]

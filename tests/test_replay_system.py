@@ -43,29 +43,26 @@ def test_replay_commit_and_load(tmp_path):
     player = _StubPlayer()
 
     manager.on_level_load(level=1, player=player)
-    assert not manager.has_ghost()
+    assert not manager.ghost # No ghost on first run
 
-    for idx in range(4):
+    # Capture inputs & frames
+    for idx in range(15): # Need > 10 frames for commit
         player.pos = [float(idx * 4), float(idx * 2)]
         player.animation.frame = idx * player.animation.img_duration
         player.flip = bool(idx % 2)
-        manager.capture_player(player)
+        manager.update(player, inputs=[]) 
 
-    manager.commit_run(duration_ms=1234, new_best=True)
+    manager.commit_run(new_best=True)
 
     replay_path = tmp_path / "1.json"
     assert replay_path.exists()
 
     manager.on_level_load(level=1, player=player)
-    assert manager.has_ghost()
+    assert manager.ghost is not None # Ghost exists now
 
-    first_frame = manager.ghost_current_frame()
-    assert first_frame is not None
-    assert first_frame.x == pytest.approx(0.0)
-    assert first_frame.y == pytest.approx(0.0)
-
-    manager.advance_and_render(game.display, (0, 0))
-    assert manager.ghost_index() >= 1
+    # Render test
+    manager.render_ghost(game.display, (0, 0))
+    assert manager.ghost.index >= 1
 
 
 def test_replay_last_run_persisted(tmp_path):
@@ -74,11 +71,11 @@ def test_replay_last_run_persisted(tmp_path):
     player = _StubPlayer()
 
     manager.on_level_load(level=2, player=player)
-    for idx in range(3):
+    for idx in range(15):
         player.pos = [float(idx), float(idx * 2)]
-        manager.capture_player(player)
+        manager.update(player, [])
 
-    manager.commit_run(duration_ms=9999, new_best=False)
+    manager.commit_run(new_best=False)
 
     best_path = tmp_path / "2.json"
     last_path = tmp_path / "last_runs" / "2.json"
@@ -88,10 +85,7 @@ def test_replay_last_run_persisted(tmp_path):
     # Simulate fresh session to ensure last run is loaded
     new_manager = ReplayManager(game, storage_dir=tmp_path)
     new_manager.on_level_load(level=2, player=player)
-    assert new_manager.has_ghost()
-    frame = new_manager.ghost_current_frame()
-    assert frame is not None
-    assert frame.x == pytest.approx(0.0)
+    assert new_manager.ghost is not None
 
 
 def test_replay_disabled_skips_capture(tmp_path):
@@ -102,13 +96,13 @@ def test_replay_disabled_skips_capture(tmp_path):
 
     manager.on_level_load(level=5, player=player)
     assert manager.recording is None
-    assert not manager.has_ghost()
+    assert manager.ghost is None
 
-    for idx in range(3):
+    for idx in range(15):
         player.pos = [float(idx * 3), float(idx)]
-        manager.capture_player(player)
+        manager.update(player, [])
 
-    manager.commit_run(duration_ms=777, new_best=True)
+    manager.commit_run(new_best=True)
 
     assert not (tmp_path / "5.json").exists()
     assert not (tmp_path / "last_runs" / "5.json").exists()

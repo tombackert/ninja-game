@@ -257,6 +257,12 @@ class GameState(State):
         # Persist collectables & best times when leaving game state entirely (not just pausing).
         try:
             self._game.cm.save_collectables()
+            # Commit any pending replay if we finished a level?
+            # Actually, replay commit happens on level completion, which is inside update() usually.
+            # But if we quit, we might want to abort.
+            replay = getattr(self._game, "replay", None)
+            if replay:
+                replay.recording = None # Abort on exit without finish
         except Exception:  # pragma: no cover
             pass
 
@@ -269,6 +275,12 @@ class GameState(State):
             elif act == "debug_toggle":
                 self.perf_enabled = not self.perf_enabled
                 self.debug_overlay = self.perf_enabled  # keep alias in sync
+        
+        # Pass actions to replay system
+        replay = getattr(self._game, "replay", None)
+        player = getattr(self._game, "player", None)
+        if replay and player:
+            replay.update(player, list(actions))
 
     # Raw event handling (for continuous movement / jump / dash until migrated to action axes)
     def handle(self, events: Sequence[pygame.event.Event]) -> None:  # pragma: no cover - thin delegation
@@ -319,10 +331,7 @@ class GameState(State):
                 elapsed_ms = g.timer.elapsed_time
                 new_best = g.timer.update_best_time()
                 if replay_mgr:
-                    try:
-                        replay_mgr.commit_run(duration_ms=elapsed_ms, new_best=new_best)
-                    except Exception:
-                        pass
+                    replay_mgr.commit_run(new_best=new_best)
                 levels = list_levels()
                 try:
                     current_level_index = levels.index(g.level)

@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from dataclasses import dataclass, field, asdict
+from typing import Any, List, Tuple, Dict
 
 from scripts.rng_service import RNGService
 
@@ -153,3 +153,37 @@ class SnapshotService:
                         "owner": proj_snap.owner,
                     }
                     game.projectiles._projectiles.append(proj)
+
+    @staticmethod
+    def serialize(snapshot: SimulationSnapshot) -> Dict[str, Any]:
+        return asdict(snapshot)
+
+    @staticmethod
+    def deserialize(data: Dict[str, Any]) -> SimulationSnapshot:
+        # Reconstruct nested dataclasses
+        players = [EntitySnapshot(**p) for p in data.get("players", [])]
+        enemies = [EntitySnapshot(**e) for e in data.get("enemies", [])]
+        projectiles = [ProjectileSnapshot(**p) for p in data.get("projectiles", [])]
+        
+        # Handle tuple conversion for rng_state if it came back as a list from JSON
+        rng_state = data.get("rng_state")
+        if isinstance(rng_state, list):
+            # RNG state is (version, internal_state, gaussian_next)
+            # internal_state is also a tuple/list.
+            # We need to ensure deeply nested structure is tuple where expected?
+            # python's random.setstate is picky.
+            # format: (3, (val, val, ...), None)
+            if len(rng_state) >= 2 and isinstance(rng_state[1], list):
+                rng_state[1] = tuple(rng_state[1])
+            rng_state = tuple(rng_state)
+
+        return SimulationSnapshot(
+            tick=data.get("tick", 0),
+            rng_state=rng_state,
+            players=players,
+            enemies=enemies,
+            projectiles=projectiles,
+            score=data.get("score", 0),
+            dead_count=data.get("dead_count", 0),
+            transition=data.get("transition", 0),
+        )
