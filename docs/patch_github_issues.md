@@ -572,18 +572,18 @@ Complexity overhead
 ### Context
 Assess benefit of ECS architecture.
 ### Tasks
-- [ ] Prototype minimal ECS for projectiles/particles
-- [ ] Measure complexity vs benefit
+- [x] Prototype minimal ECS for projectiles/particles
+- [x] Measure complexity vs benefit
 ### Changes
 - Prototype folder `experiments/ecs/`
 ### Acceptance Criteria
-- [ ] Documented decision (proceed or not)
+- [x] Documented decision (proceed or not)
 ### Risks
 Time sink
 ### Test Cases
 1. N/A (documentation-driven)
 ### Definition of Done
-- [ ] ADR (architecture decision record) committed
+- [x] ADR (architecture decision record) committed (docs/adr/001-ecs-migration.md)
 
 
 ## Added Multiplayer & RL Related Issues
