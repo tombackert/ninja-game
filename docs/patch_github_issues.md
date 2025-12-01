@@ -108,10 +108,10 @@ Accidentally drop a needed field
 ### Context
 Avoid per-frame filesystem scans.
 ### Tasks
-- [x] Add utility `level_index.py` with `list_levels()` caching result
+- [x] Add utility `level_cache.py` with `list_levels()` caching result
 - [x] Replace dynamic os.listdir calls in loops
 ### Changes
-- New file `scripts/level_index.py`
+- New file `scripts/level_cache.py`
 - Edits in `game.py`, `menu.py`
 ### Acceptance Criteria
 - [x] Level progression logic maintained
@@ -501,52 +501,35 @@ Large initial diff
 ### Context
 Visibility into runtime performance.
 ### Tasks
-- [ ] performance module collecting frame times
-- [ ] Periodic logging (DEBUG)
+- [x] performance module collecting frame times
+- [x] Periodic logging (DEBUG)
 ### Changes
 - `performance.py`
 ### Acceptance Criteria
-- [ ] Rolling average computed
+- [x] Rolling average computed
 ### Risks
 Log noise (mitigate log level)
 ### Test Cases
 1. Simulated frame updates produce expected average
 ### Definition of Done
-- [ ] Unit test for average calc
-
-### Issue 28: Configurable key bindings
-### Context
-Allow user remapping.
-### Tasks
-- [ ] Key binding schema in settings
-- [ ] InputRouter respects mapping
-### Changes
-- `settings.py`, `input_router.py`
-### Acceptance Criteria
-- [ ] Remap left/right works in game
-### Risks
-Conflicting bindings
-### Test Cases
-1. Change left key -> movement still works
-### Definition of Done
-- [ ] Unit test adjusting binding
+- [x] Unit test for average calc
 
 ### Issue 29: In-game debug overlay
 ### Context
 Runtime diagnostics.
 ### Tasks
-- [ ] Toggle overlay with F1
-- [ ] Show fps, entity counts, memory (optional)
+- [x] Toggle overlay with F1
+- [x] Show fps, entity counts, memory (optional)
 ### Changes
-- `debug_overlay.py`
+- `debug_overlay.py` (Integrated into `state_manager.py` / `perf_hud.py`)
 ### Acceptance Criteria
-- [ ] Overlay toggles & displays metrics
+- [x] Overlay toggles & displays metrics
 ### Risks
 Overdraw cost (minor)
 ### Test Cases
 1. Toggle twice returns to hidden
 ### Definition of Done
-- [ ] Manual visual confirm + simple test
+- [x] Manual visual confirm + simple test
 
 ---
 ## Iteration 5 – Feature Hardening
@@ -555,35 +538,35 @@ Overdraw cost (minor)
 ### Context
 Record player inputs & positions for playback.
 ### Tasks
-- [ ] Input recorder
-- [ ] Ghost entity playback
+- [x] Input recorder
+- [x] Ghost entity playback
 ### Changes
 - `replay.py`, entity integration
 ### Acceptance Criteria
-- [ ] Ghost replicates prior run path
+- [x] Ghost replicates prior run path
 ### Risks
 Desync if map changed
 ### Test Cases
 1. Record short run -> replay matches position trace
 ### Definition of Done
-- [ ] Unit test comparing position frames
+- [x] Unit test comparing position frames
 
 ### Issue 31: Modular AI behavior scripts
 ### Context
 Pluggable enemy behaviors.
 ### Tasks
-- [ ] Behavior interface
-- [ ] Example: patrol, shooter
+- [x] Behavior interface
+- [x] Example: patrol, shooter
 ### Changes
-- `ai/` package
+- `scripts/ai/` package
 ### Acceptance Criteria
-- [ ] Enemy can swap behaviors via config
+- [x] Enemy can swap behaviors via config (constructor injection)
 ### Risks
 Complexity overhead
 ### Test Cases
 1. Behavior switch alters movement pattern
 ### Definition of Done
-- [ ] Unit test for behavior dispatch
+- [x] Unit test for behavior dispatch
 
 ### Issue 32: ECS migration feasibility (exploratory)
 ### Context
@@ -856,6 +839,7 @@ Scope creep
 - Map hot reload
 - Post-processing pipeline
 - Profiling tool panel
+- Configurable key bindings (Issue 28)
 
 ---
 ## Global Definition of Done Reminder

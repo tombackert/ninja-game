@@ -150,10 +150,10 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None):
+    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None, policy: str = "scripted_enemy"):
         super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
-        self.policy = PolicyService.get("scripted_enemy")
+        self.policy = PolicyService.get(policy)
 
     def update(self, tilemap, movement=(0, 0)):
         rng = RNGService.get()

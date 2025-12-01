@@ -141,7 +141,6 @@ Issues:
 - Headless CI setup (SDL_VIDEODRIVER=dummy) + GitHub Actions workflow.
 - Code style enforcement (ruff, black, mypy).
 - Metrics hook (frame time rolling avg, entity counts, etc.).
-- Configurable key bindings (persistent).
 - In-game debug overlay (F1).
 - Training Environment Wrapper (`TrainingEnv`) enabling reset/step API for RL.
 - RewardShaper module (pluggable reward functions referencing FeatureExtractor output).
@@ -169,6 +168,7 @@ Issues:
 - Profiling tool (mini UI panel with per-system timings).
 - Network transport abstraction (pluggable UDP / WebSockets) beyond initial scaffolding.
 - Encryption / authentication layer (if public multiplayer planned).
+- Configurable key bindings.
 
 ---
 ## Dependencies & Order
@@ -204,7 +204,7 @@ Issues:
 
 ---
 ## Instrumentation
-- Add `performance.py` (frame time sampler + rolling average) in Iteration 1 (optional).
+- Add `scripts/perf_hud.py` (frame time sampler + rolling average) in Iteration 1 (optional).
 - Log active particle / projectile counts (DEBUG) after Iteration 3.
 
 ---
