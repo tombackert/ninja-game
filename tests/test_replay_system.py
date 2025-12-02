@@ -9,6 +9,10 @@ class _StubAnim:
     def __init__(self, size=(12, 18)):
         self.images = [pygame.Surface(size, pygame.SRCALPHA)]
         self.img_duration = 5
+        self.frame = 0
+    def img(self): return self.images[0]
+    def copy(self): return self
+    def update(self): self.frame += 1
 
 
 class _StubGame:
@@ -16,6 +20,11 @@ class _StubGame:
         self.assets = {"player/default/idle": _StubAnim(), "player/default/run": _StubAnim()}
         self.display = pygame.Surface((160, 120), pygame.SRCALPHA)
         self.dead = 0
+        self.transition = 0
+        self.tilemap = type("StubTM", (), {"physics_rects_around": lambda x: []})()
+        self.players = []
+        self.enemies = []
+        # self.projectiles = [] # Optional, checking hasattr
 
 
 class _StubPlayer:
@@ -25,6 +34,14 @@ class _StubPlayer:
         self.action = "idle"
         self.skin = 0
         self.animation = type("Anim", (), {"frame": 0, "img_duration": 5})()
+        self.velocity = [0.0, 0.0]
+        self.lives = 3
+        self.air_time = 0
+        self.jumps = 1
+        self.wall_slide = False
+        self.dashing = 0
+        self.shoot_cooldown = 0
+        self.id = 0
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +58,8 @@ def test_replay_commit_and_load(tmp_path):
     game = _StubGame()
     manager = ReplayManager(game, storage_dir=tmp_path)
     player = _StubPlayer()
+    # Add player to game so SnapshotService finds it
+    game.players.append(player)
 
     manager.on_level_load(level=1, player=player)
     assert not manager.ghost # No ghost on first run
@@ -48,8 +67,7 @@ def test_replay_commit_and_load(tmp_path):
     # Capture inputs & frames
     for idx in range(15): # Need > 10 frames for commit
         player.pos = [float(idx * 4), float(idx * 2)]
-        player.animation.frame = idx * player.animation.img_duration
-        player.flip = bool(idx % 2)
+        # manager.update now takes inputs
         manager.update(player, inputs=[]) 
 
     manager.commit_run(new_best=True)
@@ -61,14 +79,16 @@ def test_replay_commit_and_load(tmp_path):
     assert manager.ghost is not None # Ghost exists now
 
     # Render test
+    # This now triggers re-simulation
     manager.render_ghost(game.display, (0, 0))
-    assert manager.ghost.index >= 1
+    assert manager.ghost.tick >= 1
 
 
 def test_replay_last_run_persisted(tmp_path):
     game = _StubGame()
     manager = ReplayManager(game, storage_dir=tmp_path)
     player = _StubPlayer()
+    game.players.append(player)
 
     manager.on_level_load(level=2, player=player)
     for idx in range(15):
@@ -93,6 +113,7 @@ def test_replay_disabled_skips_capture(tmp_path):
     global_settings.ghost_enabled = False
     manager = ReplayManager(game, storage_dir=tmp_path)
     player = _StubPlayer()
+    game.players.append(player)
 
     manager.on_level_load(level=5, player=player)
     assert manager.recording is None

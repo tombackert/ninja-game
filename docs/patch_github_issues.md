@@ -840,6 +840,7 @@ Scope creep
 - Post-processing pipeline
 - Profiling tool panel
 - Configurable key bindings (Issue 28)
+- Replay / Ghost via Snapshots (Issue 42) - Requires fixed timestep
 
 ---
 ## Global Definition of Done Reminder

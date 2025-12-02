@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from scripts.snapshot import SnapshotService, SimulationSnapshot
 from scripts.rng_service import RNGService
 from scripts.replay import ReplayData, FrameSample
-from scripts.ai.behaviors import ShooterPolicy
 from scripts.entities import Enemy, PhysicsEntity
 
 # Stub classes to avoid loading assets
@@ -13,22 +12,22 @@ class StubGame:
     def __init__(self):
         self.players = []
         self.enemies = []
-        self.projectiles = MagicMock()
-        self.projectiles._projectiles = []
+        self.projectiles = [] # List, not mock, so it iterates
         self.cm = MagicMock()
         self.cm.coins = 0
         self.dead = 0
         self.transition = 0
         
-        # Mock assets with copy() method
+        # Mock assets with copy() method for Ghost/Enemy init
         mock_anim = MagicMock()
         mock_anim.copy.return_value = mock_anim
         self.assets = {
             "enemy/idle": mock_anim,
             "enemy/run": mock_anim,
+            "player/default/idle": mock_anim, # Needed for GhostPlayer default skin
+            "player/default/run": mock_anim,
             "player/idle": mock_anim,
             "player/run": mock_anim,
-            # Add others if needed by specific tests
         }
         
         self.tilemap = MagicMock()
@@ -133,9 +132,6 @@ class TestAdvancedSystems(unittest.TestCase):
         Verify ShooterPolicy correctly orients the enemy towards the player.
         """
         # Setup Enemy with ShooterPolicy
-        # We need a real Enemy instance but stubbed game
-        # PolicyService.get("shooter") requires "scripts.ai" import side-effect.
-        # We will inject policy directly or rely on PolicyService working if imported.
         from scripts.ai.behaviors import ShooterPolicy
         
         enemy = Enemy(self.game, (200, 200), (10, 10), 0)
