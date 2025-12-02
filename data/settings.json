@@ -1,5 +1,5 @@
 {
-    "music_volume": 0.0,
+    "music_volume": 0.3,
     "sound_volume": 0.0,
     "selected_level": 1,
     "selected_editor_level": 20,
@@ -18,5 +18,8 @@
         "9": true,
         "10": true,
         "15": true
-    }
+    },
+    "show_perf_overlay": true,
+    "ghost_enabled": true,
+    "ghost_mode": "best"
 }

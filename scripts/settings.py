@@ -47,6 +47,7 @@ class Settings:
         if new_val != self._music_volume:
             self._music_volume = new_val
             self._dirty = True
+            self.flush()
 
     @property
     def sound_volume(self):
@@ -58,6 +59,7 @@ class Settings:
         if new_val != self._sound_volume:
             self._sound_volume = new_val
             self._dirty = True
+            self.flush()
 
     @property
     def selected_level(self):
@@ -69,6 +71,7 @@ class Settings:
         if new_val != self._selected_level:
             self._selected_level = new_val
             self._dirty = True
+            self.flush()
 
     @property
     def ghost_enabled(self) -> bool:
@@ -80,6 +83,7 @@ class Settings:
         if new_val != self._ghost_enabled:
             self._ghost_enabled = new_val
             self._dirty = True
+            self.flush()
 
     @property
     def ghost_mode(self) -> str:
@@ -90,6 +94,7 @@ class Settings:
         if value in ("best", "last") and value != self._ghost_mode:
             self._ghost_mode = value
             self._dirty = True
+            self.flush()
 
     def set_editor_level(self, value):
         self.selected_editor_level = max(0, value)
@@ -107,6 +112,7 @@ class Settings:
         if level in self.playable_levels and not self.playable_levels[level]:
             self.playable_levels[level] = True
             self._dirty = True
+            self.flush()
         # Delegate to progress tracker
         # (lazy import to avoid circular import at module load)
         try:  # pragma: no cover - defensive
