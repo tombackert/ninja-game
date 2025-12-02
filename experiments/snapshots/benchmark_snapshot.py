@@ -66,8 +66,8 @@ def run_benchmark(game, iterations=1000, mode="FULL"):
         if mode == "NONE":
             pass # Simulate game loop overhead?
         else:
-            snap = SnapshotService.capture(game)
             optimized = (mode == "LITE")
+            snap = SnapshotService.capture(game, optimized=optimized)
             replay.capture_frame(i, game.players[0], [], snap, optimized=optimized)
             
     end = time.perf_counter()

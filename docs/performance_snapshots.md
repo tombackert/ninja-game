@@ -15,13 +15,13 @@ Assess the runtime cost and memory footprint of the Replay/Ghost system's snapsh
     *   **FULL:** Captures all entities (used for Save/Load, AI, Netcode).
     *   **LITE:** Captures only Player state (used for Ghost visuals).
 
-## Results
+## Results (Iteration 2 - Push Filtering Down)
 
-| Mode | Time (ms/frame) | Size (KB/frame) |
-| :--- | :--- | :--- |
-| **Baseline** (No Capture) | 0.0000 | 0 |
-| **FULL Snapshot** | 0.6990 | 30.10 |
-| **LITE Snapshot** | 0.5502 | 0.33 |
+| Mode | Time (ms/frame) | Size (KB/frame) | Speedup |
+| :--- | :--- | :--- | :--- |
+| **Baseline** (No Capture) | 0.0000 | 0 | - |
+| **FULL Snapshot** | 0.7022 | 30.09 | 1.0x |
+| **LITE Snapshot** | **0.0102** | **0.33** | **68.57x** |
 
 ## Analysis
 
@@ -33,12 +33,11 @@ The LITE mode achieves a **98.9% reduction** in storage size (0.33KB vs 30KB per
 *   **Conclusion:** The LITE mode is **mandatory** for the Ghost system to prevent massive disk usage.
 
 ### 2. Runtime Performance
-The LITE mode is **~1.27x faster** than FULL mode (0.55ms vs 0.70ms).
-*   **Why not faster?** The `SnapshotService.capture()` method currently iterates over all 100 enemies to build the initial `SimulationSnapshot` object *before* the `ReplayRecording.capture_frame` method strips them out.
-*   **Bottleneck:** The cost is dominated by object creation (`EntitySnapshot`) in the capture phase, not the serialization phase.
-*   **Optimization Opportunity:** We could pass a flag to `SnapshotService.capture(optimized=True)` to skip iterating enemies entirely, which would likely drop the time to ~0.05ms.
+The optimized LITE mode is **~68x faster** than FULL mode (0.01ms vs 0.70ms).
+*   **Why:** By pushing the `optimized=True` flag into `SnapshotService.capture`, we skip iterating over the enemy/projectile lists entirely. This avoids the O(N) object creation overhead.
+*   **Impact:** 0.01ms is negligible (0.06% of a 16ms frame). This means we can afford to snapshot frequently (e.g., 6Hz or even 30Hz) without frame drops.
 
-## Recommendation for Future
-While the current implementation (0.55ms/frame) is acceptable (3% of a 16ms frame budget at 60fps), we can optimize further by pushing the filtering logic *into* the `SnapshotService`.
+## Conclusion
+The snapshot system is now highly optimized for both storage and runtime performance. The `optimized` flag is a critical feature for the Ghost system.
 
-Current Status: **Approved**. The storage savings alone justify the architecture.
+Current Status: **Optimized & Approved**.

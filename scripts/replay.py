@@ -95,13 +95,27 @@ class ReplayRecording:
         self.data.inputs.append({"tick": tick, "inputs": inputs})
         
         # Capture Snapshot
+        # Logic: If `snapshot` object is passed, it's assumed to be already captured.
+        # However, the caller (ReplayManager.update) calls SnapshotService.capture().
+        # We should move the capture call inside here OR update ReplayManager to pass the flag.
+        # ReplayManager calls capture() then calls capture_frame().
+        # To avoid double capture or refactoring caller too much:
+        # If the snapshot passed is ALREADY optimized (by the caller knowing), we just serialize.
+        # But currently ReplayManager calls capture() without args.
+        
+        # Wait, `ReplayManager.update` calls `SnapshotService.capture(self.game)`.
+        # It does NOT pass `optimized`.
+        # So we receive a FULL snapshot.
+        # We should strip it here? No, the user asked to PUSH logic into SnapshotService.
+        # This means ReplayManager should call `capture(optimized=True)`.
+        
         if snapshot:
             serialized = SnapshotService.serialize(snapshot)
-            if optimized:
-                # Strip heavy data not needed for visual ghost playback
-                serialized["enemies"] = []
-                serialized["projectiles"] = []
-                serialized["rng_state"] = () 
+            # If we received a full snapshot but want optimized, we could strip here, 
+            # BUT the goal is performance, so we should have captured it optimized in the first place.
+            # See ReplayManager.update below.
+            
+            # Legacy strip logic removal (handled by upstream capture)
             self.data.snapshots[str(tick)] = serialized
 
         self.data.duration_frames += 1
@@ -285,7 +299,8 @@ class ReplayManager:
         snap = None
         if self.tick_counter % 10 == 0:
             try:
-                snap = SnapshotService.capture(self.game)
+                # Pushed filtering into capture service for performance
+                snap = SnapshotService.capture(self.game, optimized=True)
             except: pass
         
         self.recording.capture_frame(self.tick_counter, player, inputs, snap, optimized=True)

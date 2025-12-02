@@ -43,10 +43,10 @@ class SimulationSnapshot:
 
 class SnapshotService:
     @staticmethod
-    def capture(game) -> SimulationSnapshot:
-        rng_state = RNGService.get().get_state()
+    def capture(game, optimized: bool = False) -> SimulationSnapshot:
+        rng_state = () if optimized else RNGService.get().get_state()
 
-        # Capture Players
+        # Capture Players (Always needed)
         players: List[EntitySnapshot] = []
         for p in game.players:
             # Handle both property and direct attribute for lives during migration
@@ -67,23 +67,24 @@ class SnapshotService:
             )
             players.append(player_snap)
 
-        # Capture Enemies
+        # Capture Enemies (Skip if optimized)
         enemies: List[EntitySnapshot] = []
-        for e in game.enemies:
-            enemy_snap = EntitySnapshot(
-                type="enemy",
-                id=e.id,
-                pos=list(e.pos),
-                velocity=list(e.velocity),
-                flip=e.flip,
-                action=e.action,
-                walking=e.walking,
-            )
-            enemies.append(enemy_snap)
+        if not optimized:
+            for e in game.enemies:
+                enemy_snap = EntitySnapshot(
+                    type="enemy",
+                    id=e.id,
+                    pos=list(e.pos),
+                    velocity=list(e.velocity),
+                    flip=e.flip,
+                    action=e.action,
+                    walking=e.walking,
+                )
+                enemies.append(enemy_snap)
 
-        # Capture Projectiles
+        # Capture Projectiles (Skip if optimized)
         projectiles: List[ProjectileSnapshot] = []
-        if hasattr(game, "projectiles"):
+        if not optimized and hasattr(game, "projectiles"):
             # Iterate over the system (yields dicts)
             for p in game.projectiles:
                 proj_snap = ProjectileSnapshot(
@@ -104,8 +105,9 @@ class SnapshotService:
 
     @staticmethod
     def restore(game, snapshot: SimulationSnapshot) -> None:
-        # Restore RNG
-        RNGService.get().set_state(snapshot.rng_state)
+        # Restore RNG (only if captured)
+        if snapshot.rng_state:
+            RNGService.get().set_state(snapshot.rng_state)
 
         # Restore Globals
         game.dead = snapshot.dead_count
@@ -176,6 +178,8 @@ class SnapshotService:
             if len(rng_state) >= 2 and isinstance(rng_state[1], list):
                 rng_state[1] = tuple(rng_state[1])
             rng_state = tuple(rng_state)
+        if rng_state is None:
+            rng_state = ()
 
         return SimulationSnapshot(
             tick=data.get("tick", 0),
