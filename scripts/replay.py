@@ -293,10 +293,19 @@ class ReplayManager:
             self.last_data = self._load(level_str, "last")
             
             source = None
-            if self.last_data and self.last_data.level == level_str:
-                source = self.last_data
-            elif self.best_data and self.best_data.level == level_str:
-                source = self.best_data
+            mode = getattr(self.settings, "ghost_mode", "best")
+            
+            # Prioritize based on mode
+            if mode == "best":
+                if self.best_data and self.best_data.level == level_str:
+                    source = self.best_data
+                elif self.last_data and self.last_data.level == level_str:
+                    source = self.last_data
+            else: # mode == "last"
+                if self.last_data and self.last_data.level == level_str:
+                    source = self.last_data
+                elif self.best_data and self.best_data.level == level_str:
+                    source = self.best_data
             
             if source:
                 self.ghost = ReplayGhost(self.game, source)
