@@ -760,24 +760,25 @@ Interpolation drift
 ### Test Cases
 1. Record small session -> playback diff under threshold
 ### Definition of Done
-- [x] Unit test
+- [x] Unit test comparing position frames
 
 ### Issue 43: Interpolation Buffers
 ### Context
 Smooth remote entity movement between delayed snapshots.
 ### Tasks
-- [ ] Buffer snapshots per remote entity
-- [ ] Interpolate based on render time offset
+- [x] Buffer snapshots per remote entity
+- [x] Interpolate based on render time offset
 ### Changes
 - `interpolation.py`
 ### Acceptance Criteria
-- [ ] No stutter with uniform snapshot interval
+- [x] No stutter with uniform snapshot interval
 ### Risks
 Catch-up jitter on burst delay
 ### Test Cases
 1. Simulated 100ms latency scenario -> movement continuity
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
+- [x] Performance benchmark (`experiments/benchmark_interpolation.py`) passed (1.87us/op)
 
 ### Issue 44: Snapshot Delta Compression
 ### Context
@@ -840,7 +841,6 @@ Scope creep
 - Post-processing pipeline
 - Profiling tool panel
 - Configurable key bindings (Issue 28)
-- Replay / Ghost via Snapshots (Issue 42) - Requires fixed timestep
 
 ---
 ## Global Definition of Done Reminder
