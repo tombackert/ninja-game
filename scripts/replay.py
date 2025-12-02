@@ -180,6 +180,8 @@ class ReplayGhost:
         if self.tick >= self.data.duration_frames:
             return
 
+        # print(f"[DEBUG] Ghost Tick {self.tick} Pos {self.entity.pos}")
+
         # 1. Apply Snapshot Correction (Sync)
         if str(self.tick) in self.data.snapshots:
             snap_data = self.data.snapshots[str(self.tick)]
@@ -355,18 +357,12 @@ class ReplayManager:
     def _ghosts_enabled(self) -> bool:
         return bool(getattr(global_settings, "ghost_enabled", True))
 
-        def _get_skin(self, player) -> str:
-
-            try:
-
-                from scripts.collectableManager import CollectableManager as CM
-
-                idx = int(getattr(player, "skin", 0))
-
-                return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
-
-            except Exception:
-
-                return "default"
+    def _get_skin(self, player) -> str:
+        try:
+            from scripts.collectableManager import CollectableManager as CM
+            idx = int(getattr(player, "skin", 0))
+            return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
+        except Exception:
+            return "default"
 
 __all__ = ["ReplayManager", "ReplayRecording", "ReplayGhost", "ReplayData", "FrameSample"]

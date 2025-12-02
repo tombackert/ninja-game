@@ -19,6 +19,7 @@ class Settings:
         self.selected_skin = 0
         self.show_perf_overlay = True
         self._ghost_enabled = True
+        self._ghost_mode = "best" # "best" or "last"
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -78,6 +79,16 @@ class Settings:
         new_val = bool(value)
         if new_val != self._ghost_enabled:
             self._ghost_enabled = new_val
+            self._dirty = True
+
+    @property
+    def ghost_mode(self) -> str:
+        return self._ghost_mode
+
+    @ghost_mode.setter
+    def ghost_mode(self, value: str) -> None:
+        if value in ("best", "last") and value != self._ghost_mode:
+            self._ghost_mode = value
             self._dirty = True
 
     def set_editor_level(self, value):
@@ -147,6 +158,7 @@ class Settings:
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
                     self.show_perf_overlay = data.get("show_perf_overlay", self.show_perf_overlay)
                     self._ghost_enabled = bool(data.get("ghost_enabled", self._ghost_enabled))
+                    self._ghost_mode = str(data.get("ghost_mode", self._ghost_mode))
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
@@ -176,6 +188,7 @@ class Settings:
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()},
             "show_perf_overlay": self.show_perf_overlay,
             "ghost_enabled": self._ghost_enabled,
+            "ghost_mode": self._ghost_mode,
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)

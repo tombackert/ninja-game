@@ -849,7 +849,7 @@ class OptionsState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self._ui = UI
         self.settings = settings
-        self.widget = ScrollableListWidget([], visible_rows=3, spacing=50, font_size=30)
+        self.widget = ScrollableListWidget([], visible_rows=4, spacing=50, font_size=30)
         self.request_back = False
         self.enter = False
 
@@ -861,34 +861,33 @@ class OptionsState(State):
                 self.widget.move_down()
             elif a in ("menu_back", "menu_quit"):
                 self.request_back = True
-            elif a == "options_left":
-                if self.widget.selected_index == 0:
-                    self.settings.music_volume = self.settings.music_volume - 0.1
+            elif a == "options_left" or a == "options_right":
+                # Cycle or toggle
+                idx = self.widget.selected_index
+                if idx == 0:
+                    change = -0.1 if a == "options_left" else 0.1
+                    self.settings.music_volume += change
                     pygame.mixer.music.set_volume(self.settings.music_volume)
-                elif self.widget.selected_index == 1:
-                    self.settings.sound_volume = self.settings.sound_volume - 0.1
-                elif self.widget.selected_index == 2:
+                elif idx == 1:
+                    change = -0.1 if a == "options_left" else 0.1
+                    self.settings.sound_volume += change
+                elif idx == 2:
                     self.settings.show_perf_overlay = not self.settings.show_perf_overlay
-                elif self.widget.selected_index == 3:
+                elif idx == 3:
                     self.settings.ghost_enabled = not self.settings.ghost_enabled
-            elif a == "options_right":
-                if self.widget.selected_index == 0:
-                    self.settings.music_volume = self.settings.music_volume + 0.1
-                    pygame.mixer.music.set_volume(self.settings.music_volume)
-                elif self.widget.selected_index == 1:
-                    self.settings.sound_volume = self.settings.sound_volume + 0.1
-                elif self.widget.selected_index == 2:
-                    self.settings.show_perf_overlay = not self.settings.show_perf_overlay
-                elif self.widget.selected_index == 3:
-                    self.settings.ghost_enabled = not self.settings.ghost_enabled
+                elif idx == 4:
+                    # Toggle mode
+                    current = self.settings.ghost_mode
+                    self.settings.ghost_mode = "last" if current == "best" else "best"
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
         self.widget.options = [
             f"Music Volume: {int(self.settings.music_volume * 100):3d}%",
             f"Sound Volume: {int(self.settings.sound_volume * 100):3d}%",
-            # f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
+            f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
             f"Ghosts: {'ON ' if self.settings.ghost_enabled else 'OFF'}",
+            f"Ghost Mode: {self.settings.ghost_mode.upper()}",
         ]
 
     def render(self, surface: pygame.Surface) -> None:
