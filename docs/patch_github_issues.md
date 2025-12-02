@@ -784,18 +784,18 @@ Catch-up jitter on burst delay
 ### Context
 Reduce bandwidth by sending only changed fields.
 ### Tasks
-- [ ] Compute diff vs previous snapshot
-- [ ] Apply patch on receiver
+- [x] Compute diff vs previous snapshot
+- [x] Apply patch on receiver
 ### Changes
 - `network/delta.py`
 ### Acceptance Criteria
-- [ ] Reconstructed snapshot equals full snapshot
+- [x] Reconstructed snapshot equals full snapshot
 ### Risks
 Complexity & CPU cost
 ### Test Cases
 1. Random state changes -> diff+apply roundtrip match
 ### Definition of Done
-- [ ] Unit test
+- [x] Unit test
 
 ### Issue 45: Batch Headless Simulation Harness
 ### Context
