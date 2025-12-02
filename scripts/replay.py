@@ -135,10 +135,14 @@ class GhostPlayer(Player):
 
     def update_inputs(self, inputs: List[str]):
         for inp in inputs:
-            if inp == "left": self.input_left = True
-            if inp == "stop_left": self.input_left = False
-            if inp == "right": self.input_right = True
-            if inp == "stop_right": self.input_right = False
+            if inp == "left":
+                self.input_left = True
+            if inp == "stop_left":
+                self.input_left = False
+            if inp == "right":
+                self.input_right = True
+            if inp == "stop_right":
+                self.input_right = False
 
     def render(self, surf, offset=(0, 0)):
         # Ghost specific render override handled by wrapper
@@ -203,11 +207,15 @@ class ReplayGhost:
         jump = False
         dash = False
         for inp in inputs:
-            if inp == "jump": jump = True
-            if inp == "dash": dash = True
+            if inp == "jump":
+                jump = True
+            if inp == "dash":
+                dash = True
 
-        if jump: self.entity.jump()
-        if dash: self.entity.dash()
+        if jump:
+            self.entity.jump()
+        if dash:
+            self.entity.dash()
 
         # 3. Run Physics Update
         frame_movement = (movement[1] - movement[0], 0)
@@ -219,10 +227,12 @@ class ReplayGhost:
         self.tick += 1
 
     def _render_tinted(self, surface: pygame.Surface, offset: tuple[int, int]):
-        if not self.entity.animation: return
+        if not self.entity.animation:
+            return
         
         base_img = self.entity.animation.img()
-        if not base_img: return
+        if not base_img:
+            return
 
         anim_key = (self.entity.action, int(self.entity.animation.frame), self.entity.flip)
         
@@ -268,7 +278,8 @@ class ReplayManager:
         try:
             from scripts.rng_service import RNGService
             # Capture seed if possible
-        except: pass
+        except Exception:
+            pass
 
         skin = self._get_skin(player)
         
@@ -291,8 +302,10 @@ class ReplayManager:
 
     def update(self, player: Any, inputs: List[str]):
         """Called every frame to capture state."""
-        if not self.recording: return
-        if getattr(self.game, "dead", 0): return
+        if not self.recording:
+            return
+        if getattr(self.game, "dead", 0):
+            return
         
         # Snapshot every 10 frames (approx 6 times/sec at 60fps)
         # Good balance between smoothness (catching drift early) and performance
@@ -301,13 +314,15 @@ class ReplayManager:
             try:
                 # Pushed filtering into capture service for performance
                 snap = SnapshotService.capture(self.game, optimized=True)
-            except: pass
+            except Exception:
+                pass
         
         self.recording.capture_frame(self.tick_counter, player, inputs, snap, optimized=True)
         self.tick_counter += 1
 
     def commit_run(self, new_best: bool):
-        if not self.recording or self.recording.data.duration_frames < 10: return
+        if not self.recording or self.recording.data.duration_frames < 10:
+            return
         data = self.recording.data
         self.last_data = data
         self._save(data, "last")
@@ -326,11 +341,13 @@ class ReplayManager:
 
     def _load(self, level: str, kind: str) -> Optional[ReplayData]:
         path = self._path(level, kind)
-        if not path.exists(): return None
+        if not path.exists():
+            return None
         try:
             with path.open("r") as f:
                 return ReplayData.from_json(json.load(f))
-        except: return None
+        except Exception:
+            return None
 
     def _path(self, level: str, kind: str) -> Path:
         return (self.storage_dir if kind == "best" else self.last_runs_dir) / f"{level}.json"
@@ -338,11 +355,18 @@ class ReplayManager:
     def _ghosts_enabled(self) -> bool:
         return bool(getattr(global_settings, "ghost_enabled", True))
 
-    def _get_skin(self, player) -> str:
-        try:
-            from scripts.collectableManager import CollectableManager as CM
-            idx = int(getattr(player, "skin", 0))
-            return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
-        except: return "default"
+        def _get_skin(self, player) -> str:
+
+            try:
+
+                from scripts.collectableManager import CollectableManager as CM
+
+                idx = int(getattr(player, "skin", 0))
+
+                return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
+
+            except Exception:
+
+                return "default"
 
 __all__ = ["ReplayManager", "ReplayRecording", "ReplayGhost", "ReplayData", "FrameSample"]

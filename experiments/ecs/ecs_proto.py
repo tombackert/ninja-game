@@ -37,9 +37,12 @@ class World:
     def destroy_entity(self, e_id: int):
         # In a real ECS, we'd swap-remove or mark for deletion
         # Python dict deletion is O(1) usually
-        if e_id in self.positions: del self.positions[e_id]
-        if e_id in self.velocities: del self.velocities[e_id]
-        if e_id in self.lifetimes: del self.lifetimes[e_id]
+        if e_id in self.positions:
+            del self.positions[e_id]
+        if e_id in self.velocities:
+            del self.velocities[e_id]
+        if e_id in self.lifetimes:
+            del self.lifetimes[e_id]
         # self.entities.remove(e_id) # O(N) - slow, skip for benchmark pure update speed
 
 # --- Systems ---
