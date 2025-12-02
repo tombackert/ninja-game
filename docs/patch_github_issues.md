@@ -818,18 +818,18 @@ GIL contention or process overhead
 ### Context
 Prepare for external RL frameworks (Ray, etc.).
 ### Tasks
-- [ ] Provide adapter interface (serialize observation, action application)
-- [ ] Document integration example
+- [x] Provide adapter interface (serialize observation, action application)
+- [x] Document integration example
 ### Changes
 - `training_adapter.py`
 ### Acceptance Criteria
-- [ ] Minimal example script executes one train loop iteration
+- [x] Minimal example script executes one train loop iteration
 ### Risks
 Scope creep
 ### Test Cases
 1. Example script returns a policy update step
 ### Definition of Done
-- [ ] Example included
+- [x] Example included (`examples/train_integration.py`)
 
 
 
