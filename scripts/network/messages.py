@@ -12,9 +12,9 @@ class Message:
         return json.dumps(asdict(self))
 
     @staticmethod
-    def from_json(json_str: str) -> 'Message':
+    def from_json(json_str: str) -> "Message":
         data = json.loads(json_str)
-        return Message(type=data['type'], payload=data['payload'])
+        return Message(type=data["type"], payload=data["payload"])
 
 
 @dataclass

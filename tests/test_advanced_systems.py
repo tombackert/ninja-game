@@ -154,5 +154,5 @@ class TestAdvancedSystems(unittest.TestCase):
         self.assertTrue(enemy.flip, "Shooter should face left when player is left")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -40,13 +40,13 @@ def analyze_log(filename: str):
     last_timestamp = None
 
     try:
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 try:
-                    w = float(row['work_ms'])
-                    f_val = float(row['full_ms']) if row['full_ms'] else 0.0
-                    current_timestamp = float(row['timestamp'])
+                    w = float(row["work_ms"])
+                    f_val = float(row["full_ms"]) if row["full_ms"] else 0.0
+                    current_timestamp = float(row["timestamp"])
 
                     # Calculate FPS from timestamp delta
                     if last_timestamp is not None:
@@ -57,12 +57,12 @@ def analyze_log(filename: str):
 
                     last_timestamp = current_timestamp
 
-                    counts = json.loads(row['counts'])
+                    counts = json.loads(row["counts"])
 
                     work_ms.append(w)
                     full_ms.append(f_val)
-                    particles.append(counts.get('particles', 0))
-                    enemies.append(counts.get('enemies', 0))
+                    particles.append(counts.get("particles", 0))
+                    enemies.append(counts.get("enemies", 0))
                 except (ValueError, json.JSONDecodeError):
                     continue
     except Exception as e:

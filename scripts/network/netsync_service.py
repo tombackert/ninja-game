@@ -38,15 +38,15 @@ class NetSyncService:
         self.peer_transport: Optional[Transport] = None  # For loopback connecting
 
     def send_input(self, tick: int, inputs: List[str]):
-        msg = Message(type='input', payload={'tick': tick, 'inputs': inputs})
+        msg = Message(type="input", payload={"tick": tick, "inputs": inputs})
         self.transport.send(msg)
 
     def send_snapshot(self, tick: int, snapshot_data: dict):
-        msg = Message(type='snapshot', payload={'tick': tick, 'snapshot_data': snapshot_data})
+        msg = Message(type="snapshot", payload={"tick": tick, "snapshot_data": snapshot_data})
         self.transport.send(msg)
 
     def send_ack(self, tick: int):
-        msg = Message(type='ack', payload={'tick': tick, 'received_ts': time.time()})
+        msg = Message(type="ack", payload={"tick": tick, "received_ts": time.time()})
         self.transport.send(msg)
 
     def process_messages(self) -> List[Message]:

@@ -63,5 +63,5 @@ class TestInterpolation(unittest.TestCase):
         self.assertEqual(res.pos, [10.0, 20.0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

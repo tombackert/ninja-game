@@ -12,9 +12,9 @@ def test_netsync_loopback_roundtrip():
     msgs = service.process_messages()
     assert len(msgs) == 1
     msg = msgs[0]
-    assert msg.type == 'input'
-    assert msg.payload['tick'] == 10
-    assert msg.payload['inputs'] == ["jump", "right"]
+    assert msg.type == "input"
+    assert msg.payload["tick"] == 10
+    assert msg.payload["inputs"] == ["jump", "right"]
 
 
 def test_netsync_snapshot_serialization():
@@ -26,8 +26,8 @@ def test_netsync_snapshot_serialization():
 
     msgs = service.process_messages()
     assert len(msgs) == 1
-    assert msgs[0].type == 'snapshot'
-    assert msgs[0].payload['snapshot_data'] == dummy_snap
+    assert msgs[0].type == "snapshot"
+    assert msgs[0].payload["snapshot_data"] == dummy_snap
 
 
 def test_ack_message():
@@ -38,6 +38,6 @@ def test_ack_message():
 
     msgs = service.process_messages()
     assert len(msgs) == 1
-    assert msgs[0].type == 'ack'
-    assert msgs[0].payload['tick'] == 55
-    assert 'received_ts' in msgs[0].payload
+    assert msgs[0].type == "ack"
+    assert msgs[0].payload["tick"] == 55
+    assert "received_ts" in msgs[0].payload

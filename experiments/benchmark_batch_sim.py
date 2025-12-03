@@ -24,7 +24,7 @@ def run_benchmark():
     print(f"Running Parallel Batch ({num_envs} Envs)...")
     batch = BatchSimulation(num_envs=num_envs)
     stats = batch.run_batch(steps_per_env=steps_per_env)
-    par_sps = stats['sps']
+    par_sps = stats["sps"]
     print(f"Parallel:   {par_sps:.2f} steps/sec")
 
     # 3. Analysis

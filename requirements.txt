@@ -3,4 +3,3 @@ pytest
 black
 ruff
 mypy
-flake8

@@ -70,5 +70,5 @@ class TestModularAI(unittest.TestCase):
         self.assertTrue(entity.flip)  # Face left (True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

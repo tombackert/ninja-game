@@ -74,5 +74,5 @@ class TestSnapshotDelta(unittest.TestCase):
         self.assertEqual(restored, curr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

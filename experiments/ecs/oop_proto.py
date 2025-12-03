@@ -6,7 +6,7 @@ from typing import List
 
 
 class Particle:
-    __slots__ = ['x', 'y', 'vx', 'vy', 'life']
+    __slots__ = ["x", "y", "vx", "vy", "life"]
 
     def __init__(self, x, y, vx, vy, life):
         self.x = x

@@ -15,13 +15,13 @@ def test_rng_determinism():
     rng.seed(12345)
     val_a1 = rng.random()
     val_a2 = rng.randint(0, 100)
-    val_a3 = rng.choice(['a', 'b', 'c'])
+    val_a3 = rng.choice(["a", "b", "c"])
 
     # Sequence B (same seed)
     rng.seed(12345)
     val_b1 = rng.random()
     val_b2 = rng.randint(0, 100)
-    val_b3 = rng.choice(['a', 'b', 'c'])
+    val_b3 = rng.choice(["a", "b", "c"])
 
     assert val_a1 == val_b1
     assert val_a2 == val_b2

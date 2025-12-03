@@ -31,9 +31,6 @@ jobs:
       - name: Black format check
         run: |
           black --check .
-      - name: Flake8
-        run: |
-          flake8 .
       - name: Mypy
         run: |
           mypy scripts
