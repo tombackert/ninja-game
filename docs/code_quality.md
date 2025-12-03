@@ -36,25 +36,10 @@ We use a consolidated toolchain to minimize dependencies and maximize speed.
 Run the consolidated check script before pushing. This runs the exact same steps as the CI server.
 
 ```bash
-./tools/check_quality.sh
+./tools/check_all.sh
 ```
 
-### B. Pre-Commit Hooks (Automatic)
-We use `pre-commit` to prevent bad commits locally.
-
-**Setup:**
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-**Checks:**
-- `ruff` (Fix mode)
-- `black`
-- `mypy` (Targeting `scripts/`)
-- `check-merge-conflict`, `end-of-file-fixer`, `trailing-whitespace`
-
-### C. Continuous Integration (GitHub Actions)
+### B. Continuous Integration (GitHub Actions)
 Every Push and Pull Request triggers the `CI` workflow (`.github/workflows/ci.yml`).
 
 **Steps:**
