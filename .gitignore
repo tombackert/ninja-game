@@ -3,5 +3,19 @@ __pycache__/
 *.py[cod]
 *.pyc
 .DS_Store
-data/.DS_Store
+
+
+
+.gemini/
+gha-creds-*.json
+gemini*
+
+# Gameplay specific data ignores
 data/saves/
+data/replays/
+data/collectables.json
+data/best_times.json
+data/settings.json
+
+# Test specifiv ignores
+performance_data.csv

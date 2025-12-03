@@ -1,0 +1,27 @@
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 120
+# Replace Flake8 with Ruff by selecting standard errors (E) and pyflakes (F)
+lint.select = ["E", "F"]
+lint.ignore = ["E203"] # Ignore whitespace before colon (compatible with Black)
+exclude = ["build", "__pycache__"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+follow_imports = "skip"
+warn_unused_ignores = false
+warn_redundant_casts = false
+warn_unused_configs = false
+# Allow gradual typing adoption
+allow_untyped_defs = true
+allow_untyped_calls = true
+
+[tool.pytest.ini_options]
+addopts = "-q"
+
+[build-system]
+requires = ["setuptools", "wheel"]

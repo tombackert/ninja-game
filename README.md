@@ -6,13 +6,14 @@
 [![PyPiVersion](https://img.shields.io/pypi/v/pygame-ce.svg?v=1)](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/t/tombackert/ninja-game)
 ![GitHub last commit](https://img.shields.io/github/last-commit/tombackert/ninja-game)
+![CI](https://github.com/tombackert/ninja-game/actions/workflows/ci.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 
 
 
-This is a fun and challenging 2D Platformer game where you must use your skills to navigate through difficult worlds, defeat enemies, collect trophies, reach new goals or just have fun playing against your friends. 
-This project is intended for anyone who is looking to dive into game dev, learn how basic game mechanics work, or stengthen their coding skills in a learning by doing approach.  
+This is a fun and challenging 2D Platformer game where you must use your skills to navigate through difficult worlds, defeat enemies, collect trophies, reach new goals or just have fun playing against your friends.
+This project is intended for anyone who is looking to dive into game dev, learn how basic game mechanics work, or stengthen their coding skills in a learning by doing approach.
 
 ## The game features:
 
@@ -34,6 +35,13 @@ This project is intended for anyone who is looking to dive into game dev, learn 
 4. Run the game
 5. Explore the code and experiment with different levels and features
 
+Headless (no window) test execution is configured in CI via SDL_VIDEODRIVER=dummy; you can replicate locally:
+
+```
+export SDL_VIDEODRIVER=dummy
+pytest -q
+```
+
 
 ## Contributing:
 I encourage contributions to this project. Feel free to submit pull requests for new projects, improvements, or additional resources. Please refer to the CONTRIBUTING.md *(to be added...)* file (if you create one) for guidelines.
@@ -47,6 +55,21 @@ Here are some ways you can help:
 - Provide valuable tips on how to create state-of-the-art pixel art games
 - Add new features
 - I hope you enjoy playing Ninja Game!
+
+### Dev Tooling (Pre-commit Hooks)
+
+This repo ships a `.pre-commit-config.yaml` with fast quality gates (Ruff lint+format, Black, mypy (lenient), and basic hygiene hooks). To enable locally:
+
+```
+pip install pre-commit
+pre-commit install
+```
+
+On each commit only changed files are checked; auto-fixes (Ruff / Black) are applied and re-staged automatically. You can run all hooks manually with:
+
+```
+pre-commit run --all-files
+```
 
 
 ## Resources
@@ -73,6 +96,3 @@ All credits belong to [DaFluffyPotato](https://www.youtube.com/@DaFluffyPotato) 
 
 ## License:
 This repository is licensed under the MIT License.
-
-
-
