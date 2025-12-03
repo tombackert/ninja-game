@@ -10,9 +10,15 @@ class _StubAnim:
         self.images = [pygame.Surface(size, pygame.SRCALPHA)]
         self.img_duration = 5
         self.frame = 0
-    def img(self): return self.images[0]
-    def copy(self): return self
-    def update(self): self.frame += 1
+
+    def img(self):
+        return self.images[0]
+
+    def copy(self):
+        return self
+
+    def update(self):
+        self.frame += 1
 
 
 class _StubGame:
@@ -62,13 +68,13 @@ def test_replay_commit_and_load(tmp_path):
     game.players.append(player)
 
     manager.on_level_load(level=1, player=player)
-    assert not manager.ghost # No ghost on first run
+    assert not manager.ghost  # No ghost on first run
 
     # Capture inputs & frames
-    for idx in range(15): # Need > 10 frames for commit
+    for idx in range(15):  # Need > 10 frames for commit
         player.pos = [float(idx * 4), float(idx * 2)]
         # manager.update now takes inputs
-        manager.update(player, inputs=[]) 
+        manager.update(player, inputs=[])
 
     manager.commit_run(new_best=True)
 
@@ -76,7 +82,7 @@ def test_replay_commit_and_load(tmp_path):
     assert replay_path.exists()
 
     manager.on_level_load(level=1, player=player)
-    assert manager.ghost is not None # Ghost exists now
+    assert manager.ghost is not None  # Ghost exists now
 
     # Render test
     # This now triggers re-simulation
