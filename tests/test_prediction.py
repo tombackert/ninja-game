@@ -2,7 +2,6 @@ from scripts.prediction_service import PredictionReconciliationService
 from scripts.rollback_buffer import RollbackBuffer
 from scripts.snapshot import SnapshotService
 from game import Game
-from scripts.entities import Player
 
 
 def test_reconciliation_logic():

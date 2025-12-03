@@ -15,14 +15,16 @@ from typing import Dict, List, Optional, Any
 import pygame
 
 from scripts.settings import settings as global_settings
-from scripts.snapshot import SimulationSnapshot, SnapshotService
+from scripts.snapshot import SnapshotService
 from scripts.entities import Player
 
 REPLAY_VERSION = 2
 
+
 @dataclass(slots=True)
 class FrameSample:
     """Single frame of replay data (Legacy Visual Ghost)."""
+
     x: float
     y: float
     flip: bool
@@ -48,16 +50,18 @@ class FrameSample:
             anim_frame=int(payload.get("anim", 0)),
         )
 
+
 @dataclass
 class ReplayData:
     """Full replay container (Inputs + Snapshots)."""
+
     level: str
     skin: str
     seed: int
     duration_frames: int
-    inputs: List[Dict[str, Any]] = field(default_factory=list) # [{"tick": N, "inputs": ["left", ...]}, ...]
-    snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict) # tick -> serialized snapshot
-    
+    inputs: List[Dict[str, Any]] = field(default_factory=list)  # [{"tick": N, "inputs": ["left", ...]}, ...]
+    snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # tick -> serialized snapshot
+
     # Kept for legacy load compatibility
     visual_frames: List[Any] = field(default_factory=list)
 
@@ -81,19 +85,22 @@ class ReplayData:
             duration_frames=int(data.get("duration_frames", 0)),
             inputs=data.get("inputs", []),
             snapshots=data.get("snapshots", {}),
-            visual_frames=data.get("visual_frames", [])
+            visual_frames=data.get("visual_frames", []),
         )
 
 
 class ReplayRecording:
     """Active recording session."""
+
     def __init__(self, level: str, skin: str, seed: int):
         self.data = ReplayData(level=level, skin=skin, seed=seed, duration_frames=0)
 
-    def capture_frame(self, tick: int, player: Any, inputs: List[str], snapshot: Optional[Any] = None, optimized: bool = True):
+    def capture_frame(
+        self, tick: int, player: Any, inputs: List[str], snapshot: Optional[Any] = None, optimized: bool = True
+    ):
         # Capture Inputs
         self.data.inputs.append({"tick": tick, "inputs": inputs})
-        
+
         # Capture Snapshot
         # Logic: If `snapshot` object is passed, it's assumed to be already captured.
         # However, the caller (ReplayManager.update) calls SnapshotService.capture().
@@ -102,19 +109,19 @@ class ReplayRecording:
         # To avoid double capture or refactoring caller too much:
         # If the snapshot passed is ALREADY optimized (by the caller knowing), we just serialize.
         # But currently ReplayManager calls capture() without args.
-        
+
         # Wait, `ReplayManager.update` calls `SnapshotService.capture(self.game)`.
         # It does NOT pass `optimized`.
         # So we receive a FULL snapshot.
         # We should strip it here? No, the user asked to PUSH logic into SnapshotService.
         # This means ReplayManager should call `capture(optimized=True)`.
-        
+
         if snapshot:
             serialized = SnapshotService.serialize(snapshot)
-            # If we received a full snapshot but want optimized, we could strip here, 
+            # If we received a full snapshot but want optimized, we could strip here,
             # BUT the goal is performance, so we should have captured it optimized in the first place.
             # See ReplayManager.update below.
-            
+
             # Legacy strip logic removal (handled by upstream capture)
             self.data.snapshots[str(tick)] = serialized
 
@@ -123,6 +130,7 @@ class ReplayRecording:
 
 class GhostPlayer(Player):
     """A player entity that doesn't spawn effects but simulates movement."""
+
     def __init__(self, game, pos, size, id, skin_idx=0):
         # Initialize base Player but suppress heavy init if needed
         # We need it to behave exactly like Player for physics
@@ -151,23 +159,24 @@ class GhostPlayer(Player):
 
 class ReplayGhost:
     """Renders a ghost by re-simulating inputs."""
-    
+
     _TINT_COLOR = (100, 220, 255, 180)
 
     def __init__(self, game_instance, data: ReplayData):
         self.game = game_instance
         self.data = data
         self.tick = 0
-        
+
         start_pos = (0, 0)
         start_snap = self.data.snapshots.get("0")
         if start_snap:
             snap = SnapshotService.deserialize(start_snap)
             if snap.players:
                 start_pos = snap.players[0].pos
-        
+
         try:
             from scripts.collectableManager import CollectableManager as CM
+
             skin_idx = CM.SKIN_PATHS.index(data.skin)
         except ValueError:
             skin_idx = 0
@@ -197,14 +206,14 @@ class ReplayGhost:
                 self.entity.jumps = p_snap.jumps
                 self.entity.wall_slide = p_snap.wall_slide
                 self.entity.dashing = p_snap.dashing
-        
+
         # 2. Apply Inputs (Persistent State)
         inputs = self.input_map.get(self.tick, [])
         self.entity.update_inputs(inputs)
-        
+
         # Map persistent state to frame movement
         movement = [self.entity.input_left, self.entity.input_right]
-        
+
         # Triggers are instant
         jump = False
         dash = False
@@ -231,30 +240,33 @@ class ReplayGhost:
     def _render_tinted(self, surface: pygame.Surface, offset: tuple[int, int]):
         if not self.entity.animation:
             return
-        
+
         base_img = self.entity.animation.img()
         if not base_img:
             return
 
         anim_key = (self.entity.action, int(self.entity.animation.frame), self.entity.flip)
-        
+
         tinted = self._tint_cache.get(anim_key)
         if not tinted:
             tinted = base_img.copy()
             if self.entity.flip:
                 tinted = pygame.transform.flip(tinted, True, False)
-            
+
             tint_surf = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
             tint_surf.fill(self._TINT_COLOR)
             tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             tinted.set_alpha(self._TINT_COLOR[3])
-            
+
             self._tint_cache[anim_key] = tinted
 
-        surface.blit(tinted, (
-            self.entity.pos[0] - offset[0] + self.entity.anim_offset[0],
-            self.entity.pos[1] - offset[1] + self.entity.anim_offset[1]
-        ))
+        surface.blit(
+            tinted,
+            (
+                self.entity.pos[0] - offset[0] + self.entity.anim_offset[0],
+                self.entity.pos[1] - offset[1] + self.entity.anim_offset[1],
+            ),
+        )
 
     def reset(self):
         self.tick = 0
@@ -267,7 +279,7 @@ class ReplayManager:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.last_runs_dir = self.storage_dir / "last_runs"
         self.last_runs_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.recording: Optional[ReplayRecording] = None
         self.ghost: Optional[ReplayGhost] = None
         self.best_data: Optional[ReplayData] = None
@@ -276,37 +288,38 @@ class ReplayManager:
 
     def on_level_load(self, level: int | str, player: Any):
         level_str = str(level)
-        seed = 0 
+        seed = 0
         try:
-            from scripts.rng_service import RNGService
+            pass
+
             # Capture seed if possible
         except Exception:
             pass
 
         skin = self._get_skin(player)
-        
+
         if self._ghosts_enabled():
             self.recording = ReplayRecording(level_str, skin, seed)
             self.tick_counter = 0
-            
+
             self.best_data = self._load(level_str, "best")
             self.last_data = self._load(level_str, "last")
-            
+
             source = None
-            mode = getattr(self.settings, "ghost_mode", "best")
-            
+            mode = getattr(global_settings, "ghost_mode", "best")
+
             # Prioritize based on mode
             if mode == "best":
                 if self.best_data and self.best_data.level == level_str:
                     source = self.best_data
                 elif self.last_data and self.last_data.level == level_str:
                     source = self.last_data
-            else: # mode == "last"
+            else:  # mode == "last"
                 if self.last_data and self.last_data.level == level_str:
                     source = self.last_data
                 elif self.best_data and self.best_data.level == level_str:
                     source = self.best_data
-            
+
             if source:
                 self.ghost = ReplayGhost(self.game, source)
                 self.ghost.reset()
@@ -317,7 +330,7 @@ class ReplayManager:
             return
         if getattr(self.game, "dead", 0):
             return
-        
+
         # Snapshot every 10 frames (approx 6 times/sec at 60fps)
         # Good balance between smoothness (catching drift early) and performance
         snap = None
@@ -327,7 +340,7 @@ class ReplayManager:
                 snap = SnapshotService.capture(self.game, optimized=True)
             except Exception:
                 pass
-        
+
         self.recording.capture_frame(self.tick_counter, player, inputs, snap, optimized=True)
         self.tick_counter += 1
 
@@ -369,9 +382,11 @@ class ReplayManager:
     def _get_skin(self, player) -> str:
         try:
             from scripts.collectableManager import CollectableManager as CM
+
             idx = int(getattr(player, "skin", 0))
             return CM.SKIN_PATHS[idx] if 0 <= idx < len(CM.SKIN_PATHS) else "default"
         except Exception:
             return "default"
+
 
 __all__ = ["ReplayManager", "ReplayRecording", "ReplayGhost", "ReplayData", "FrameSample"]

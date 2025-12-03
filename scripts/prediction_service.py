@@ -1,7 +1,5 @@
 from scripts.rollback_buffer import RollbackBuffer
 from scripts.snapshot import SnapshotService, SimulationSnapshot
-from scripts.training_env import TrainingEnv
-import copy
 
 
 class PredictionReconciliationService:

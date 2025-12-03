@@ -10,8 +10,6 @@ from scripts.constants import (
     DASH_MIN_ACTIVE_ABS,
     DASH_SPEED,
     DASH_TRAIL_PARTICLE_SPEED,
-    ENEMY_DIRECTION_BASE,
-    ENEMY_DIRECTION_SCALE_LOG,
     ENEMY_SHOOT_BASE,
     ENEMY_SHOOT_SCALE_LOG,
     GRAVITY_ACCEL,
@@ -150,7 +148,9 @@ class PhysicsEntity:
 
 
 class Enemy(PhysicsEntity):
-    def __init__(self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None, policy: str = "scripted_enemy"):
+    def __init__(
+        self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None, policy: str = "scripted_enemy"
+    ):
         super().__init__(game, "enemy", pos, size, id, services=services)
         self.walking = 0
         self.policy = PolicyService.get(policy)

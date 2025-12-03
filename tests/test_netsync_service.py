@@ -1,4 +1,3 @@
-from scripts.network.messages import Message
 from scripts.network.netsync_service import NetSyncService, LocalLoopbackTransport
 
 

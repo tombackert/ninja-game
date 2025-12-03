@@ -1,7 +1,7 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import math
-from scripts.snapshot import SimulationSnapshot, EntitySnapshot
+from scripts.snapshot import SimulationSnapshot
 
 
 class FeatureExtractor:

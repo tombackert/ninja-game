@@ -166,7 +166,7 @@ class SnapshotService:
         players = [EntitySnapshot(**p) for p in data.get("players", [])]
         enemies = [EntitySnapshot(**e) for e in data.get("enemies", [])]
         projectiles = [ProjectileSnapshot(**p) for p in data.get("projectiles", [])]
-        
+
         # Handle tuple conversion for rng_state if it came back as a list from JSON
         rng_state = data.get("rng_state")
         if isinstance(rng_state, list):

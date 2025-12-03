@@ -80,7 +80,6 @@ class InputRouter:
             _key_rule(pygame.K_SPACE, "jump", pygame.KEYDOWN),
             _key_rule(pygame.K_x, "dash", pygame.KEYDOWN),
             _key_rule(pygame.K_c, "shoot", pygame.KEYDOWN),
-            
             _key_rule(pygame.K_LEFT, "stop_left", pygame.KEYUP),
             _key_rule(pygame.K_a, "stop_left", pygame.KEYUP),
             _key_rule(pygame.K_RIGHT, "stop_right", pygame.KEYUP),

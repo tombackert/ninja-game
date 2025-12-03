@@ -16,7 +16,6 @@ import sys
 import csv
 import json
 import statistics
-import time
 
 # Ensure we can import app from root
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -90,17 +89,17 @@ def analyze_log(filename: str):
 
     # Report
     print("\n" + "=" * 40)
-    print(f" PERFORMANCE REPORT")
+    print(" PERFORMANCE REPORT")
     print("=" * 40)
     print(f"Total Frames: {count}")
     print("-" * 20)
-    print(f"FPS (Calculated):")
+    print("FPS (Calculated):")
     print(f"  Avg:     {avg_fps:.2f}")
     print(f"  Max:     {max_fps:.2f}")
     print(f"  Min:     {min_fps:.2f}")
     print(f"  1% Low:  {p01_fps:.2f}")
     print("-" * 20)
-    print(f"Frame Times (ms):")
+    print("Frame Times (ms):")
     print(f"  Avg Work (CPU): {avg_work:.2f} ms")
     print(f"  Max Work (CPU): {max_work:.2f} ms")
     print(f"  Avg Full Frame: {avg_full:.2f} ms")
@@ -116,7 +115,7 @@ def analyze_log(filename: str):
     # Load
     max_parts = max(particles) if particles else 0
     print("-" * 20)
-    print(f"Peak Load:")
+    print("Peak Load:")
     print(f"  Particles: {max_parts}")
     print(f"  Enemies:   {max(enemies) if enemies else 0}")
 
@@ -138,7 +137,7 @@ def main():
     # Set env var for app
     os.environ["PERF_LOG_FILE"] = LOG_FILE
 
-    print(f"Starting benchmark...")
+    print("Starting benchmark...")
     print(f"Logging to: {LOG_FILE}")
     print("Play the game. Close window or Quit to finish.")
 

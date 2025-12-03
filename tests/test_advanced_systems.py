@@ -2,34 +2,35 @@ import unittest
 import pygame
 from unittest.mock import MagicMock
 
-from scripts.snapshot import SnapshotService, SimulationSnapshot
+from scripts.snapshot import SnapshotService
 from scripts.rng_service import RNGService
 from scripts.replay import ReplayData, FrameSample
-from scripts.entities import Enemy, PhysicsEntity
+from scripts.entities import Enemy
+
 
 # Stub classes to avoid loading assets
 class StubGame:
     def __init__(self):
         self.players = []
         self.enemies = []
-        self.projectiles = [] # List, not mock, so it iterates
+        self.projectiles = []  # List, not mock, so it iterates
         self.cm = MagicMock()
         self.cm.coins = 0
         self.dead = 0
         self.transition = 0
-        
+
         # Mock assets with copy() method for Ghost/Enemy init
         mock_anim = MagicMock()
         mock_anim.copy.return_value = mock_anim
         self.assets = {
             "enemy/idle": mock_anim,
             "enemy/run": mock_anim,
-            "player/default/idle": mock_anim, # Needed for GhostPlayer default skin
+            "player/default/idle": mock_anim,  # Needed for GhostPlayer default skin
             "player/default/run": mock_anim,
             "player/idle": mock_anim,
             "player/run": mock_anim,
         }
-        
+
         self.tilemap = MagicMock()
         self.tilemap.solid_check.return_value = False
         # Setup mock player
@@ -47,6 +48,7 @@ class StubGame:
         self.player.shoot_cooldown = 0
         self.players.append(self.player)
 
+
 class TestAdvancedSystems(unittest.TestCase):
     def setUp(self):
         pygame.init()
@@ -58,45 +60,45 @@ class TestAdvancedSystems(unittest.TestCase):
 
     def test_snapshot_determinism(self):
         """
-        Verify that restoring a snapshot and applying the same inputs 
+        Verify that restoring a snapshot and applying the same inputs
         results in the EXACT same state (Determinism).
         """
         # 1. Setup initial state
         self.game.player.pos = [100.0, 100.0]
         self.game.player.velocity = [1.0, 0.0]
-        
+
         # 2. Capture Snapshot A (Start)
         snap_a = SnapshotService.capture(self.game)
-        
+
         # 3. Simulate "Run 1"
         # Modify state as if simulation happened
-        self.game.player.pos[0] += 10.0 # Move right
+        self.game.player.pos[0] += 10.0  # Move right
         self.game.player.velocity[0] = 2.0
-        RNGService.get().random() # Advance RNG
-        
+        RNGService.get().random()  # Advance RNG
+
         # 4. Capture Snapshot B (End of Run 1)
         snap_b = SnapshotService.capture(self.game)
-        
+
         # 5. Restore Snapshot A
         SnapshotService.restore(self.game, snap_a)
-        
+
         # Verify restoration worked (sanity check)
         self.assertEqual(self.game.player.pos, [100.0, 100.0])
         self.assertEqual(self.game.player.velocity, [1.0, 0.0])
-        
+
         # 6. Simulate "Run 2" (Identical actions)
         self.game.player.pos[0] += 10.0
         self.game.player.velocity[0] = 2.0
-        RNGService.get().random() # Advance RNG (must match)
+        RNGService.get().random()  # Advance RNG (must match)
 
         # 7. Capture Snapshot C (End of Run 2)
         snap_c = SnapshotService.capture(self.game)
-        
+
         # 8. Compare B and C
         # We compare the serialized dicts for deep equality
         dict_b = SnapshotService.serialize(snap_b)
         dict_c = SnapshotService.serialize(snap_c)
-        
+
         self.assertEqual(dict_b, dict_c, "Snapshots diverging after restore and re-simulation!")
 
     def test_replay_data_serialization(self):
@@ -110,16 +112,16 @@ class TestAdvancedSystems(unittest.TestCase):
             seed=999,
             duration_frames=100,
             inputs=[{"tick": 1, "inputs": ["left"]}, {"tick": 2, "inputs": ["jump"]}],
-            snapshots={"0": {"tick": 0, "score": 100}}, # Mock serialized snapshot
-            visual_frames=[FrameSample(10, 10, False, "run", 0)]
+            snapshots={"0": {"tick": 0, "score": 100}},  # Mock serialized snapshot
+            visual_frames=[FrameSample(10, 10, False, "run", 0)],
         )
-        
+
         # Serialize
         json_data = rd.to_json()
-        
+
         # Deserialize
         rd_restored = ReplayData.from_json(json_data)
-        
+
         self.assertEqual(rd.level, rd_restored.level)
         self.assertEqual(rd.seed, rd_restored.seed)
         self.assertEqual(len(rd.inputs), len(rd_restored.inputs))
@@ -133,23 +135,24 @@ class TestAdvancedSystems(unittest.TestCase):
         """
         # Setup Enemy with ShooterPolicy
         from scripts.ai.behaviors import ShooterPolicy
-        
+
         enemy = Enemy(self.game, (200, 200), (10, 10), 0)
         enemy.policy = ShooterPolicy()
-        
+
         # Case 1: Player is to the RIGHT
         self.game.player.pos = [300, 200]
         enemy.update(self.game.tilemap)
-        
+
         # Enemy should NOT be flipped (facing right)
         self.assertFalse(enemy.flip, "Shooter should face right when player is right")
-        
+
         # Case 2: Player is to the LEFT
         self.game.player.pos = [100, 200]
         enemy.update(self.game.tilemap)
-        
+
         # Enemy SHOULD be flipped (facing left)
         self.assertTrue(enemy.flip, "Shooter should face left when player is left")
+
 
 if __name__ == '__main__':
     unittest.main()

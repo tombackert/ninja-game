@@ -19,7 +19,7 @@ class Settings:
         self.selected_skin = 0
         self.show_perf_overlay = True
         self._ghost_enabled = True
-        self._ghost_mode = "best" # "best" or "last"
+        self._ghost_mode = "best"  # "best" or "last"
         self._dirty = False
         self.playable_levels = {
             0: True,

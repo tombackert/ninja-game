@@ -1,6 +1,6 @@
-from typing import Callable, List, Optional
+from typing import List, Optional
 import time
-from scripts.network.messages import Message, InputMessage, SnapshotMessage, AckMessage
+from scripts.network.messages import Message
 
 
 class Transport:

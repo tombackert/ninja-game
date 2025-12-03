@@ -262,7 +262,7 @@ class GameState(State):
             # But if we quit, we might want to abort.
             replay = getattr(self._game, "replay", None)
             if replay:
-                replay.recording = None # Abort on exit without finish
+                replay.recording = None  # Abort on exit without finish
         except Exception:  # pragma: no cover
             pass
 
@@ -275,7 +275,7 @@ class GameState(State):
             elif act == "debug_toggle":
                 self.perf_enabled = not self.perf_enabled
                 self.debug_overlay = self.perf_enabled  # keep alias in sync
-        
+
         # Pass actions to replay system
         replay = getattr(self._game, "replay", None)
         player = getattr(self._game, "player", None)
@@ -328,7 +328,6 @@ class GameState(State):
             g.transition += 1
             if g.transition > TRANSITION_MAX:
                 # Level advance logic
-                elapsed_ms = g.timer.elapsed_time
                 new_best = g.timer.update_best_time()
                 if replay_mgr:
                     replay_mgr.commit_run(new_best=new_best)

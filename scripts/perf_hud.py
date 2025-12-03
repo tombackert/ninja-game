@@ -113,10 +113,11 @@ class PerformanceHUD:
         if not self._last_sample or not self.log_path:
             return
 
+        import json
+
         # Lazy init file
         if self._csv_file is None:
             import csv
-            import json
             import os
 
             file_exists = os.path.isfile(self.log_path)
@@ -133,7 +134,6 @@ class PerformanceHUD:
         if self._csv_writer is None:
             return
 
-        import json
         import time
 
         counts = getattr(self, "_game_counts", {})
