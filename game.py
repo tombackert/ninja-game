@@ -171,18 +171,33 @@ class Game:
 
         # START LOAD LEVEL
         self.enemies = []
-        self.players = []
+        # Only clear players if this is a fresh load, not a respawn
+        if not respawn:
+            self.players = []
+
+        # RNG Determinism (Issue 48)
+        from scripts.rng_service import RNGService
+        rng = RNGService.get()
 
         if respawn:
+            # Restore RNG state to ensure deterministic replay
+            if hasattr(self, "level_rng_state") and self.level_rng_state is not None:
+                rng.set_state(self.level_rng_state)
+
             enemy_id = 0
             for player in self.players:
-                player.pos = player.respawn_pos
+                # Enforce strict coordinate reset
+                player.pos = list(player.respawn_pos)
                 player.air_time = 0
+                player.velocity = [0, 0] # Reset velocity too for safety
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
                     self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
                     enemy_id += 1
         else:
+            # Capture RNG state at start of level
+            self.level_rng_state = rng.get_state()
+
             enemy_id = 0
             player_id = 0
             skin = self.playerSkin
