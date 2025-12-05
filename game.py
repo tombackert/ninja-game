@@ -286,6 +286,36 @@ class Game:
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
+            # Entity Updates (Moved from UI.render_game_elements)
+            self.clouds.update()
+            
+            for enemy in self.enemies.copy():
+                kill = enemy.update(self.tilemap, (0, 0))
+                if kill:
+                    self.enemies.remove(enemy)
+
+            if not self.dead:
+                for player in self.players:
+                    if player.id == self.playerID:
+                        player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+                        if self.replay:
+                            try:
+                                self.replay.capture_player(player)
+                            except Exception:
+                                pass
+                    else:
+                        player.update(self.tilemap, (0, 0))
+            
+            if hasattr(self, "particle_system"):
+                self.particle_system.update()
+            else:
+                for spark in self.sparks.copy():
+                    kill = spark.update()
+                    if kill:
+                        self.sparks.remove(spark)
+            
+            self.cm.update(self.player.rect())
+
             UI.render_game_elements(self, render_scroll)
             # Update projectiles after entities so newly spawned
             # this frame move immediately

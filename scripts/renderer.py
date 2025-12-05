@@ -85,8 +85,6 @@ class Renderer:
         # 3. World & entities
         from scripts.ui import UI  # local import avoids cycles
 
-        game.scroll[0] += (game.player.rect().centerx - game.display.get_width() / 2 - game.scroll[0]) / 30
-        game.scroll[1] += (game.player.rect().centery - game.display.get_height() / 2 - game.scroll[1]) / 30
         render_scroll = (int(game.scroll[0]), int(game.scroll[1]))
         # Render ghost before world to keep player on top
         replay_mgr = getattr(game, "replay", None)

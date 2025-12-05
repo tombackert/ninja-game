@@ -301,29 +301,15 @@ class UI:
                 )
 
         # Clouds
-        game.clouds.update()
         game.clouds.render(game.display_2, offset=render_scroll)
         game.tilemap.render(game.display, offset=render_scroll)
 
         # Enemies
-        for enemy in game.enemies.copy():
-            kill = enemy.update(game.tilemap, (0, 0))
+        for enemy in game.enemies:
             enemy.render(game.display, offset=render_scroll)
-            if kill:
-                game.enemies.remove(enemy)
 
         if not game.dead:
             for player in game.players:
-                if player.id == game.playerID:
-                    player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
-                    replay_mgr = getattr(game, "replay", None)
-                    if replay_mgr is not None:
-                        try:
-                            replay_mgr.capture_player(player)
-                        except Exception:
-                            pass
-                else:
-                    player.update(game.tilemap, (0, 0))
                 if player.lives > 0:
                     player.render(game.display, offset=render_scroll)
 
@@ -339,7 +325,6 @@ class UI:
 
         # Update & render sparks / particles via central system if present
         if hasattr(game, "particle_system"):
-            game.particle_system.update()
             draw_refs = game.particle_system.get_draw_commands()
             for spark in draw_refs["sparks"]:
                 spark.render(game.display, offset=render_scroll)
@@ -348,13 +333,9 @@ class UI:
         else:
             # Legacy path (should be phased out)
             for spark in game.sparks.copy():
-                kill = spark.update()
                 spark.render(game.display, offset=render_scroll)
-                if kill:
-                    game.sparks.remove(spark)
 
         # Collectables update & render
-        game.cm.update(game.player.rect())
         game.cm.render(game.display, offset=render_scroll)
 
         # Display sillhouette

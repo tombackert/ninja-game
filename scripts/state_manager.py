@@ -347,6 +347,12 @@ class GameState(State):
         if g.transition < 0:
             g.transition += 1
 
+        # --- Camera Update ---
+        # Moved from Renderer.render to ensure it pauses (Issue 47)
+        if hasattr(g, "player") and g.player:
+            g.scroll[0] += (g.player.rect().centerx - g.display.get_width() / 2 - g.scroll[0]) / 30
+            g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
+
         # --- Death / respawn handling ---
         # (Note: legacy attribute 'lifes' renamed to 'lives' internally; we access both defensively.)
         player_lives_attr = getattr(g.player, "lives", getattr(g.player, "lifes", 0))
@@ -390,6 +396,46 @@ class GameState(State):
         if hasattr(g, "projectiles") and hasattr(g.projectiles, "update"):
             g.projectiles.update(g.tilemap, g.players, g.enemies)
 
+        # --- Entities & World Update (Moved from UI.render_game_elements) ---
+        # Clouds
+        if hasattr(g, "clouds"):
+            g.clouds.update()
+
+        # Enemies
+        for enemy in g.enemies.copy():
+            kill = enemy.update(g.tilemap, (0, 0))
+            if kill:
+                g.enemies.remove(enemy)
+
+        # Players
+        if not g.dead:
+            for player in g.players:
+                if player.id == g.playerID:
+                    # Movement driven by legacy input flags
+                    player.update(g.tilemap, (g.movement[1] - g.movement[0], 0))
+                    replay_mgr = getattr(g, "replay", None)
+                    if replay_mgr is not None:
+                        try:
+                            replay_mgr.capture_player(player)
+                        except Exception:
+                            pass
+                else:
+                    player.update(g.tilemap, (0, 0))
+
+        # Particles / Sparks
+        if hasattr(g, "particle_system"):
+            g.particle_system.update()
+        else:
+            # Legacy path
+            for spark in g.sparks.copy():
+                kill = spark.update()
+                if kill:
+                    g.sparks.remove(spark)
+
+        # Collectables
+        if hasattr(g, "cm") and hasattr(g, "player"):
+            g.cm.update(g.player.rect())
+
         # Particle system update remains in renderer (coupled to render order)
 
     def render(self, surface: pygame.Surface) -> None:
@@ -425,6 +471,14 @@ class PauseState(State):
 
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
+        self.pause_start_ticks = pygame.time.get_ticks()
+
+    def on_exit(self, next_state: "State | None") -> None:
+        # Calculate pause duration and offset the game timer so elapsed time remains correct
+        if hasattr(self, "pause_start_ticks") and self._underlying and hasattr(self._underlying, "game"):
+            duration = pygame.time.get_ticks() - self.pause_start_ticks
+            if hasattr(self._underlying.game, "timer"):
+                self._underlying.game.timer.adjust_for_pause(duration)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
