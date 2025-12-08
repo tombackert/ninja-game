@@ -75,6 +75,13 @@ class ProgressTracker:
     def is_unlocked(self, level: int) -> bool:
         return level in self.unlocked
 
+    def unlock(self, level: int) -> None:
+        """Explicitly unlock a specific level."""
+        if level in self.levels and level not in self.unlocked:
+            self.unlocked.add(level)
+            self._sync_settings()
+            log.info("Explicitly unlocked level", level)
+
     def unlock_next(self, completed_level: int) -> int | None:
         """Unlock the next sequential level if available.
 

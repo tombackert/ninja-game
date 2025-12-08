@@ -104,6 +104,7 @@ class InputRouter:
                 "StoreState": menu_rules,
                 "AccessoriesState": menu_rules,
                 "OptionsState": menu_rules,
+                "LevelCompleteState": menu_rules,
             }
         )
 

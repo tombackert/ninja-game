@@ -46,6 +46,7 @@ class State:
     """
 
     name: str = "State"
+    manager: "StateManager | None" = None
 
     # Lifecycle -----------------------------------------------------
     def on_enter(self, previous: "State | None") -> None:  # pragma: no cover - default no-op
@@ -93,6 +94,7 @@ class StateManager:
 
     # Transitions ---------------------------------------------------
     def push(self, state: State) -> None:
+        state.manager = self
         prev = self.current
         self._stack.append(state)
         state.on_enter(prev)
@@ -108,6 +110,7 @@ class StateManager:
         return top
 
     def set(self, state: State) -> None:
+        state.manager = self
         # Exit all existing states (LIFO) before setting new root.
         while self._stack:
             popped = self._stack.pop()
@@ -222,6 +225,7 @@ class GameState(State):
             setattr(self._game, "state_ref", self)
         except Exception:
             pass
+        self.level_complete_capture = None  # Store clean snapshot for level end
         self._accum = 0.0  # placeholder for future fixed timestep accumulator
         self._initialized_audio = False
         self.request_pause = False
@@ -331,19 +335,32 @@ class GameState(State):
                 new_best = g.timer.update_best_time()
                 if replay_mgr:
                     replay_mgr.commit_run(new_best=new_best)
+                
+                # Identify next level
                 levels = list_levels()
                 try:
                     current_level_index = levels.index(g.level)
                 except ValueError:
                     current_level_index = 0
-                if current_level_index == len(levels) - 1:
-                    g.load_level(g.level)
-                else:
+                
+                next_level = None
+                if current_level_index < len(levels) - 1:
                     next_level = levels[current_level_index + 1]
-                    g.level = next_level
-                    settings.set_level_to_playable(g.level)
-                    settings.selected_level = g.level
-                    g.load_level(g.level)
+                    # Unlock next level
+                    from scripts.progress_tracker import get_progress_tracker
+                    get_progress_tracker().unlock(next_level)
+                    # settings.set_level_to_playable(next_level) # handled by tracker now
+                
+                # Transition to Level Complete State
+                if self.manager:
+                    self.manager.set(LevelCompleteState(
+                        current_level=g.level,
+                        next_level=next_level,
+                        time_str=g.timer.text,
+                        best_time_str=g.timer.best_time_text,
+                        new_best=new_best
+                    ))
+
         if g.transition < 0:
             g.transition += 1
 
@@ -925,10 +942,8 @@ class OptionsState(State):
                     change = -0.1 if a == "options_left" else 0.1
                     self.settings.sound_volume += change
                 elif idx == 2:
-                    self.settings.show_perf_overlay = not self.settings.show_perf_overlay
-                elif idx == 3:
                     self.settings.ghost_enabled = not self.settings.ghost_enabled
-                elif idx == 4:
+                elif idx == 3:
                     # Toggle mode
                     current = self.settings.ghost_mode
                     self.settings.ghost_mode = "last" if current == "best" else "best"
@@ -938,7 +953,6 @@ class OptionsState(State):
         self.widget.options = [
             f"Music Volume: {int(self.settings.music_volume * 100):3d}%",
             f"Sound Volume: {int(self.settings.sound_volume * 100):3d}%",
-            f"Perf Overlay: {'ON ' if self.settings.show_perf_overlay else 'OFF'}",
             f"Ghosts: {'ON ' if self.settings.ghost_enabled else 'OFF'}",
             f"Ghost Mode: {self.settings.ghost_mode.upper()}",
         ]
@@ -949,3 +963,92 @@ class OptionsState(State):
         UI.render_menu_title(surface, "Options", surface.get_width() // 2, 160)
         self.widget.render(surface, surface.get_width() // 2, 260)
         UI.render_menu_ui_element(surface, "ESC back", 20, surface.get_height() - 40)
+
+class LevelCompleteState(State):
+    name = "LevelCompleteState"
+
+    def __init__(self, current_level, next_level, time_str, best_time_str, new_best=False):
+        from scripts.ui_widgets import ScrollableListWidget
+        from scripts.displayManager import DisplayManager
+        from scripts.ui import UI
+
+        self.current_level = current_level
+        self.next_level = next_level
+        self.time_str = time_str
+        self.best_time_str = best_time_str
+        self.new_best = new_best
+        self.bg = None
+        try:
+            self.bg = pygame.image.load("data/images/background-big.png")
+        except Exception:
+            pass
+        
+        self.dm = DisplayManager()
+        self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
+        self._ui = UI
+        
+        # Options
+        self.options = []
+        if self.next_level:
+            self.options.append("Next Level")
+        self.options.append("Replay")
+        self.options.append("Menu")
+        
+        self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=50, font_size=30)
+        self.enter = False
+
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        for act in actions:
+            if act == "menu_up":
+                self.widget.move_up()
+            elif act == "menu_down":
+                self.widget.move_down()
+            elif act == "menu_select":
+                self.enter = True
+
+    def update(self, dt: float) -> None:
+        if self.enter:
+            choice = self.options[self.widget.selected_index]
+            if choice == "Next Level":
+                if self.manager:
+                    from scripts.settings import settings
+                    settings.selected_level = self.next_level
+                    self.manager.set(GameState())
+            elif choice == "Replay":
+                if self.manager:
+                    from scripts.settings import settings
+                    settings.selected_level = self.current_level
+                    self.manager.set(GameState())
+            elif choice == "Menu":
+                if self.manager:
+                    self.manager.set(MenuState())
+            self.enter = False
+
+    def render(self, surface: pygame.Surface) -> None:
+        UI = self._ui
+        # Background
+        if self.bg:
+            try:
+                bg_scaled = pygame.transform.scale(self.bg, surface.get_size())
+                surface.blit(bg_scaled, (0, 0))
+            except Exception:
+                surface.fill((0, 0, 0))
+        else:
+            surface.fill((0, 0, 0))
+        
+        # Title
+        UI.render_menu_title(surface, "Level Complete!", surface.get_width() // 2, 80)
+        
+        # Stats
+        y_start = 160
+        color = "#FFD700" if self.new_best else UI.GAME_UI_COLOR
+        UI.render_menu_msg(surface, f"Time: {self.time_str}", surface.get_width() // 2, y_start)
+        UI.render_menu_msg(surface, f"Best: {self.best_time_str}", surface.get_width() // 2, y_start + 40)
+        if self.new_best:
+             UI.render_menu_msg(surface, "NEW BEST RECORD!", surface.get_width() // 2, y_start + 80)
+        
+        # Widget
+        self.widget.render(surface, surface.get_width() // 2, 320)
+        
+        # Hints
+        UI.render_menu_ui_element(surface, "ENTER select", 20, surface.get_height() - 40)
