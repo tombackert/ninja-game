@@ -35,6 +35,23 @@ from typing import Optional, Any
 
 @dataclass
 class PerformanceSample:
+    """Snapshot of performance metrics for a single frame.
+
+    Attributes:
+        work_ms (float): Time in milliseconds spent on CPU work (logic + render commands).
+            Excludes VSync/SwapBuffers time. High values indicate CPU bound.
+        full_ms (float | None): Total frame duration in milliseconds including VSync wait.
+            Should ideally match target frame time (e.g. 16.6ms for 60FPS).
+        avg_work_ms (float | None): Exponential Moving Average of work_ms for smoothing jitter.
+        fps (float | None): Instantaneous Frames Per Second as reported by the game clock.
+        theor_fps (float | None): Theoretical maximum FPS possible based solely on work_ms
+            (1000 / work_ms). Helps identify potential performance ceiling.
+        memory_rss (float | None): Resident Set Size (RSS) memory usage in Megabytes.
+            Indicates physical RAM currently used by the process.
+        asset_count (int | None): Total count of loaded AssetManager resources (Images + Sounds).
+            Useful for tracking asset leaks or loading spikes.
+    """
+
     work_ms: float
     full_ms: float | None
     avg_work_ms: float | None
@@ -46,6 +63,19 @@ class PerformanceSample:
 
 @dataclass
 class PerformanceHUD:
+    """System for collecting and managing performance metrics.
+
+    Separates timing logic from rendering to allow headless profiling and
+    cleaner architecture.
+
+    Attributes:
+        enabled (bool): Master toggle. If False, overhead is minimized to near zero.
+        alpha (float): Smoothing factor (0.0 < alpha <= 1.0) for EMA calculations.
+            Lower values = smoother lines but more lag. Default 0.1.
+        log_path (Optional[str]): If provided, appends metrics to this CSV file path
+            each frame. Useful for session profiling.
+    """
+
     enabled: bool = True
     alpha: float = 0.1  # EMA smoothing factor for work segment
     log_path: Optional[str] = None
