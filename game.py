@@ -177,6 +177,7 @@ class Game:
 
         # RNG Determinism (Issue 48)
         from scripts.rng_service import RNGService
+
         rng = RNGService.get()
 
         if respawn:
@@ -189,7 +190,7 @@ class Game:
                 # Enforce strict coordinate reset
                 player.pos = list(player.respawn_pos)
                 player.air_time = 0
-                player.velocity = [0, 0] # Reset velocity too for safety
+                player.velocity = [0, 0]  # Reset velocity too for safety
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
                     self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
@@ -303,7 +304,7 @@ class Game:
 
             # Entity Updates (Moved from UI.render_game_elements)
             self.clouds.update()
-            
+
             for enemy in self.enemies.copy():
                 kill = enemy.update(self.tilemap, (0, 0))
                 if kill:
@@ -320,7 +321,7 @@ class Game:
                                 pass
                     else:
                         player.update(self.tilemap, (0, 0))
-            
+
             if hasattr(self, "particle_system"):
                 self.particle_system.update()
             else:
@@ -328,7 +329,7 @@ class Game:
                     kill = spark.update()
                     if kill:
                         self.sparks.remove(spark)
-            
+
             self.cm.update(self.player.rect())
 
             UI.render_game_elements(self, render_scroll)

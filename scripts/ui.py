@@ -421,7 +421,9 @@ class UI:
         screen.blit(scaled_display, (0, 0))
 
     @staticmethod
-    def render_menu_msg(screen, msg, x, y):
+    def render_menu_msg(screen, msg, x, y, color=None):
+        if color is None:
+            color = UI.GAME_UI_COLOR
         font_15 = UI.get_font(30)
         UI.draw_text_with_outline(
             surface=screen,
@@ -429,7 +431,7 @@ class UI:
             text=msg,
             x=x,
             y=y,
-            text_color=UI.GAME_UI_COLOR,
+            text_color=color,
             center=True,
             scale=3,
         )

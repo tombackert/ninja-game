@@ -326,40 +326,46 @@ class GameState(State):
             TRANSITION_MAX,
         )
         from scripts.level_cache import list_levels
-        from scripts.settings import settings
 
         if g.endpoint:
             g.transition += 1
             if g.transition > TRANSITION_MAX:
                 # Level advance logic
-                new_best = g.timer.update_best_time()
+                old_best_val = g.timer.update_best_time()
+                is_new_best = old_best_val is not None
+
                 if replay_mgr:
-                    replay_mgr.commit_run(new_best=new_best)
-                
+                    replay_mgr.commit_run(new_best=is_new_best)
+
                 # Identify next level
                 levels = list_levels()
                 try:
                     current_level_index = levels.index(g.level)
                 except ValueError:
                     current_level_index = 0
-                
+
                 next_level = None
                 if current_level_index < len(levels) - 1:
                     next_level = levels[current_level_index + 1]
                     # Unlock next level
                     from scripts.progress_tracker import get_progress_tracker
+
                     get_progress_tracker().unlock(next_level)
                     # settings.set_level_to_playable(next_level) # handled by tracker now
-                
+
                 # Transition to Level Complete State
                 if self.manager:
-                    self.manager.set(LevelCompleteState(
-                        current_level=g.level,
-                        next_level=next_level,
-                        time_str=g.timer.text,
-                        best_time_str=g.timer.best_time_text,
-                        new_best=new_best
-                    ))
+                    old_best_str = g.timer.format_time(old_best_val) if is_new_best else None
+                    self.manager.set(
+                        LevelCompleteState(
+                            current_level=g.level,
+                            next_level=next_level,
+                            time_str=g.timer.text,
+                            best_time_str=g.timer.best_time_text,
+                            new_best=is_new_best,
+                            old_best_str=old_best_str,
+                        )
+                    )
 
         if g.transition < 0:
             g.transition += 1
@@ -964,10 +970,11 @@ class OptionsState(State):
         self.widget.render(surface, surface.get_width() // 2, 260)
         UI.render_menu_ui_element(surface, "ESC back", 20, surface.get_height() - 40)
 
+
 class LevelCompleteState(State):
     name = "LevelCompleteState"
 
-    def __init__(self, current_level, next_level, time_str, best_time_str, new_best=False):
+    def __init__(self, current_level, next_level, time_str, best_time_str, new_best=False, old_best_str=None):
         from scripts.ui_widgets import ScrollableListWidget
         from scripts.displayManager import DisplayManager
         from scripts.ui import UI
@@ -977,23 +984,24 @@ class LevelCompleteState(State):
         self.time_str = time_str
         self.best_time_str = best_time_str
         self.new_best = new_best
+        self.old_best_str = old_best_str
         self.bg = None
         try:
             self.bg = pygame.image.load("data/images/background-big.png")
         except Exception:
             pass
-        
+
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self._ui = UI
-        
+
         # Options
         self.options = []
         if self.next_level:
             self.options.append("Next Level")
         self.options.append("Replay")
         self.options.append("Menu")
-        
+
         self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=50, font_size=30)
         self.enter = False
 
@@ -1012,11 +1020,13 @@ class LevelCompleteState(State):
             if choice == "Next Level":
                 if self.manager:
                     from scripts.settings import settings
+
                     settings.selected_level = self.next_level
                     self.manager.set(GameState())
             elif choice == "Replay":
                 if self.manager:
                     from scripts.settings import settings
+
                     settings.selected_level = self.current_level
                     self.manager.set(GameState())
             elif choice == "Menu":
@@ -1035,20 +1045,28 @@ class LevelCompleteState(State):
                 surface.fill((0, 0, 0))
         else:
             surface.fill((0, 0, 0))
-        
+
         # Title
         UI.render_menu_title(surface, "Level Complete!", surface.get_width() // 2, 80)
-        
+
         # Stats
-        y_start = 160
+        y_start = 320
         color = "#FFD700" if self.new_best else UI.GAME_UI_COLOR
-        UI.render_menu_msg(surface, f"Time: {self.time_str}", surface.get_width() // 2, y_start)
-        UI.render_menu_msg(surface, f"Best: {self.best_time_str}", surface.get_width() // 2, y_start + 40)
+
+        UI.render_menu_msg(surface, f"Time: {self.time_str}", surface.get_width() // 2, y_start, color=color)
+
         if self.new_best:
-             UI.render_menu_msg(surface, "NEW BEST RECORD!", surface.get_width() // 2, y_start + 80)
-        
+            UI.render_menu_msg(surface, "NEW BEST RECORD!", surface.get_width() // 2, y_start - 80, color="#FFD700")
+            UI.render_menu_msg(
+                surface, f"Old best: {self.old_best_str}", surface.get_width() // 2, y_start + 40, color=color
+            )
+        else:
+            UI.render_menu_msg(
+                surface, f"Best: {self.best_time_str}", surface.get_width() // 2, y_start + 40, color=color
+            )
+
         # Widget
-        self.widget.render(surface, surface.get_width() // 2, 320)
-        
+        self.widget.render(surface, surface.get_width() // 2, 420)
+
         # Hints
         UI.render_menu_ui_element(surface, "ENTER select", 20, surface.get_height() - 40)

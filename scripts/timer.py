@@ -73,8 +73,8 @@ class Timer:
             self.best_time = current_time
             self.best_time_text = self.format_time(self.best_time)
             self.save_best_times()
-            return True
-        return False
+            return old_best
+        return None
 
     def save_best_times(self):
         with open(BEST_TIMES_FILE, "w") as file:
