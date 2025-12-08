@@ -22,6 +22,10 @@ class UI:
     _text_cache_capacity: int = 256
     _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
+    # Performance overlay caching
+    _perf_overlay_cache: pygame.Surface | None = None
+    _perf_overlay_frame: int = 0
+
     # ---------- Cache management helpers (restored) ----------
     @staticmethod
     def clear_image_cache():
@@ -57,6 +61,8 @@ class UI:
         avg_work_ms: float | None = None,
         fps: float | None = None,
         theor_fps: float | None = None,
+        memory_rss: float | None = None,
+        asset_count: int | None = None,
         x: int = 5,
         y: int = 5,
         update_every: int = 10,
@@ -73,22 +79,22 @@ class UI:
             transparent surface (HUD appeared missing). We now treat (x,y) as the
             on-screen anchor; internal text always starts at a small fixed inset.
         """
-        if not hasattr(UI, "_perf_overlay_frame"):
-            UI._perf_overlay_frame = 0  # type: ignore[attr-defined]
-            UI._perf_overlay_cache = None  # type: ignore[attr-defined]
-        UI._perf_overlay_frame += 1  # type: ignore[attr-defined]
-        rebuild = (
-            UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1  # type: ignore[attr-defined]
-        )
-        if not rebuild and UI._perf_overlay_cache is not None:  # type: ignore[attr-defined]
+        UI._perf_overlay_frame += 1
+        rebuild = UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1
+        if not rebuild and UI._perf_overlay_cache is not None:
             # If caller now requests a wider overlay than cached, force rebuild.
             try:  # pragma: no cover - defensive
-                if UI._perf_overlay_cache.get_width() < min_width:  # type: ignore[attr-defined]
+                if UI._perf_overlay_cache.get_width() < min_width:
                     rebuild = True
             except Exception:
                 rebuild = True
             if not rebuild:
-                surface.blit(UI._perf_overlay_cache, (x, y))  # type: ignore[attr-defined]
+                # Adjust position if off-screen
+                dest_y = y
+                h = UI._perf_overlay_cache.get_height()
+                if dest_y + h > surface.get_height():
+                    dest_y = surface.get_height() - h - 5
+                surface.blit(UI._perf_overlay_cache, (x, dest_y))
                 return
         font = UI.get_font(8)
         # We'll size width dynamically based on measured text so large values fit.
@@ -107,7 +113,12 @@ class UI:
         if fps is not None:
             rows.append(("FPS:", f"{fps:.1f}"))
         if theor_fps is not None:
-            rows.append(("FPS:", f"{theor_fps:.0f}"))
+            rows.append(("Theoretical FPS:", f"{theor_fps:.0f}"))
+        if memory_rss is not None:
+            rows.append(("Mem RSS:", f"{memory_rss:.1f}MB"))
+        if asset_count is not None:
+            rows.append(("AssetCnt:", f"{asset_count}"))
+
         section_breaks.append(len(rows))  # end of perf section
         img = UI.get_image_cache_stats()
         txt = UI.get_text_cache_stats()
@@ -116,7 +127,7 @@ class UI:
             total = stats.get("hits", 0) + stats.get("misses", 0)
             return (stats.get("hits", 0) / total * 100.0) if total else 0.0
 
-        rows.append(("ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
+        rows.append(("UI ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
         rows.append(("TxtCache:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
         rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
         section_breaks.append(len(rows))  # end of cache section
@@ -177,8 +188,12 @@ class UI:
         except Exception:  # pragma: no cover
             pass
         # Cache composed overlay for fast reuse.
-        UI._perf_overlay_cache = overlay  # type: ignore[attr-defined]
-        surface.blit(overlay, (x, y))
+        UI._perf_overlay_cache = overlay
+
+        dest_y = y
+        if dest_y + overlay_h > surface.get_height():
+            dest_y = surface.get_height() - overlay_h - 5
+        surface.blit(overlay, (x, dest_y))
 
     @staticmethod
     def load_image_cached(path, scale=1):

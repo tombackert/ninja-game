@@ -11,6 +11,9 @@ def test_policy_registry():
 
 def test_enemy_uses_policy():
     g = Game()
+    g.tilemap.tilemap = {}  # Clear tilemap to avoid collisions
+    g.tilemap.offgrid_tiles = []
+
     e = Enemy(g, [0, 0], (8, 15), 0)
     assert isinstance(e.policy, ScriptedEnemyPolicy)
 

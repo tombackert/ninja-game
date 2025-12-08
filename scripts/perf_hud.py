@@ -40,6 +40,8 @@ class PerformanceSample:
     avg_work_ms: float | None
     fps: float | None
     theor_fps: float | None
+    memory_rss: float | None = None
+    asset_count: int | None = None
 
 
 @dataclass
@@ -51,7 +53,8 @@ class PerformanceHUD:
     _t_work_start: float = field(default=0.0, init=False, repr=False)
     _last_full_ms: float = field(default=0.0, init=False)
     _avg_work_ms: Optional[float] = field(default=None, init=False)
-    _last_sample: Optional[PerformanceSample] = field(default=None, init=False)
+    _staging_sample: Optional[PerformanceSample] = field(default=None, init=False)
+    _visible_sample: Optional[PerformanceSample] = field(default=None, init=False)
     _csv_file: Optional[Any] = field(default=None, init=False, repr=False)
     _csv_writer: Optional[Any] = field(default=None, init=False, repr=False)
 
@@ -80,7 +83,7 @@ class PerformanceHUD:
         else:
             self._avg_work_ms = self.alpha * work_ms + (1 - self.alpha) * self._avg_work_ms
         # Temporarily store partial sample (full_ms, fps filled in at end_frame)
-        self._last_sample = PerformanceSample(
+        self._staging_sample = PerformanceSample(
             work_ms=work_ms,
             full_ms=None,
             avg_work_ms=self._avg_work_ms,
@@ -94,9 +97,9 @@ class PerformanceHUD:
         t_full_end = time.perf_counter()
         full_ms = (t_full_end - self._t_full_start) * 1000.0
         self._last_full_ms = full_ms
-        if self._last_sample:
+        if self._staging_sample:
             # Enrich existing partial sample
-            self._last_sample.full_ms = full_ms
+            self._staging_sample.full_ms = full_ms
             if clock is not None:
                 try:  # pragma: no cover - depends on pygame clock
                     fps = clock.get_fps()
@@ -104,13 +107,50 @@ class PerformanceHUD:
                     fps = None
             else:
                 fps = None
-            self._last_sample.fps = fps
+            self._staging_sample.fps = fps
+
+            # Collect system stats (memory, assets)
+            mem, assets = self._collect_sys_stats()
+            self._staging_sample.memory_rss = mem
+            self._staging_sample.asset_count = assets
 
             if self.log_path:
                 self._log_sample()
 
+            # Promote fully completed sample to visible
+            self._visible_sample = self._staging_sample
+
+    def _collect_sys_stats(self) -> tuple[float | None, int | None]:
+        mem = None
+        assets = None
+        try:
+            import resource
+            import sys
+
+            usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if sys.platform == "darwin":
+                mem = usage / (1024 * 1024)  # MB
+            else:
+                mem = usage / 1024  # MB
+        except ImportError:
+            pass
+
+        try:
+            from scripts.asset_manager import AssetManager
+
+            if AssetManager._instance is None:
+                assets = 0
+            else:
+                am = AssetManager.get()
+                # Count loaded surfaces and sounds
+                assets = len(am._images) + len(am._sounds)
+        except Exception:
+            pass
+
+        return mem, assets
+
     def _log_sample(self) -> None:
-        if not self._last_sample or not self.log_path:
+        if not self._staging_sample or not self.log_path:
             return
 
         import json
@@ -140,9 +180,9 @@ class PerformanceHUD:
         try:
             row = [
                 time.time(),
-                f"{self._last_sample.work_ms:.3f}",
-                f"{self._last_sample.full_ms:.3f}" if self._last_sample.full_ms else "",
-                f"{self._last_sample.fps:.2f}" if self._last_sample.fps else "",
+                f"{self._staging_sample.work_ms:.3f}",
+                f"{self._staging_sample.full_ms:.3f}" if self._staging_sample.full_ms else "",
+                f"{self._staging_sample.fps:.2f}" if self._staging_sample.fps else "",
                 json.dumps(counts),
             ]
             self._csv_writer.writerow(row)
@@ -151,7 +191,7 @@ class PerformanceHUD:
 
     @property
     def last_sample(self) -> Optional[PerformanceSample]:
-        return self._last_sample
+        return self._staging_sample
 
     @property
     def last_full_frame_ms(self) -> float:
@@ -162,7 +202,8 @@ class PerformanceHUD:
 
         Import is local to avoid creating a hard dependency for pure logic tests.
         """
-        if not (self.enabled and self._last_sample):
+        # Use visible_sample (from previous frame) so we have full metrics
+        if not (self.enabled and self._visible_sample):
             return
         try:
             from scripts.ui import UI
@@ -170,11 +211,13 @@ class PerformanceHUD:
             game_counts = getattr(self, "_game_counts", None)
             UI.render_perf_overlay(
                 surface,
-                work_ms=self._last_sample.work_ms,
-                frame_full_ms=self._last_sample.full_ms,
-                avg_work_ms=self._last_sample.avg_work_ms,
-                fps=self._last_sample.fps,
-                theor_fps=self._last_sample.theor_fps,
+                work_ms=self._visible_sample.work_ms,
+                frame_full_ms=self._visible_sample.full_ms,
+                avg_work_ms=self._visible_sample.avg_work_ms,
+                fps=self._visible_sample.fps,
+                theor_fps=self._visible_sample.theor_fps,
+                memory_rss=self._visible_sample.memory_rss,
+                asset_count=self._visible_sample.asset_count,
                 x=x,
                 y=y,
                 game_counts=game_counts,

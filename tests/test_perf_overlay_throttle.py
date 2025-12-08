@@ -10,10 +10,8 @@ def test_perf_overlay_throttling(monkeypatch):
     UI.get_font = staticmethod(lambda size: pygame.font.SysFont(None, size))  # type: ignore
     surf = pygame.Surface((200, 150))
     # Ensure clean cache state
-    if hasattr(UI, "_perf_overlay_frame"):
-        delattr(UI, "_perf_overlay_frame")
-    if hasattr(UI, "_perf_overlay_cache"):
-        delattr(UI, "_perf_overlay_cache")
+    UI._perf_overlay_frame = 0
+    UI._perf_overlay_cache = None
 
     # Draw several times with update_every=5
     prev_id = None
