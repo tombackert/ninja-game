@@ -166,6 +166,10 @@ class Enemy(PhysicsEntity):
         # Usually update's movement arg is external forces.
         combined_movement = (movement[0] + intent_movement[0], movement[1] + intent_movement[1])
 
+        # Apply jump intent
+        if decision.get("jump") and self.collisions["down"]:
+            self.velocity[1] = JUMP_VELOCITY
+
         # Apply shooting intent
         if decision.get("shoot"):
             if self.services:
