@@ -310,9 +310,9 @@ class Player(PhysicsEntity):
                 self.game.screenshake = max(16, self.game.screenshake)
                 # Duck audio on death impact
                 if self.services:
-                     self.services.audio.trigger_ducking(intensity=0.2)
+                    self.services.audio.trigger_ducking(intensity=0.2)
                 elif hasattr(self.game, "audio"):
-                     self.game.audio.trigger_ducking(intensity=0.2)
+                    self.game.audio.trigger_ducking(intensity=0.2)
             self.game.dead += 1
 
         if self.collisions["down"]:
