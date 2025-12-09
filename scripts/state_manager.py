@@ -251,7 +251,12 @@ class GameState(State):
 
         if os.environ.get("NINJA_GAME_TESTING") != "1" and not self._initialized_audio:
             try:  # Best-effort; audio is ancillary.
-                self._game.audio.play_music("data/music.wav", loops=-1)
+                # Issue 53: Per-level music tracks
+                track = "data/music/music_0.wav"
+                if hasattr(self._game, "tilemap") and hasattr(self._game.tilemap, "meta_data"):
+                    track = self._game.tilemap.meta_data.get("music", track)
+                
+                self._game.audio.play_music(track, loops=-1)
                 self._game.audio.play("ambience", loops=-1)
                 self._initialized_audio = True
             except Exception:  # pragma: no cover - audio optional in CI
