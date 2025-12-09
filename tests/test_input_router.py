@@ -39,3 +39,32 @@ def test_pause_menu_actions():
     actions = router.process(events, "PauseState")
     # First ESC closes, M would request menu; ensure both captured
     assert actions == ["pause_close", "pause_menu"]
+
+
+def test_configurable_bindings():
+    pygame.init()
+    # Mock settings before creating Router
+    from scripts.settings import settings
+
+    # Save original
+    original_binds = settings.key_bindings["GameState"]["jump"]
+
+    try:
+        # Rebind Jump to Z (K_z)
+        settings.key_bindings["GameState"]["jump"] = [pygame.K_z]
+
+        router = InputRouter()
+
+        # Test Z triggers jump
+        events = [pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_z})]
+        actions = router.process(events, "GameState")
+        assert "jump" in actions
+
+        # Test original key (SPACE/UP) no longer triggers jump (unless kept in list, here we replaced)
+        events_old = [pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE})]
+        actions_old = router.process(events_old, "GameState")
+        assert "jump" not in actions_old
+
+    finally:
+        # Restore
+        settings.key_bindings["GameState"]["jump"] = original_binds

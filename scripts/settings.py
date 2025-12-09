@@ -1,5 +1,6 @@
 import json
 import os
+import pygame
 
 from scripts.logger import get_logger
 
@@ -34,6 +35,36 @@ class Settings:
             9: False,
             10: False,
             15: False,
+        }
+        # Default key bindings (using pygame key integers for backend simplicity)
+
+        self.key_bindings = {
+            "MenuState": {
+                "menu_up": [pygame.K_UP, pygame.K_w],
+                "menu_down": [pygame.K_DOWN, pygame.K_s],
+                "menu_select": [pygame.K_RETURN, pygame.K_KP_ENTER],
+                "menu_quit": [pygame.K_ESCAPE],
+                "menu_back": [pygame.K_BACKSPACE],
+                "options_left": [pygame.K_LEFT, pygame.K_a],
+                "options_right": [pygame.K_RIGHT, pygame.K_d],
+                "accessories_switch": [pygame.K_TAB],
+            },
+            "GameState": {
+                "pause_toggle": [pygame.K_ESCAPE],
+                "debug_toggle": [pygame.K_F1],
+                "left": [pygame.K_LEFT, pygame.K_a],
+                "right": [pygame.K_RIGHT, pygame.K_d],
+                "jump": [pygame.K_UP, pygame.K_w, pygame.K_SPACE],
+                "dash": [pygame.K_x],
+                "shoot": [pygame.K_c],
+            },
+            "PauseState": {
+                "pause_close": [pygame.K_ESCAPE],
+                "pause_menu": [pygame.K_m],
+                "menu_up": [pygame.K_UP, pygame.K_w],
+                "menu_down": [pygame.K_DOWN, pygame.K_s],
+                "menu_select": [pygame.K_RETURN, pygame.K_KP_ENTER],
+            },
         }
         self.load_settings()
 
@@ -168,6 +199,14 @@ class Settings:
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
+
+                    # Merge loaded bindings with defaults (deep merge to preserve defaults for missing keys)
+                    loaded_bindings = data.get("key_bindings", {})
+                    for state, binds in loaded_bindings.items():
+                        if state in self.key_bindings:
+                            for action, keys in binds.items():
+                                self.key_bindings[state][action] = keys
+
             except (json.JSONDecodeError, IOError) as e:
                 log.warn("Error loading settings; regenerating", e)
                 self._dirty = True
@@ -195,6 +234,7 @@ class Settings:
             "show_perf_overlay": self.show_perf_overlay,
             "ghost_enabled": self._ghost_enabled,
             "ghost_mode": self._ghost_mode,
+            "key_bindings": self.key_bindings,
         }
         try:
             os.makedirs(os.path.dirname(self.SETTINGS_FILE), exist_ok=True)
