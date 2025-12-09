@@ -216,9 +216,7 @@ class MenuState(State):
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
-        # We don't have a key for "Menu" title yet in json, assume hardcoded or add "menu.title"
-        # For now hardcoded per strings.json content (not added there yet)
-        UI.render_menu_title(surface, "Menu", surface.get_width() // 2, 200)
+        UI.render_menu_title(surface, self.loc.translate("menu.title"), surface.get_width() // 2, 200)
         self.list_widget.render(surface, surface.get_width() // 2, 300)
         UI.render_menu_ui_element(
             surface,
