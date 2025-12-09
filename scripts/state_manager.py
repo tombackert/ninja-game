@@ -153,20 +153,25 @@ class MenuState(State):
     def __init__(self) -> None:
         from scripts.displayManager import DisplayManager
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.dm = DisplayManager()
         self.BASE_W = self.dm.BASE_W
         self.BASE_H = self.dm.BASE_H
         self.display = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
-        self.options = [
-            "Play",
-            "Levels",
-            "Store",
-            "Accessories",
-            "Options",
-            "Quit",
+        self.options_keys = [
+            "menu.play",
+            "menu.levels",
+            "menu.store",
+            "menu.accessories",
+            "menu.options",
+            "menu.quit",
         ]
+        # Translate initially
+        self.options = [self.loc.translate(k) for k in self.options_keys]
+
         self.list_widget = ScrollableListWidget(self.options, visible_rows=6, spacing=50, font_size=30)
         self.selected = 0  # legacy compatibility (to be removed)
         self.enter = False
@@ -188,25 +193,38 @@ class MenuState(State):
 
     def update(self, dt: float) -> None:
         if self.enter:
-            choice = self.list_widget.options[self.list_widget.selected_index]
-            if choice == "Play":
+            # Map translated choice back to key or index?
+            # Safer to use index since we control the list order
+            idx = self.list_widget.selected_index
+            key = self.options_keys[idx]
+
+            if key == "menu.play":
                 self.start_game = True
-            elif choice == "Quit":
+            elif key == "menu.quit":
                 self.quit_requested = True
-            elif choice in ("Levels", "Store", "Accessories", "Options"):
-                # Defer instantiation to app loop to avoid heavy imports here
-                self.next_state = choice
+            elif key == "menu.levels":
+                self.next_state = "Levels"
+            elif key == "menu.store":
+                self.next_state = "Store"
+            elif key == "menu.accessories":
+                self.next_state = "Accessories"
+            elif key == "menu.options":
+                self.next_state = "Options"
             # Future: branch to other submenus (Levels/Store/etc.) via state transitions
             self.enter = False
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
+        # We don't have a key for "Menu" title yet in json, assume hardcoded or add "menu.title"
+        # For now hardcoded per strings.json content (not added there yet)
         UI.render_menu_title(surface, "Menu", surface.get_width() // 2, 200)
         self.list_widget.render(surface, surface.get_width() // 2, 300)
         UI.render_menu_ui_element(
             surface,
-            "ENTER select / ESC quit",
+            self.loc.translate("menu.enter_hint")
+            + " / "
+            + self.loc.translate("menu.quit"),  # Hacky concat or add combined key
             surface.get_width() // 2 - 120,
             surface.get_height() - 40,
         )
@@ -255,7 +273,7 @@ class GameState(State):
                 track = "data/music/music_0.wav"
                 if hasattr(self._game, "tilemap") and hasattr(self._game.tilemap, "meta_data"):
                     track = self._game.tilemap.meta_data.get("music", track)
-                
+
                 self._game.audio.play_music(track, loops=-1)
                 self._game.audio.play("ambience", loops=-1)
                 self._initialized_audio = True
@@ -488,14 +506,24 @@ class PauseState(State):
 
     def __init__(self) -> None:
         from scripts.ui_widgets import ScrollableListWidget
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self._ticks = 0
         self.closed = False
         self.return_to_menu = False
         self.quit_requested = False
         self._underlying: State | None = None  # set in on_enter
-        self.options = ["Resume", "Menu"]
-        self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=60, font_size=30)
+        self.options_keys = [
+            "menu.resume",
+            "menu.menu",
+        ]  # 'Menu' reused? "menu.menu" -> "Menu" (implied context) or "level_complete.menu"?
+        # Let's use "level_complete.menu" for "Menu" button
+        self.options_keys = ["menu.resume", "level_complete.menu"]
+
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in self.options_keys], visible_rows=3, spacing=60, font_size=30
+        )
         self.bg: pygame.Surface | None = None
         # Background image (menu backdrop) for pause overlay decoration
         try:
@@ -526,10 +554,12 @@ class PauseState(State):
                 self.return_to_menu = True
                 self.closed = True
             elif act == "menu_select":
-                choice = self.options[self.widget.selected_index]
-                if choice == "Resume":
+                # Use index to match key logic
+                idx = self.widget.selected_index
+                key = self.options_keys[idx]
+                if key == "menu.resume":
                     self.closed = True
-                elif choice == "Menu":
+                elif key == "level_complete.menu":
                     self.return_to_menu = True
                     self.closed = True
 
@@ -567,7 +597,7 @@ class PauseState(State):
         UI.draw_text_with_outline(
             surface=surface,
             font=font,
-            text="Paused",
+            text=self.loc.translate("menu.paused"),
             x=surface.get_width() // 2,
             y=140,
             center=True,
@@ -578,13 +608,13 @@ class PauseState(State):
         # Footer hint
         UI.render_menu_ui_element(
             surface,
-            "ENTER select / ESC resume",
+            self.loc.translate("menu.enter_hint") + " / " + self.loc.translate("menu.resume"),
             surface.get_width() // 2 - 130,
             surface.get_height() - 60,
         )
         UI.render_menu_ui_element(
             surface,
-            "Up/Down navigate",
+            self.loc.translate("menu.navigate_hint"),
             surface.get_width() // 2 - 110,
             surface.get_height() - 40,
         )
@@ -602,7 +632,9 @@ class LevelsState(State):
         from scripts.progress_tracker import get_progress_tracker
         from scripts.settings import settings
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
@@ -647,9 +679,9 @@ class LevelsState(State):
             # Use tracker authoritative unlock state
             if self.progress.is_unlocked(lvl):
                 self.settings.selected_level = lvl
-                self.message = f"Selected level {lvl}"
+                self.message = self.loc.translate("menu.selected", lvl)
             else:
-                self.message = "Level not unlocked!"
+                self.message = self.loc.translate("menu.locked")
             self.message_timer = 1.0  # seconds
             self.enter = False
         if self.message_timer > 0:
@@ -660,7 +692,7 @@ class LevelsState(State):
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, "Select Level", surface.get_width() // 2, 160)
+        UI.render_menu_title(surface, self.loc.translate("menu.select_level"), surface.get_width() // 2, 160)
         # Decorate selected & owned indicator with padlocks at side
         self.widget.render(surface, surface.get_width() // 2, 260)
         # Draw padlocks
@@ -679,13 +711,13 @@ class LevelsState(State):
             )
         UI.render_menu_ui_element(
             surface,
-            f"Current: {self.settings.selected_level}",
+            f"{self.loc.translate('menu.current')}: {self.settings.selected_level}",
             20,
             20,
         )
         UI.render_menu_ui_element(
             surface,
-            "ESC to menu",
+            self.loc.translate("menu.back_hint"),
             20,
             surface.get_height() - 40,
         )
@@ -706,7 +738,9 @@ class StoreState(State):
         from scripts.displayManager import DisplayManager
         from scripts.settings import settings
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
@@ -740,11 +774,11 @@ class StoreState(State):
             name = opt.split("$")[0].strip()
             result = self.cm.buy_collectable(name)
             if result == "success":
-                self.message = f"Bought {name} for ${self.cm.ITEMS[name]}"
+                self.message = self.loc.translate("store.buy_success", name, self.cm.ITEMS[name])
             elif result == "not enough coins":
-                self.message = "Not enough coins!"
+                self.message = self.loc.translate("store.not_enough")
             elif result == "not purchaseable":
-                self.message = "Item is not purchaseable!"
+                self.message = self.loc.translate("store.not_purchaseable")
             else:
                 self.message = result
             self.message_timer = 1.5
@@ -757,7 +791,7 @@ class StoreState(State):
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, "Store", surface.get_width() // 2, 160)
+        UI.render_menu_title(surface, self.loc.translate("store.title"), surface.get_width() // 2, 160)
         self.widget.render(surface, surface.get_width() // 2, 260)
         # Padlocks indicating purchaseable status
         for i in range(self.widget.visible_rows):
@@ -783,7 +817,7 @@ class StoreState(State):
             20,
             "right",
         )
-        UI.render_menu_ui_element(surface, "ESC to menu", 20, surface.get_height() - 40)
+        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
         if self.message:
             UI.render_menu_msg(
                 surface,
@@ -801,7 +835,9 @@ class AccessoriesState(State):
         from scripts.displayManager import DisplayManager
         from scripts.settings import settings
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
@@ -810,8 +846,8 @@ class AccessoriesState(State):
         self.cm = CollectableManager(None)
         self.weapons = list(self.cm.WEAPONS)
         self.skins = list(self.cm.SKINS)
-        self.weapon_widget = ScrollableListWidget([w for w in self.weapons], visible_rows=4, spacing=50, font_size=30)
-        self.skin_widget = ScrollableListWidget([s for s in self.skins], visible_rows=4, spacing=50, font_size=30)
+        self.weapon_widget = ScrollableListWidget(self.weapons, visible_rows=4, spacing=50, font_size=30)
+        self.skin_widget = ScrollableListWidget(self.skins, visible_rows=4, spacing=50, font_size=30)
         self.active_panel = 0  # 0 weapons, 1 skins
         self.request_back = False
         self.enter = False
@@ -838,17 +874,17 @@ class AccessoriesState(State):
                 name = self.weapons[idx]
                 if self.cm.get_amount(name) > 0:
                     self.settings.selected_weapon = idx
-                    self.message = f"Equipped {name}"
+                    self.message = self.loc.translate("accessories.equipped", name)
                 else:
-                    self.message = f"Locked {name}"
+                    self.message = self.loc.translate("accessories.locked", name)
             else:
                 idx = self.skin_widget.selected_index
                 name = self.skins[idx]
                 if self.cm.get_amount(name) > 0:
                     self.settings.selected_skin = idx
-                    self.message = f"Equipped {name}"
+                    self.message = self.loc.translate("accessories.equipped", name)
                 else:
-                    self.message = f"Locked {name}"
+                    self.message = self.loc.translate("accessories.locked", name)
             self.message_timer = 1.0
             self.enter = False
         if self.message_timer > 0:
@@ -859,9 +895,9 @@ class AccessoriesState(State):
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, "Accessories", surface.get_width() // 2, 120)
-        UI.render_menu_subtitle(surface, "Weapons", surface.get_width() // 2 - 350, 260)
-        UI.render_menu_subtitle(surface, "Skins", surface.get_width() // 2 + 350, 260)
+        UI.render_menu_title(surface, self.loc.translate("accessories.title"), surface.get_width() // 2, 120)
+        UI.render_menu_subtitle(surface, self.loc.translate("accessories.weapons"), surface.get_width() // 2 - 350, 260)
+        UI.render_menu_subtitle(surface, self.loc.translate("accessories.skins"), surface.get_width() // 2 + 350, 260)
         # Render weapon list
         self.weapon_widget.render(surface, surface.get_width() // 2 - 350, 330)
         self.skin_widget.render(surface, surface.get_width() // 2 + 350, 330)
@@ -892,18 +928,28 @@ class AccessoriesState(State):
                 330 + (i * self.skin_widget.spacing),
                 0.15,
             )
-        UI.render_menu_ui_element(surface, f"Coins: ${self.cm.coins}", 20, 20)
-        UI.render_menu_ui_element(surface, f"Weapon: {self.cm.WEAPONS[self.settings.selected_weapon]}", 20, 40)
-        UI.render_menu_ui_element(surface, f"Skin: {self.cm.SKINS[self.settings.selected_skin]}", 20, 60)
+        UI.render_menu_ui_element(surface, self.loc.translate("accessories.coins", self.cm.coins), 20, 20)
         UI.render_menu_ui_element(
             surface,
-            "TAB switch list",
+            self.loc.translate("accessories.equipped_weapon", self.cm.WEAPONS[self.settings.selected_weapon]),
+            20,
+            40,
+        )
+        UI.render_menu_ui_element(
+            surface,
+            self.loc.translate("accessories.equipped_skin", self.cm.SKINS[self.settings.selected_skin]),
+            20,
+            60,
+        )
+        UI.render_menu_ui_element(
+            surface,
+            self.loc.translate("accessories.tab_hint"),
             surface.get_width() // 2 - 90,
             surface.get_height() - 70,
         )
         UI.render_menu_ui_element(
             surface,
-            "ESC back",
+            self.loc.translate("menu.back_hint"),
             surface.get_width() // 2 - 50,
             surface.get_height() - 40,
         )
@@ -930,7 +976,9 @@ class OptionsState(State):
         from scripts.displayManager import DisplayManager
         from scripts.settings import settings
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
@@ -967,19 +1015,22 @@ class OptionsState(State):
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
+        ghosts_status = (
+            self.loc.translate("options.on") if self.settings.ghost_enabled else self.loc.translate("options.off")
+        )
         self.widget.options = [
-            f"Music Volume: {int(self.settings.music_volume * 100):3d}%",
-            f"Sound Volume: {int(self.settings.sound_volume * 100):3d}%",
-            f"Ghosts: {'ON ' if self.settings.ghost_enabled else 'OFF'}",
-            f"Ghost Mode: {self.settings.ghost_mode.upper()}",
+            self.loc.translate("options.music_volume", int(self.settings.music_volume * 100)),
+            self.loc.translate("options.sound_volume", int(self.settings.sound_volume * 100)),
+            self.loc.translate("options.ghosts", ghosts_status),
+            self.loc.translate("options.ghost_mode", self.settings.ghost_mode.upper()),
         ]
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, "Options", surface.get_width() // 2, 160)
+        UI.render_menu_title(surface, self.loc.translate("options.title"), surface.get_width() // 2, 160)
         self.widget.render(surface, surface.get_width() // 2, 260)
-        UI.render_menu_ui_element(surface, "ESC back", 20, surface.get_height() - 40)
+        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
 
 
 class LevelCompleteState(State):
@@ -989,7 +1040,9 @@ class LevelCompleteState(State):
         from scripts.ui_widgets import ScrollableListWidget
         from scripts.displayManager import DisplayManager
         from scripts.ui import UI
+        from scripts.localization import LocalizationService
 
+        self.loc = LocalizationService.get()
         self.current_level = current_level
         self.next_level = next_level
         self.time_str = time_str
@@ -1007,13 +1060,15 @@ class LevelCompleteState(State):
         self._ui = UI
 
         # Options
-        self.options = []
+        self.options_keys = []
         if self.next_level:
-            self.options.append("Next Level")
-        self.options.append("Replay")
-        self.options.append("Menu")
+            self.options_keys.append("level_complete.next_level")
+        self.options_keys.append("level_complete.replay")
+        self.options_keys.append("level_complete.menu")
 
-        self.widget = ScrollableListWidget(self.options, visible_rows=3, spacing=50, font_size=30)
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in self.options_keys], visible_rows=3, spacing=50, font_size=30
+        )
         self.enter = False
 
     def handle_actions(self, actions: Sequence[str]) -> None:
@@ -1027,20 +1082,21 @@ class LevelCompleteState(State):
 
     def update(self, dt: float) -> None:
         if self.enter:
-            choice = self.options[self.widget.selected_index]
-            if choice == "Next Level":
+            idx = self.widget.selected_index
+            choice_key = self.options_keys[idx]
+            if choice_key == "level_complete.next_level":
                 if self.manager:
                     from scripts.settings import settings
 
                     settings.selected_level = self.next_level
                     self.manager.set(GameState())
-            elif choice == "Replay":
+            elif choice_key == "level_complete.replay":
                 if self.manager:
                     from scripts.settings import settings
 
                     settings.selected_level = self.current_level
                     self.manager.set(GameState())
-            elif choice == "Menu":
+            elif choice_key == "level_complete.menu":
                 if self.manager:
                     self.manager.set(MenuState())
             self.enter = False
@@ -1058,26 +1114,46 @@ class LevelCompleteState(State):
             surface.fill((0, 0, 0))
 
         # Title
-        UI.render_menu_title(surface, "Level Complete!", surface.get_width() // 2, 80)
+        UI.render_menu_title(surface, self.loc.translate("level_complete.title"), surface.get_width() // 2, 80)
 
         # Stats
         y_start = 320
         color = "#FFD700" if self.new_best else UI.GAME_UI_COLOR
 
-        UI.render_menu_msg(surface, f"Time: {self.time_str}", surface.get_width() // 2, y_start, color=color)
+        UI.render_menu_msg(
+            surface,
+            self.loc.translate("level_complete.time", self.time_str),
+            surface.get_width() // 2,
+            y_start,
+            color=color,
+        )
 
         if self.new_best:
-            UI.render_menu_msg(surface, "NEW BEST RECORD!", surface.get_width() // 2, y_start - 80, color="#FFD700")
             UI.render_menu_msg(
-                surface, f"Old best: {self.old_best_str}", surface.get_width() // 2, y_start + 40, color=color
+                surface,
+                self.loc.translate("level_complete.new_best"),
+                surface.get_width() // 2,
+                y_start - 80,
+                color="#FFD700",
+            )
+            UI.render_menu_msg(
+                surface,
+                self.loc.translate("level_complete.old_best", self.old_best_str),
+                surface.get_width() // 2,
+                y_start + 40,
+                color=color,
             )
         else:
             UI.render_menu_msg(
-                surface, f"Best: {self.best_time_str}", surface.get_width() // 2, y_start + 40, color=color
+                surface,
+                self.loc.translate("level_complete.best", self.best_time_str),
+                surface.get_width() // 2,
+                y_start + 40,
+                color=color,
             )
 
         # Widget
         self.widget.render(surface, surface.get_width() // 2, 420)
 
         # Hints
-        UI.render_menu_ui_element(surface, "ENTER select", 20, surface.get_height() - 40)
+        UI.render_menu_ui_element(surface, self.loc.translate("menu.enter_hint"), 20, surface.get_height() - 40)

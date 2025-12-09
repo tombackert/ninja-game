@@ -345,12 +345,15 @@ class Game:
             self.display_2.blit(self.display, (0, 0))
 
             # HUD
+            from scripts.localization import LocalizationService
+
+            loc = LocalizationService.get()
             UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
             UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
-            UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
-            UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lives}", 5, 5)
-            UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
-            UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.level", self.level), self.BASE_W // 2 - 40, 5)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.lives", self.player.lives), 5, 5)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.coins", self.cm.coins), 5, 15)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.ammo", self.cm.ammo), 5, 25)
 
             # Mark end of work segment for HUD
             self.perf_hud.end_work_segment()

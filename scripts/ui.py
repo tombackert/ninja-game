@@ -103,21 +103,25 @@ class UI:
         # (Overlay surface created later after measuring text.)
 
         # Build rows first so we can size columns dynamically (prevents overlap).
+        from scripts.localization import LocalizationService
+
+        loc = LocalizationService.get()
+
         rows: list[tuple[str, str]] = []
         section_breaks: list[int] = []  # indices where a visual gap inserted
         if frame_full_ms is not None:
-            rows.append(("Frame:", f"{frame_full_ms:.2f}ms"))
-        rows.append(("Work:", f"{work_ms:.2f}ms"))
+            rows.append((loc.translate("perf.frame"), f"{frame_full_ms:.2f}ms"))
+        rows.append((loc.translate("perf.work"), f"{work_ms:.2f}ms"))
         if avg_work_ms is not None:
-            rows.append(("AvgWork:", f"{avg_work_ms:.2f}ms"))
+            rows.append((loc.translate("perf.avg_work"), f"{avg_work_ms:.2f}ms"))
         if fps is not None:
-            rows.append(("FPS:", f"{fps:.1f}"))
+            rows.append((loc.translate("perf.fps"), f"{fps:.1f}"))
         if theor_fps is not None:
-            rows.append(("Theoretical FPS:", f"{theor_fps:.0f}"))
+            rows.append((loc.translate("perf.theor_fps"), f"{theor_fps:.0f}"))
         if memory_rss is not None:
-            rows.append(("Mem RSS:", f"{memory_rss:.1f}MB"))
+            rows.append((loc.translate("perf.mem"), f"{memory_rss:.1f}MB"))
         if asset_count is not None:
-            rows.append(("AssetCnt:", f"{asset_count}"))
+            rows.append((loc.translate("perf.asset_cnt"), f"{asset_count}"))
 
         section_breaks.append(len(rows))  # end of perf section
         img = UI.get_image_cache_stats()
@@ -127,9 +131,9 @@ class UI:
             total = stats.get("hits", 0) + stats.get("misses", 0)
             return (stats.get("hits", 0) / total * 100.0) if total else 0.0
 
-        rows.append(("UI ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
-        rows.append(("TxtCache:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
-        rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
+        rows.append((loc.translate("perf.ui_img_cache"), f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
+        rows.append((loc.translate("perf.txt_cache"), f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
+        rows.append((loc.translate("perf.txt_stats"), f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
         section_breaks.append(len(rows))  # end of cache section
         if game_counts:
             rows.extend((f"{k.capitalize()}:", str(game_counts[k])) for k in sorted(game_counts.keys()))
