@@ -61,6 +61,9 @@ class AudioService:
         # Pre-register known sounds (can lazily add later)
         for name in ["jump", "dash", "hit", "shoot", "ambience", "collect"]:
             self._sfx[name] = self._am.get_sound(f"{name}.wav")
+        self._duck_factor = 1.0
+        self._duck_target = 1.0
+        self._duck_speed = 0.1
         self.apply_volumes()
 
     @classmethod
@@ -69,9 +72,32 @@ class AudioService:
             cls._instance = cls()
         return cls._instance
 
+    # Ducking ------------------------------------------------------------
+    def trigger_ducking(self, duration: float = 0.5, intensity: float = 0.3) -> None:
+        """Temporarily lower music volume."""
+        self._duck_target = intensity
+        # For simplicity, we just set the target. 
+        # Ideally, we'd have a timer, but a simple 'decay back to 1.0' in update works too.
+        # Let's use a simple approach: set target low, and update() slowly raises it back.
+
+    def update(self) -> None:
+        """Called every frame to update ducking envelope."""
+        if self._duck_factor < 1.0:
+            self._duck_factor = min(1.0, self._duck_factor + 0.05)
+            self.apply_volumes()
+        elif self._duck_target < 1.0:
+             # We just triggered ducking, snap target or lerp down?
+             # Let's lerp down for smoothness
+             self._duck_factor = max(self._duck_target, self._duck_factor - 0.1)
+             if self._duck_factor <= self._duck_target + 0.01:
+                 # Reached bottom, reset target to 1.0 so we rise back up next frame
+                 self._duck_target = 1.0
+             self.apply_volumes()
+
+
     # Volume management --------------------------------------------------
     def apply_volumes(self) -> None:
-        music_v = settings.music_volume
+        music_v = settings.music_volume * self._duck_factor
         sound_v = settings.sound_volume
         for k, snd in self._sfx.items():
             base = 1.0

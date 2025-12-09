@@ -312,6 +312,9 @@ class GameState(State):
         # Update internal clock to track FPS (Issue 50)
         g.clock.tick()
 
+        # Update Audio Service (Ducking)
+        g.audio.update()
+
         if not g.running:
             return  # Game externally marked finished (future: transition to Menu)
         # If a PauseState render is freezing this frame, skip simulation changes.
