@@ -187,6 +187,15 @@ class ReplayGhost:
 
     def step_and_render(self, surface: pygame.Surface, offset: tuple[int, int]):
         if self.tick >= self.data.duration_frames:
+            # Issue 51: Ghost Polish - Idle at Finish
+            if self.entity.action != "idle":
+                self.entity.set_action("idle")
+
+            # Animate in place
+            if self.entity.animation:
+                self.entity.animation.update()
+
+            self._render_tinted(surface, offset)
             return
 
         # print(f"[DEBUG] Ghost Tick {self.tick} Pos {self.entity.pos}")
