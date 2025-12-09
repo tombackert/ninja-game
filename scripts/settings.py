@@ -11,8 +11,8 @@ class Settings:
 
     def __init__(self):
         # Default settings
-        self._music_volume = 0.5
-        self._sound_volume = 0.5
+        self._music_volume = 0.0
+        self._sound_volume = 0.0
         self._selected_level = 0
         self.selected_editor_level = 0
         self.selected_weapon = 0
