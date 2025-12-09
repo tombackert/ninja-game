@@ -5,7 +5,8 @@
             "current_time": "00:00:00",
             "start_time": "00:00:00"
         },
-        "version": 2
+        "version": 2,
+        "music": "data/music/music_0.wav"
     },
     "entities_data": {
         "players": [],

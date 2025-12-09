@@ -166,6 +166,10 @@ class Enemy(PhysicsEntity):
         # Usually update's movement arg is external forces.
         combined_movement = (movement[0] + intent_movement[0], movement[1] + intent_movement[1])
 
+        # Apply jump intent
+        if decision.get("jump") and self.collisions["down"]:
+            self.velocity[1] = JUMP_VELOCITY
+
         # Apply shooting intent
         if decision.get("shoot"):
             if self.services:
@@ -304,6 +308,11 @@ class Player(PhysicsEntity):
         if self.air_time > AIR_TIME_FATAL:
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
+                # Duck audio on death impact
+                if self.services:
+                    self.services.audio.trigger_ducking(intensity=0.2)
+                elif hasattr(self.game, "audio"):
+                    self.game.audio.trigger_ducking(intensity=0.2)
             self.game.dead += 1
 
         if self.collisions["down"]:

@@ -22,6 +22,10 @@ class UI:
     _text_cache_capacity: int = 256
     _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
 
+    # Performance overlay caching
+    _perf_overlay_cache: pygame.Surface | None = None
+    _perf_overlay_frame: int = 0
+
     # ---------- Cache management helpers (restored) ----------
     @staticmethod
     def clear_image_cache():
@@ -57,6 +61,8 @@ class UI:
         avg_work_ms: float | None = None,
         fps: float | None = None,
         theor_fps: float | None = None,
+        memory_rss: float | None = None,
+        asset_count: int | None = None,
         x: int = 5,
         y: int = 5,
         update_every: int = 10,
@@ -73,22 +79,22 @@ class UI:
             transparent surface (HUD appeared missing). We now treat (x,y) as the
             on-screen anchor; internal text always starts at a small fixed inset.
         """
-        if not hasattr(UI, "_perf_overlay_frame"):
-            UI._perf_overlay_frame = 0  # type: ignore[attr-defined]
-            UI._perf_overlay_cache = None  # type: ignore[attr-defined]
-        UI._perf_overlay_frame += 1  # type: ignore[attr-defined]
-        rebuild = (
-            UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1  # type: ignore[attr-defined]
-        )
-        if not rebuild and UI._perf_overlay_cache is not None:  # type: ignore[attr-defined]
+        UI._perf_overlay_frame += 1
+        rebuild = UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1
+        if not rebuild and UI._perf_overlay_cache is not None:
             # If caller now requests a wider overlay than cached, force rebuild.
             try:  # pragma: no cover - defensive
-                if UI._perf_overlay_cache.get_width() < min_width:  # type: ignore[attr-defined]
+                if UI._perf_overlay_cache.get_width() < min_width:
                     rebuild = True
             except Exception:
                 rebuild = True
             if not rebuild:
-                surface.blit(UI._perf_overlay_cache, (x, y))  # type: ignore[attr-defined]
+                # Adjust position if off-screen
+                dest_y = y
+                h = UI._perf_overlay_cache.get_height()
+                if dest_y + h > surface.get_height():
+                    dest_y = surface.get_height() - h - 5
+                surface.blit(UI._perf_overlay_cache, (x, dest_y))
                 return
         font = UI.get_font(8)
         # We'll size width dynamically based on measured text so large values fit.
@@ -97,17 +103,26 @@ class UI:
         # (Overlay surface created later after measuring text.)
 
         # Build rows first so we can size columns dynamically (prevents overlap).
+        from scripts.localization import LocalizationService
+
+        loc = LocalizationService.get()
+
         rows: list[tuple[str, str]] = []
         section_breaks: list[int] = []  # indices where a visual gap inserted
         if frame_full_ms is not None:
-            rows.append(("Frame:", f"{frame_full_ms:.2f}ms"))
-        rows.append(("Work:", f"{work_ms:.2f}ms"))
+            rows.append((loc.translate("perf.frame"), f"{frame_full_ms:.2f}ms"))
+        rows.append((loc.translate("perf.work"), f"{work_ms:.2f}ms"))
         if avg_work_ms is not None:
-            rows.append(("AvgWork:", f"{avg_work_ms:.2f}ms"))
+            rows.append((loc.translate("perf.avg_work"), f"{avg_work_ms:.2f}ms"))
         if fps is not None:
-            rows.append(("FPS:", f"{fps:.1f}"))
+            rows.append((loc.translate("perf.fps"), f"{fps:.1f}"))
         if theor_fps is not None:
-            rows.append(("FPS:", f"{theor_fps:.0f}"))
+            rows.append((loc.translate("perf.theor_fps"), f"{theor_fps:.0f}"))
+        if memory_rss is not None:
+            rows.append((loc.translate("perf.mem"), f"{memory_rss:.1f}MB"))
+        if asset_count is not None:
+            rows.append((loc.translate("perf.asset_cnt"), f"{asset_count}"))
+
         section_breaks.append(len(rows))  # end of perf section
         img = UI.get_image_cache_stats()
         txt = UI.get_text_cache_stats()
@@ -116,9 +131,9 @@ class UI:
             total = stats.get("hits", 0) + stats.get("misses", 0)
             return (stats.get("hits", 0) / total * 100.0) if total else 0.0
 
-        rows.append(("ImgCache:", f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
-        rows.append(("TxtCache:", f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
-        rows.append(("Txt h/m/e:", f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
+        rows.append((loc.translate("perf.ui_img_cache"), f"{img['size']}/{img['capacity']} {ratio(img):.0f}%"))
+        rows.append((loc.translate("perf.txt_cache"), f"{txt['size']}/{txt['capacity']} {ratio(txt):.0f}%"))
+        rows.append((loc.translate("perf.txt_stats"), f"{txt['hits']}/{txt['misses']}/{txt['evictions']}"))
         section_breaks.append(len(rows))  # end of cache section
         if game_counts:
             rows.extend((f"{k.capitalize()}:", str(game_counts[k])) for k in sorted(game_counts.keys()))
@@ -177,8 +192,12 @@ class UI:
         except Exception:  # pragma: no cover
             pass
         # Cache composed overlay for fast reuse.
-        UI._perf_overlay_cache = overlay  # type: ignore[attr-defined]
-        surface.blit(overlay, (x, y))
+        UI._perf_overlay_cache = overlay
+
+        dest_y = y
+        if dest_y + overlay_h > surface.get_height():
+            dest_y = surface.get_height() - overlay_h - 5
+        surface.blit(overlay, (x, dest_y))
 
     @staticmethod
     def load_image_cached(path, scale=1):
@@ -301,29 +320,15 @@ class UI:
                 )
 
         # Clouds
-        game.clouds.update()
         game.clouds.render(game.display_2, offset=render_scroll)
         game.tilemap.render(game.display, offset=render_scroll)
 
         # Enemies
-        for enemy in game.enemies.copy():
-            kill = enemy.update(game.tilemap, (0, 0))
+        for enemy in game.enemies:
             enemy.render(game.display, offset=render_scroll)
-            if kill:
-                game.enemies.remove(enemy)
 
         if not game.dead:
             for player in game.players:
-                if player.id == game.playerID:
-                    player.update(game.tilemap, (game.movement[1] - game.movement[0], 0))
-                    replay_mgr = getattr(game, "replay", None)
-                    if replay_mgr is not None:
-                        try:
-                            replay_mgr.capture_player(player)
-                        except Exception:
-                            pass
-                else:
-                    player.update(game.tilemap, (0, 0))
                 if player.lives > 0:
                     player.render(game.display, offset=render_scroll)
 
@@ -339,7 +344,6 @@ class UI:
 
         # Update & render sparks / particles via central system if present
         if hasattr(game, "particle_system"):
-            game.particle_system.update()
             draw_refs = game.particle_system.get_draw_commands()
             for spark in draw_refs["sparks"]:
                 spark.render(game.display, offset=render_scroll)
@@ -348,13 +352,9 @@ class UI:
         else:
             # Legacy path (should be phased out)
             for spark in game.sparks.copy():
-                kill = spark.update()
                 spark.render(game.display, offset=render_scroll)
-                if kill:
-                    game.sparks.remove(spark)
 
         # Collectables update & render
-        game.cm.update(game.player.rect())
         game.cm.render(game.display, offset=render_scroll)
 
         # Display sillhouette
@@ -440,7 +440,9 @@ class UI:
         screen.blit(scaled_display, (0, 0))
 
     @staticmethod
-    def render_menu_msg(screen, msg, x, y):
+    def render_menu_msg(screen, msg, x, y, color=None):
+        if color is None:
+            color = UI.GAME_UI_COLOR
         font_15 = UI.get_font(30)
         UI.draw_text_with_outline(
             surface=screen,
@@ -448,7 +450,7 @@ class UI:
             text=msg,
             x=x,
             y=y,
-            text_color=UI.GAME_UI_COLOR,
+            text_color=color,
             center=True,
             scale=3,
         )

@@ -51,50 +51,47 @@ class InputRouter:
         self._register_default_rules()
 
     def _register_default_rules(self) -> None:
-        menu_rules: List[Rule] = [
-            _key_rule(pygame.K_UP, "menu_up"),
-            _key_rule(pygame.K_w, "menu_up"),
-            _key_rule(pygame.K_DOWN, "menu_down"),
-            _key_rule(pygame.K_s, "menu_down"),
-            _key_rule(pygame.K_RETURN, "menu_select"),
-            _key_rule(pygame.K_KP_ENTER, "menu_select"),
-            _key_rule(pygame.K_ESCAPE, "menu_quit"),
-            _key_rule(pygame.K_BACKSPACE, "menu_back"),
-            _key_rule(pygame.K_LEFT, "options_left"),
-            _key_rule(pygame.K_a, "options_left"),
-            _key_rule(pygame.K_RIGHT, "options_right"),
-            _key_rule(pygame.K_d, "options_right"),
-            _key_rule(pygame.K_TAB, "accessories_switch"),
-            _mouse_button_rule(1, "menu_select"),
-        ]
-        game_rules: List[Rule] = [
-            _key_rule(pygame.K_ESCAPE, "pause_toggle"),
-            _key_rule(pygame.K_F1, "debug_toggle"),
-            # Added generic movement/action bindings for replay capture
-            _key_rule(pygame.K_LEFT, "left", pygame.KEYDOWN),
-            _key_rule(pygame.K_a, "left", pygame.KEYDOWN),
-            _key_rule(pygame.K_RIGHT, "right", pygame.KEYDOWN),
-            _key_rule(pygame.K_d, "right", pygame.KEYDOWN),
-            _key_rule(pygame.K_UP, "jump", pygame.KEYDOWN),
-            _key_rule(pygame.K_w, "jump", pygame.KEYDOWN),
-            _key_rule(pygame.K_SPACE, "jump", pygame.KEYDOWN),
-            _key_rule(pygame.K_x, "dash", pygame.KEYDOWN),
-            _key_rule(pygame.K_c, "shoot", pygame.KEYDOWN),
-            _key_rule(pygame.K_LEFT, "stop_left", pygame.KEYUP),
-            _key_rule(pygame.K_a, "stop_left", pygame.KEYUP),
-            _key_rule(pygame.K_RIGHT, "stop_right", pygame.KEYUP),
-            _key_rule(pygame.K_d, "stop_right", pygame.KEYUP),
-        ]
-        pause_rules: List[Rule] = [
-            _key_rule(pygame.K_ESCAPE, "pause_close"),
-            _key_rule(pygame.K_m, "pause_menu"),
-            _key_rule(pygame.K_UP, "menu_up"),
-            _key_rule(pygame.K_w, "menu_up"),
-            _key_rule(pygame.K_DOWN, "menu_down"),
-            _key_rule(pygame.K_s, "menu_down"),
-            _key_rule(pygame.K_RETURN, "menu_select"),
-            _key_rule(pygame.K_KP_ENTER, "menu_select"),
-        ]
+        from scripts.settings import settings
+
+        # Helper to generate rules for a list of keys
+        def bind(keys, action, event_type=pygame.KEYDOWN):
+            rules = []
+            for k in keys:
+                rules.append(_key_rule(k, action, event_type))
+            return rules
+
+        # MenuState (simple press)
+        menu_binds = settings.key_bindings.get("MenuState", {})
+        menu_rules: List[Rule] = []
+        for act, keys in menu_binds.items():
+            menu_rules.extend(bind(keys, act))
+        # Add mouse rule manually (not in settings yet?)
+        menu_rules.append(_mouse_button_rule(1, "menu_select"))
+
+        # GameState (complex)
+        game_binds = settings.key_bindings.get("GameState", {})
+        game_rules: List[Rule] = []
+
+        # Simple press actions
+        for act in ["pause_toggle", "debug_toggle", "dash", "shoot", "jump"]:
+            if act in game_binds:
+                game_rules.extend(bind(game_binds[act], act))
+
+        # Movement (press/release)
+        if "left" in game_binds:
+            game_rules.extend(bind(game_binds["left"], "left", pygame.KEYDOWN))
+            game_rules.extend(bind(game_binds["left"], "stop_left", pygame.KEYUP))
+
+        if "right" in game_binds:
+            game_rules.extend(bind(game_binds["right"], "right", pygame.KEYDOWN))
+            game_rules.extend(bind(game_binds["right"], "stop_right", pygame.KEYUP))
+
+        # PauseState
+        pause_binds = settings.key_bindings.get("PauseState", {})
+        pause_rules: List[Rule] = []
+        for act, keys in pause_binds.items():
+            pause_rules.extend(bind(keys, act))
+
         self._rules.update(
             {
                 "MenuState": menu_rules,
@@ -104,6 +101,7 @@ class InputRouter:
                 "StoreState": menu_rules,
                 "AccessoriesState": menu_rules,
                 "OptionsState": menu_rules,
+                "LevelCompleteState": menu_rules,
             }
         )
 

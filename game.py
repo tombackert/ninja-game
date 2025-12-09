@@ -171,18 +171,34 @@ class Game:
 
         # START LOAD LEVEL
         self.enemies = []
-        self.players = []
+        # Only clear players if this is a fresh load, not a respawn
+        if not respawn:
+            self.players = []
+
+        # RNG Determinism (Issue 48)
+        from scripts.rng_service import RNGService
+
+        rng = RNGService.get()
 
         if respawn:
+            # Restore RNG state to ensure deterministic replay
+            if hasattr(self, "level_rng_state") and self.level_rng_state is not None:
+                rng.set_state(self.level_rng_state)
+
             enemy_id = 0
             for player in self.players:
-                player.pos = player.respawn_pos
+                # Enforce strict coordinate reset
+                player.pos = list(player.respawn_pos)
                 player.air_time = 0
+                player.velocity = [0, 0]  # Reset velocity too for safety
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
                     self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
                     enemy_id += 1
         else:
+            # Capture RNG state at start of level
+            self.level_rng_state = rng.get_state()
+
             enemy_id = 0
             player_id = 0
             skin = self.playerSkin
@@ -286,6 +302,36 @@ class Game:
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
+            # Entity Updates (Moved from UI.render_game_elements)
+            self.clouds.update()
+
+            for enemy in self.enemies.copy():
+                kill = enemy.update(self.tilemap, (0, 0))
+                if kill:
+                    self.enemies.remove(enemy)
+
+            if not self.dead:
+                for player in self.players:
+                    if player.id == self.playerID:
+                        player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+                        if self.replay:
+                            try:
+                                self.replay.capture_player(player)
+                            except Exception:
+                                pass
+                    else:
+                        player.update(self.tilemap, (0, 0))
+
+            if hasattr(self, "particle_system"):
+                self.particle_system.update()
+            else:
+                for spark in self.sparks.copy():
+                    kill = spark.update()
+                    if kill:
+                        self.sparks.remove(spark)
+
+            self.cm.update(self.player.rect())
+
             UI.render_game_elements(self, render_scroll)
             # Update projectiles after entities so newly spawned
             # this frame move immediately
@@ -299,12 +345,15 @@ class Game:
             self.display_2.blit(self.display, (0, 0))
 
             # HUD
+            from scripts.localization import LocalizationService
+
+            loc = LocalizationService.get()
             UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
             UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
-            UI.render_game_ui_element(self.display_2, f"Level: {self.level}", self.BASE_W // 2 - 40, 5)
-            UI.render_game_ui_element(self.display_2, f"Lives: {self.player.lives}", 5, 5)
-            UI.render_game_ui_element(self.display_2, f"${self.cm.coins}", 5, 15)
-            UI.render_game_ui_element(self.display_2, f"Ammo:  {self.cm.ammo}", 5, 25)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.level", self.level), self.BASE_W // 2 - 40, 5)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.lives", self.player.lives), 5, 5)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.coins", self.cm.coins), 5, 15)
+            UI.render_game_ui_element(self.display_2, loc.translate("hud.ammo", self.cm.ammo), 5, 25)
 
             # Mark end of work segment for HUD
             self.perf_hud.end_work_segment()

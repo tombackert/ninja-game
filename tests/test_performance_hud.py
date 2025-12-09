@@ -20,3 +20,15 @@ def test_performance_hud_ema_smoothing():
     assert second is not None
     # EMA: 0.1 * 30 + 0.9 * 10 = 12.0
     assert 11.5 <= (second.avg_work_ms or 0) <= 12.5
+
+
+def test_performance_hud_metrics_collection():
+    hud = PerformanceHUD(enabled=True)
+    hud.begin_frame()
+    hud.end_work_segment()
+    hud.end_frame()
+    sample = hud.last_sample
+    assert sample is not None
+    # Check fields exist (may be None if dependencies missing in test env)
+    assert hasattr(sample, "memory_rss")
+    assert hasattr(sample, "asset_count")
