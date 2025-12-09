@@ -13,6 +13,8 @@
 - Add tutorial in menu
 - Implement diffrent enemy behavior based on locations on the map (How is Super Mario solving this? -> Different enemy types, have different behavior. Easy!) 
 - Add selected accessories to HUD in menu
+- Performance HUD full test coverage
+- Audio Ducking full implementation
 
 ## Architecture-Patch Backlog
 - Localization support
