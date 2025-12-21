@@ -7,7 +7,7 @@
 - Editor needs extensive documentation for general usage
 - Readme needs general update
 - Simplify install process
-- Verify that state implementation migration from old menu/game is complete
+- Verify that state implementation migration from old menu/game is complete + Migrate fully from old game/menu (loose all legacy functions) 
 - Can't select via mouse in pause menu
 - Add collectable lives (rare)
 - Add tutorial in menu
@@ -15,6 +15,9 @@
 - Add selected accessories to HUD in menu
 - Performance HUD full test coverage
 - Audio Ducking full implementation
+- Add Game Over screen
+- Verify deterministic respawn
+- Investigate how the state manager system works (down on process management level) + Check for possible efficency upgrade
 
 ## Architecture-Patch Backlog
 - Localization support
