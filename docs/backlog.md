@@ -17,7 +17,7 @@
 - Audio Ducking full implementation
 - Add Game Over screen
 - Verify deterministic respawn
-- Investigate how the state manager system works (down on process management level) + Check for possible efficency upgrade
+- Investigate how the state manager system works (down on process management level) + Check for possible efficiency upgrade
 
 ## Architecture-Patch Backlog
 - Localization support
