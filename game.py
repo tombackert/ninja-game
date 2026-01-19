@@ -140,6 +140,10 @@ class Game:
         # Legacy pause flag retained only for backward compatibility; the
         # new architecture uses PauseState overlays.
         self.paused = False
+
+        # Global simulation tick counter for multiplayer synchronization
+        # Incremented once per simulation frame in GameState.update()
+        self.tick = 0
         # Performance HUD (shared abstraction with modern renderer)
         from scripts.perf_hud import PerformanceHUD  # local import to avoid early cost if unused
 

@@ -93,7 +93,7 @@ class SnapshotService:
                 projectiles.append(proj_snap)
 
         return SimulationSnapshot(
-            tick=0,  # TODO: Game needs a global tick counter
+            tick=getattr(game, "tick", 0),
             rng_state=rng_state,
             players=players,
             enemies=enemies,
@@ -108,6 +108,10 @@ class SnapshotService:
         # Restore RNG (only if captured)
         if snapshot.rng_state:
             RNGService.get().set_state(snapshot.rng_state)
+
+        # Restore tick counter
+        if hasattr(game, "tick"):
+            game.tick = snapshot.tick
 
         # Restore Globals
         game.dead = snapshot.dead_count

@@ -336,6 +336,10 @@ class GameState(State):
         # If a PauseState render is freezing this frame, skip simulation changes.
         if getattr(g, "_paused_freeze", False):
             return
+
+        # Increment global simulation tick (for multiplayer sync, replay, etc.)
+        g.tick += 1
+
         replay_mgr = getattr(g, "replay", None)
 
         # --- Core time & housekeeping ---

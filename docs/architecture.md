@@ -68,15 +68,23 @@ The game uses a **State Pattern** via `StateManager`. The active state controls 
 ## 4. Determinism & Replay System
 A critical pillar of the architecture is **Determinism**, enabling Ghosts, Replays, and future Rollback Netcode.
 
-### 4.1 RNG Service
+### 4.1 Global Tick Counter
+`game.tick`: A global simulation frame counter critical for multiplayer synchronization.
+- **Initialization:** Starts at 0 when Game is created.
+- **Increment:** Incremented exactly once per `GameState.update()` call.
+- **Pause Behavior:** Does NOT increment when game is paused (`_paused_freeze` flag).
+- **Snapshots:** Captured and restored via `SnapshotService`.
+- **Usage:** Network messages, replay timestamps, reconciliation all reference this tick.
+
+### 4.2 RNG Service
 `scripts/rng_service.py`: A singleton wrapper around `random.Random`. All gameplay logic (enemy decisions, particle spreads, procedural generation) uses this service. The RNG state is serialized in snapshots to ensure perfectly reproducible runs.
 
-### 4.2 Snapshots
+### 4.3 Snapshots
 `scripts/snapshot.py`: Captures the complete state of the simulation (Tick, RNG, Players, Enemies, Projectiles, Score).
 - **Serialization:** `dataclass` based structure serialized to JSON compatible dicts.
 - **Optimization:** Supports `optimized=True` (LITE mode) which strips enemies/projectiles for lightweight Ghost recordings (99% size reduction).
 
-### 4.3 Replay & Ghost System
+### 4.4 Replay & Ghost System
 `scripts/replay.py`:
 - **Recording:** Captures a stream of **Inputs** (per frame) and **Sparse Snapshots** (every 10 frames / 6Hz).
 - **Playback (Ghost):** Instead of playing back a video of positions, the system **re-simulates** a `GhostPlayer` entity by feeding it the recorded inputs.
