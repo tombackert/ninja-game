@@ -7,7 +7,7 @@
 - Editor needs extensive documentation for general usage
 - Readme needs general update
 - Simplify install process
-- Verify that state implementation migration from old menu/game is complete + Migrate fully from old game/menu (loose all legacy functions) 
+- Verify that state implementation migration from old menu/game is complete + Migrate fully from old game/menu (lose all legacy functions) 
 - Can't select via mouse in pause menu
 - Add collectable lives (rare)
 - Add tutorial in menu
