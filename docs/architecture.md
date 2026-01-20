@@ -90,6 +90,28 @@ A critical pillar of the architecture is **Determinism**, enabling Ghosts, Repla
 - **Playback (Ghost):** Instead of playing back a video of positions, the system **re-simulates** a `GhostPlayer` entity by feeding it the recorded inputs.
 - **Drift Correction:** To prevent divergence (butterfly effect), the Ghost's state is hard-synced to the recorded snapshots at 6Hz intervals. This ensures smooth movement (via local physics) with absolute correctness (via snapshots).
 
+### 4.5 Entity ID System
+`scripts/entity_id.py`: Centralized, deterministic unique ID generation for all game entities.
+
+**EntityIDGenerator (Singleton):**
+- **Global Uniqueness:** All entities (players, enemies, projectiles) receive globally unique IDs from the same generator.
+- **Determinism:** Generator can be reset at level load to ensure identical ID sequences across clients.
+- **Serialization:** State (`get_state()`, `set_state()`) enables snapshot/restore for network sync.
+
+**Entity ID Fields:**
+- `EntitySnapshot.id`: Unique entity identifier.
+- `EntitySnapshot.owner_id`: Player ID who controls this entity (for multiplayer authority).
+- `ProjectileSnapshot.id`: Unique projectile identifier.
+- `ProjectileSnapshot.owner_id`: Player ID who fired the projectile.
+
+**Delta Compression (ID-Based):**
+The delta system uses ID-based matching instead of index-based:
+- `*_added`: Full data for new entities.
+- `*_removed`: IDs of deleted entities.
+- `*_diff`: Changed fields keyed by entity ID.
+
+This allows proper delta compression even when entities are reordered or dynamically added/removed in multiplayer.
+
 ---
 ## 5. AI & Behavior
 AI logic is decoupled from Entity classes using a **Strategy Pattern**.

@@ -6,7 +6,7 @@ def test_feature_extractor_basic():
     # Setup dummy snapshot
     me = EntitySnapshot(type="player", id=0, pos=[100, 100], velocity=[0, 0], flip=False, action="idle", lives=3)
     enemy = EntitySnapshot(type="enemy", id=1, pos=[150, 100], velocity=[-1, 0], flip=True, action="run", walking=1)
-    proj = ProjectileSnapshot(pos=[90, 100], velocity=3.0, timer=0, owner="enemy")
+    proj = ProjectileSnapshot(id=1, pos=[90, 100], velocity=3.0, timer=0, owner="enemy")
 
     snap = SimulationSnapshot(tick=1, rng_state=(), players=[me], enemies=[enemy], projectiles=[proj])
 

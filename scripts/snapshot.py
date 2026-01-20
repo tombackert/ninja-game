@@ -12,6 +12,7 @@ class EntitySnapshot:
     velocity: List[float]
     flip: bool
     action: str
+    owner_id: int | None = None  # Player ID who controls this entity (for multiplayer authority)
     lives: int = 0  # Player specific
     air_time: int = 0
     jumps: int = 0
@@ -23,10 +24,12 @@ class EntitySnapshot:
 
 @dataclass
 class ProjectileSnapshot:
+    id: int  # Unique projectile ID for network sync
     pos: List[float]
     velocity: float
     timer: float
     owner: str
+    owner_id: int | None = None  # Player ID who fired this projectile
 
 
 @dataclass
@@ -58,6 +61,7 @@ class SnapshotService:
                 velocity=list(p.velocity),
                 flip=p.flip,
                 action=p.action,
+                owner_id=p.id,  # Players own themselves
                 lives=lives_val,
                 air_time=p.air_time,
                 jumps=p.jumps,
@@ -78,6 +82,7 @@ class SnapshotService:
                     velocity=list(e.velocity),
                     flip=e.flip,
                     action=e.action,
+                    owner_id=None,  # Enemies are server-owned in multiplayer
                     walking=e.walking,
                 )
                 enemies.append(enemy_snap)
@@ -88,7 +93,12 @@ class SnapshotService:
             # Iterate over the system (yields dicts)
             for p in game.projectiles:
                 proj_snap = ProjectileSnapshot(
-                    pos=list(p["pos"]), velocity=p["vel"][0], timer=p["age"], owner=p["owner"]
+                    id=p.get("id", 0),
+                    pos=list(p["pos"]),
+                    velocity=p["vel"][0],
+                    timer=p["age"],
+                    owner=p["owner"],
+                    owner_id=p.get("owner_id"),
                 )
                 projectiles.append(proj_snap)
 
@@ -153,10 +163,12 @@ class SnapshotService:
             if hasattr(game.projectiles, "_projectiles"):
                 for proj_snap in snapshot.projectiles:
                     proj = {
+                        "id": proj_snap.id,
                         "pos": list(proj_snap.pos),
                         "vel": [proj_snap.velocity, 0.0],
                         "age": proj_snap.timer,
                         "owner": proj_snap.owner,
+                        "owner_id": proj_snap.owner_id,
                     }
                     game.projectiles._projectiles.append(proj)
 

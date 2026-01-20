@@ -11,13 +11,15 @@ code still spawns positional lists. A future iteration (Issue 19/23) can swap
 to a dataclass once services injection pattern is in place.
 
 Projectile record fields:
+    id: int (unique projectile ID for network sync, MP-02)
     pos: [x: float, y: float]
     vel: [vx: float, vy: float] (currently only horizontal)
     age: int (frames since spawn)
     owner: str ("player" | "enemy") for future friendly-fire logic
+    owner_id: int | None (player ID who fired, for multiplayer)
 
 Public API:
-    spawn(x, y, vx, owner): -> projectile dict
+    spawn(x, y, vx, owner, owner_id=None): -> projectile dict
     update(tilemap, players, enemies) -> collisions summary dict
     iter() -> iterator over active projectiles (for rendering)
     clear() -> remove all
@@ -41,18 +43,20 @@ Tests (added in `tests/test_projectile_system.py`) cover:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, Optional
 
 import pygame
 
 from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
 from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
+from .entity_id import EntityIDGenerator
 
 
 class ProjectileSystem:
     def __init__(self, game):
         self.game = game
         self._projectiles: List[Dict[str, Any]] = []
+        self._id_gen = EntityIDGenerator.get()
 
     # --- Collection Protocol -------------------------------------------------
     def __len__(self) -> int:  # pragma: no cover - trivial
@@ -62,8 +66,15 @@ class ProjectileSystem:
         return iter(self._projectiles)
 
     # --- API -----------------------------------------------------------------
-    def spawn(self, x: float, y: float, vx: float, owner: str):
-        proj = {"pos": [x, y], "vel": [vx, 0.0], "age": 0, "owner": owner}
+    def spawn(self, x: float, y: float, vx: float, owner: str, owner_id: Optional[int] = None):
+        proj = {
+            "id": self._id_gen.next_id(),
+            "pos": [x, y],
+            "vel": [vx, 0.0],
+            "age": 0,
+            "owner": owner,
+            "owner_id": owner_id,
+        }
         self._projectiles.append(proj)
         spawn_projectile_sparks(self.game, proj["pos"], vx)
         return proj

@@ -463,8 +463,9 @@ class GameState(State):
 
         # Players
         if not g.dead:
-            for player in g.players:
-                if player.id == g.playerID:
+            for idx, player in enumerate(g.players):
+                # Use list index (not entity ID) to match playerID selection
+                if idx == g.playerID:
                     # Movement driven by legacy input flags
                     player.update(g.tilemap, (g.movement[1] - g.movement[0], 0))
                     replay_mgr = getattr(g, "replay", None)

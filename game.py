@@ -17,6 +17,7 @@ from scripts.constants import (
 from scripts.displayManager import DisplayManager
 from scripts.effects import Effects
 from scripts.entities import Enemy, Player
+from scripts.entity_id import EntityIDGenerator
 from scripts.keyboardManager import KeyboardManager
 from scripts.level_cache import list_levels
 from scripts.particle_system import ParticleSystem
@@ -183,13 +184,16 @@ class Game:
         from scripts.rng_service import RNGService
 
         rng = RNGService.get()
+        id_gen = EntityIDGenerator.get()
 
         if respawn:
             # Restore RNG state to ensure deterministic replay
             if hasattr(self, "level_rng_state") and self.level_rng_state is not None:
                 rng.set_state(self.level_rng_state)
+            # Restore entity ID generator state for deterministic enemy IDs (MP-02)
+            if hasattr(self, "level_id_gen_state"):
+                id_gen.set_state(self.level_id_gen_state)
 
-            enemy_id = 0
             for player in self.players:
                 # Enforce strict coordinate reset
                 player.pos = list(player.respawn_pos)
@@ -197,14 +201,14 @@ class Game:
                 player.velocity = [0, 0]  # Reset velocity too for safety
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
-                    enemy_id += 1
+                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
         else:
             # Capture RNG state at start of level
             self.level_rng_state = rng.get_state()
+            # Reset and capture entity ID generator state (MP-02)
+            id_gen.reset(0)
+            self.level_id_gen_state = id_gen.get_state()
 
-            enemy_id = 0
-            player_id = 0
             skin = self.playerSkin
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 0:
@@ -212,17 +216,15 @@ class Game:
                         self,
                         spawner["pos"],
                         (8, 15),
-                        player_id,
+                        id_gen.next_id(),
                         lives=lives,
                         respawn_pos=list(spawner["pos"]),
                     )
                     player.skin = skin
                     player.air_time = 0
                     self.players.append(player)
-                    player_id += 1
                 else:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
-                    enemy_id += 1
+                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
             self.saves = 1
 
             # Set the current player if there are any players
@@ -315,8 +317,9 @@ class Game:
                     self.enemies.remove(enemy)
 
             if not self.dead:
-                for player in self.players:
-                    if player.id == self.playerID:
+                for idx, player in enumerate(self.players):
+                    # Use list index (not entity ID) to match playerID selection
+                    if idx == self.playerID:
                         player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                         if self.replay:
                             try:
