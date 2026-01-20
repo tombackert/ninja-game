@@ -1,59 +1,66 @@
-from typing import List, Optional
+"""Network Synchronization Service (MP-03).
+
+Manages network communication for multiplayer games.
+Supports both loopback (testing) and UDP (real network) transports.
+"""
+
+from __future__ import annotations
+
 import time
+from typing import Any, Dict, List, Optional
+
 from scripts.network.messages import Message
 
 
-class Transport:
-    """Abstract transport layer."""
-
-    def send(self, message: Message):
-        raise NotImplementedError
-
-    def receive(self) -> Optional[Message]:
-        raise NotImplementedError
-
-
-class LocalLoopbackTransport(Transport):
+class LocalLoopbackTransport:
     """Simulates network by placing messages in a local queue."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.queue: List[Message] = []
 
-    def send(self, message: Message):
-        # Simulate serialization/deserialization overhead/integrity
+    def send(self, message: Message) -> None:
+        """Send message to own queue (simulates roundtrip)."""
         serialized = message.to_json()
         self.queue.append(Message.from_json(serialized))
 
     def receive(self) -> Optional[Message]:
+        """Receive message from queue."""
         if self.queue:
             return self.queue.pop(0)
         return None
 
 
 class NetSyncService:
-    """Manages network synchronization."""
+    """Manages network synchronization for multiplayer games."""
 
-    def __init__(self, transport: Transport):
+    def __init__(self, transport: Any) -> None:
         self.transport = transport
-        self.peer_transport: Optional[Transport] = None  # For loopback connecting
 
-    def send_input(self, tick: int, inputs: List[str]):
+    def send_input(self, tick: int, inputs: List[str]) -> None:
+        """Send player input."""
         msg = Message(type="input", payload={"tick": tick, "inputs": inputs})
         self.transport.send(msg)
 
-    def send_snapshot(self, tick: int, snapshot_data: dict):
+    def send_snapshot(self, tick: int, snapshot_data: Dict[str, Any]) -> None:
+        """Send game state snapshot."""
         msg = Message(type="snapshot", payload={"tick": tick, "snapshot_data": snapshot_data})
         self.transport.send(msg)
 
-    def send_ack(self, tick: int):
+    def send_ack(self, tick: int) -> None:
+        """Send acknowledgment."""
         msg = Message(type="ack", payload={"tick": tick, "received_ts": time.time()})
         self.transport.send(msg)
 
     def process_messages(self) -> List[Message]:
-        messages = []
+        """Process all pending incoming messages."""
+        messages: List[Message] = []
         while True:
-            msg = self.transport.receive()
-            if not msg:
+            result = self.transport.receive()
+            if not result:
                 break
-            messages.append(msg)
+            # Handle both Message (loopback) and tuple (UDP) returns
+            if isinstance(result, Message):
+                messages.append(result)
+            elif isinstance(result, tuple):
+                messages.append(result[0])
         return messages
