@@ -153,7 +153,42 @@ The codebase contains a complete foundation for Multiplayer and Reinforcement Le
 
 ### 8.2 Networking Primitives
 - **Interpolation:** `scripts/network/interpolation.py` implements a `SnapshotBuffer` that smoothly interpolates entity positions/velocities between server snapshots for remote rendering.
-- **Delta Compression:** `scripts/network/delta.py` computes diffs between snapshots (`compute_delta`, `apply_delta`) to minimize bandwidth.
+- **Delta Compression:** `scripts/network/delta.py` computes diffs between snapshots (`compute_delta`, `apply_delta`) using ID-based entity matching to minimize bandwidth.
+
+### 8.3 UDP Transport Layer
+`scripts/network/udp_transport.py`: Real network communication for multiplayer.
+
+**UDPTransport Class:**
+- Non-blocking UDP socket operations
+- Packet sequencing with monotonically increasing sequence numbers
+- Ack tracking with 32-bit bitfield for reliability detection
+- Graceful handling of malformed packets
+- Context manager support for automatic cleanup
+
+**Packet Structure:**
+```python
+Packet:
+  header:
+    sequence: int      # Packet sequence number
+    ack: int           # Last received sequence from peer
+    ack_bitfield: int  # Bitfield of 32 recent acks
+  message:
+    type: str          # Message type (input, snapshot, ack)
+    payload: dict      # Message-specific data
+```
+
+**Convenience Classes:**
+- `UDPClient`: Client-side wrapper with default server address
+- `UDPServer`: Server-side wrapper with client tracking and broadcast
+
+**NetSyncService:**
+`scripts/network/netsync_service.py`: High-level API for game networking.
+- `send_input(tick, inputs)` - Send player inputs
+- `send_snapshot(tick, snapshot_data)` - Send game state
+- `send_ack(tick)` - Acknowledge received data
+- `process_messages() -> List[Tuple[Message, Address]]` - Receive pending messages with sender addresses (uniform return type for all transports)
+- Works with both `LocalLoopbackTransport` (testing) and `UDPTransport` (real network)
+- `LOOPBACK_ADDRESS = ("127.0.0.1", 0)` sentinel used as default address for loopback transport
 
 ---
 ## 9. Rendering Pipeline

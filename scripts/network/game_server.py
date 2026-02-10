@@ -22,16 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from scripts.network.client_state import ClientManager, ClientState, ConnectionState
 from scripts.network.delta import compute_delta
-from scripts.network.messages import (
-    ConnectionAccept,
-    ConnectionReject,
-    ConnectionRequest,
-    Heartbeat,
-    HeartbeatAck,
-    Message,
-    PlayerJoined,
-    PlayerLeft,
-)
+from scripts.network.messages import Message
 from scripts.network.udp_transport import UDPTransport
 from scripts.snapshot import SimulationSnapshot, SnapshotService
 

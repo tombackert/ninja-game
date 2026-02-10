@@ -181,20 +181,6 @@ class UDPTransport:
         except (OSError, socket.error):
             return None  # Socket error
 
-    def receive_simple(self) -> Optional[Tuple[Message, Tuple[str, int]]]:
-        """Simplified receive that doesn't expose packet header.
-
-        Matches the simpler Transport interface.
-
-        Returns:
-            Tuple of (message, sender_address) if available, None otherwise.
-        """
-        result = self.receive()
-        if result is None:
-            return None
-        message, addr, _ = result
-        return (message, addr)
-
     def _update_ack_tracking(self, addr: Tuple[str, int], sequence: int) -> None:
         """Update ack tracking when a packet is received from a peer."""
         prev_seq = self._remote_sequences.get(addr, -1)

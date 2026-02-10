@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List
+from typing import Any, Dict
 import json
 
 
@@ -15,24 +15,6 @@ class Message:
     def from_json(json_str: str) -> "Message":
         data = json.loads(json_str)
         return Message(type=data["type"], payload=data["payload"])
-
-
-@dataclass
-class InputMessage:
-    tick: int
-    inputs: List[str]
-
-
-@dataclass
-class SnapshotMessage:
-    tick: int
-    snapshot_data: Dict[str, Any]  # Serialized SimulationSnapshot
-
-
-@dataclass
-class AckMessage:
-    tick: int
-    received_ts: float
 
 
 # Connection protocol messages
