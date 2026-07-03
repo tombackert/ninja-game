@@ -1,5 +1,5 @@
 # Backlog Issues
-- Multiplayer mode
+- Multiplayer mode — implemented on `multiplayer` branch (host/join lobby, full world sync, E2E-tested; see docs/multiplayer.md)
 - Add restart button to pause menu
 - Settings are not deterministically loaded from memory
 - UI rendering is not handeled at one spot
