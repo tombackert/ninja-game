@@ -18,6 +18,7 @@
 - Add Game Over screen
 - Verify deterministic respawn
 - Investigate how the state manager system works (down on process management level) + Check for possible efficiency upgrade
+- Add Replay button to pause menu
 
 ## Architecture-Patch Backlog
 - Localization support

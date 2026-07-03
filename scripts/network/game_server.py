@@ -49,6 +49,9 @@ class GameServer:
     # Broadcast snapshot every N ticks (~20 Hz at 60 fps)
     SNAPSHOT_INTERVAL = 3
 
+    # Every Nth broadcast is a full snapshot to recover from UDP packet loss
+    FULL_SNAPSHOT_INTERVAL = 30
+
     # How many ticks in the future to accept inputs
     INPUT_FUTURE_WINDOW = 30
 
@@ -76,6 +79,8 @@ class GameServer:
         self.game = game
         self._last_snapshot_tick = 0
         self._last_full_snapshot: Optional[SimulationSnapshot] = None
+        self._clients_needing_full: set[Address] = set()
+        self._snapshot_broadcast_count = 0
         self._running = False
 
         # Callbacks for game events
@@ -116,26 +121,26 @@ class GameServer:
         """
         self._on_player_leave = callback
 
-    def update(self) -> None:
-        """Run one server update cycle.
-
-        This should be called once per game tick (60 Hz).
-        Processes incoming messages, applies inputs, and broadcasts snapshots.
-        """
-        # 1. Process all incoming messages
+    def process_inputs(self) -> None:
+        """Process incoming messages and apply inputs. Call BEFORE simulate_tick."""
         self._process_incoming_messages()
-
-        # 2. Check for timed out clients
         self._check_timeouts()
-
-        # 3. Apply buffered inputs for this tick
         if self.game:
             self._apply_client_inputs()
 
-        # 4. Broadcast snapshot if interval reached
+    def post_tick(self) -> None:
+        """Broadcast snapshot if needed. Call AFTER simulate_tick."""
         if self.game and self.tick - self._last_snapshot_tick >= self.SNAPSHOT_INTERVAL:
             self._broadcast_snapshot()
             self._last_snapshot_tick = self.tick
+
+    def update(self) -> None:
+        """Run one server update cycle (legacy combined method).
+
+        Prefer using process_inputs() → simulate_tick() → post_tick() instead.
+        """
+        self.process_inputs()
+        self.post_tick()
 
     def _process_incoming_messages(self) -> None:
         """Process all pending incoming messages."""
@@ -185,6 +190,7 @@ class GameServer:
         # Accept connection
         try:
             client = self.clients.add_client(addr, player_name)
+            self._clients_needing_full.add(addr)
             self._send_connection_accept(client, addr)
 
             # Notify other clients
@@ -367,38 +373,58 @@ class GameServer:
                 self.game._pending_inputs[player_id] = player_movement
 
     def _broadcast_snapshot(self) -> None:
-        """Broadcast game state snapshot to all clients."""
+        """Broadcast game state snapshot to all clients.
+
+        Sends full snapshots to newly-connected clients and deltas to the rest.
+        Periodically forces a full snapshot to all clients to recover from
+        UDP packet loss that would otherwise corrupt the delta chain.
+        """
         if not self.game:
             return
 
         # Capture current state
         snapshot = SnapshotService.capture(self.game)
 
-        # Compute delta if we have a previous snapshot
-        if self._last_full_snapshot:
-            delta = compute_delta(self._last_full_snapshot, snapshot)
-            msg = Message(
-                type="snapshot",
-                payload={
-                    "tick": snapshot.tick,
-                    "is_delta": True,
-                    "data": delta,
-                },
-            )
-        else:
-            # Send full snapshot
-            msg = Message(
-                type="snapshot",
-                payload={
-                    "tick": snapshot.tick,
-                    "is_delta": False,
-                    "data": SnapshotService.serialize(snapshot),
-                },
-            )
+        # Prepare full snapshot message
+        full_msg = Message(
+            type="snapshot",
+            payload={
+                "tick": snapshot.tick,
+                "is_delta": False,
+                "data": SnapshotService.serialize(snapshot),
+            },
+        )
 
-        # Broadcast to all clients
-        for client in self.clients.get_all_clients():
-            self.transport.send(msg, client.address)
+        # Check if this broadcast should force full snapshots to everyone
+        self._snapshot_broadcast_count += 1
+        force_full = self._snapshot_broadcast_count % self.FULL_SNAPSHOT_INTERVAL == 0
+
+        if force_full:
+            # Send full snapshot to all clients to reset delta chain
+            for client in self.clients.get_all_clients():
+                self.transport.send(full_msg, client.address)
+            self._clients_needing_full.clear()
+        else:
+            # Prepare delta message if we have a previous snapshot
+            delta_msg = None
+            if self._last_full_snapshot:
+                delta = compute_delta(self._last_full_snapshot, snapshot)
+                delta_msg = Message(
+                    type="snapshot",
+                    payload={
+                        "tick": snapshot.tick,
+                        "is_delta": True,
+                        "data": delta,
+                    },
+                )
+
+            # Send per-client: full to new clients, delta to established ones
+            for client in self.clients.get_all_clients():
+                if client.address in self._clients_needing_full or delta_msg is None:
+                    self.transport.send(full_msg, client.address)
+                    self._clients_needing_full.discard(client.address)
+                else:
+                    self.transport.send(delta_msg, client.address)
 
         self._last_full_snapshot = snapshot
 

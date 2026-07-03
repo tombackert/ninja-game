@@ -7,6 +7,7 @@ pause request which results in a PauseState being pushed.
 
 from __future__ import annotations
 
+import argparse
 import os
 
 import pygame
@@ -25,6 +26,13 @@ from scripts.state_manager import (
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Ninja Game")
+    parser.add_argument("--multiplayer", action="store_true", help="Connect to multiplayer server")
+    parser.add_argument("--host", default="127.0.0.1", help="Server host for multiplayer")
+    parser.add_argument("--port", type=int, default=7777, help="Server port for multiplayer")
+    parser.add_argument("--name", default="Player", help="Player name for multiplayer")
+    args = parser.parse_args()
+
     os.environ.setdefault("NINJA_GAME_TESTING", "0")
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))  # windowed for development
@@ -32,8 +40,13 @@ def main():
 
     sm = StateManager()
     router = InputRouter()
-    # # # # Start in menu
-    sm.set(MenuState())
+
+    if args.multiplayer:
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        sm.set(MultiplayerGameState(args.host, args.port, args.name))
+    else:
+        sm.set(MenuState())
 
     running = True
     while running:
@@ -76,6 +89,8 @@ def main():
                 sm.set(MenuState())
                 cur = sm.current
         if isinstance(cur, GameState) and getattr(cur, "request_pause", False):
+            sm.push(PauseState())
+        if hasattr(cur, "name") and cur.name == "MultiplayerGameState" and getattr(cur, "request_pause", False):
             sm.push(PauseState())
         if isinstance(cur, PauseState) and cur.closed:
             return_to_menu = cur.return_to_menu

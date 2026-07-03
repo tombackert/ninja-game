@@ -65,15 +65,22 @@ class ClientState:
         return True
 
     def get_inputs(self, tick: int) -> List[str]:
-        """Get and remove buffered inputs for a tick.
+        """Get and remove buffered inputs up to and including the given tick.
+
+        Merges all buffered inputs from past ticks to handle clock drift
+        between client and server.
 
         Args:
-            tick: The simulation tick to get inputs for
+            tick: The simulation tick (inclusive upper bound)
 
         Returns:
-            List of input actions, empty if none buffered
+            Combined list of input actions, empty if none buffered
         """
-        return self.input_buffer.pop(tick, [])
+        merged: List[str] = []
+        consumed = [t for t in self.input_buffer if t <= tick]
+        for t in sorted(consumed):
+            merged.extend(self.input_buffer.pop(t))
+        return merged
 
     def has_inputs_for_tick(self, tick: int) -> bool:
         """Check if inputs are buffered for a specific tick."""

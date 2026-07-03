@@ -102,6 +102,7 @@ class InputRouter:
                 "AccessoriesState": menu_rules,
                 "OptionsState": menu_rules,
                 "LevelCompleteState": menu_rules,
+                "MultiplayerGameState": game_rules,
             }
         )
 

@@ -46,7 +46,7 @@ Note:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, fullscreen=True):
         pygame.init()
 
         dm = DisplayManager()
@@ -56,7 +56,10 @@ class Game:
         self.WIN_H = dm.WIN_H
 
         pygame.display.set_caption("Ninja Game")
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        if fullscreen:
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
         self.WIN_W, self.WIN_H = self.screen.get_size()
 
         self.display = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)

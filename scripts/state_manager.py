@@ -235,7 +235,7 @@ class GameState(State):
         from game import Game
 
         # Underlying legacy Game object (entities, systems, assets)
-        self._game = Game()
+        self._game = Game(fullscreen=False)
         # Allow renderer to query state flags (performance HUD toggle) without tight coupling
         try:
             setattr(self._game, "state_ref", self)

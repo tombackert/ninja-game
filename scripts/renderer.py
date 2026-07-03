@@ -144,16 +144,24 @@ class Renderer:
             if seq is not None and self.perf_hud.last_sample:
                 seq.append("perf")
 
-        # 7. Post effects (screenshake) then present
-        Effects.screenshake(game)
+        # 7. Compute screenshake offset
+        import random
+
+        screenshake_offset = (0, 0)
+        if getattr(game, "screenshake", 0):
+            screenshake_offset = (
+                random.random() * game.screenshake - game.screenshake / 2,
+                random.random() * game.screenshake - game.screenshake / 2,
+            )
         if seq is not None:
             seq.append("effects_post")
 
+        # 8. Scale + blit to target surface with screenshake
         if game.display_2.get_size() != target_surface.get_size():
             scaled = pygame.transform.scale(game.display_2, target_surface.get_size())
-            target_surface.blit(scaled, (0, 0))
+            target_surface.blit(scaled, screenshake_offset)
         else:
-            target_surface.blit(game.display_2, (0, 0))
+            target_surface.blit(game.display_2, screenshake_offset)
         if seq is not None:
             seq.append("blit")
         # Finalize full frame timing (sample available next frame)
