@@ -297,12 +297,13 @@ class TestClientConnection(unittest.TestCase):
 
 
 class TestInputSending(unittest.TestCase):
-    """Tests for input submission."""
+    """Tests for the state+event input protocol (client side)."""
 
-    def test_send_inputs_transmits_to_server(self):
-        """send_inputs should transmit to server and server should receive them."""
+    def test_send_input_state_transmits_to_server(self):
+        """send_input_state should reach the server and apply actions."""
         server = GameServer(port=19010)
-        game = MockGame(tick=10, players=[MockPlayer(id=1)])
+        player = MockPlayer(id=1)
+        game = MockGame(tick=10, players=[player])
         server.set_game(game)
 
         client = GameClient(
@@ -314,19 +315,19 @@ class TestInputSending(unittest.TestCase):
         try:
             _connect_client_to_server(client, server)
 
-            client.send_inputs(15, ["left", "jump"])
+            client.send_input_state((True, False), ["jump"])
             time.sleep(0.02)
             server.update()
 
-            # Verify server buffered the input
             client_state = server.clients.get_all_clients()[0]
-            self.assertTrue(client_state.has_inputs_for_tick(15))
+            self.assertEqual(client_state.movement, [True, False])
+            self.assertTrue(player._jumped)
         finally:
             server.shutdown()
             client.close()
 
     def test_inputs_stored_in_history(self):
-        """send_inputs should store in _input_history."""
+        """send_input_state should record per-tick history for replay."""
         server = GameServer(port=19011)
         client = GameClient(
             server_port=19011,
@@ -336,57 +337,102 @@ class TestInputSending(unittest.TestCase):
 
         try:
             _connect_client_to_server(client, server)
-            client.send_inputs(10, ["left"])
-            client.send_inputs(11, ["right", "jump"])
+            tick1 = client.local_tick
+            client.send_input_state((True, False), [])
+            client.update()
+            tick2 = client.local_tick
+            client.send_input_state((False, True), ["jump"])
 
-            self.assertEqual(client._input_history[10], ["left"])
-            self.assertEqual(client._input_history[11], ["right", "jump"])
+            self.assertEqual(client._input_history[tick1], ((True, False), []))
+            self.assertEqual(client._input_history[tick2], ((False, True), ["jump"]))
         finally:
             server.shutdown()
             client.close()
 
-    def test_old_inputs_pruned(self):
-        """Inputs older than 60 ticks behind server_tick should be pruned."""
-        server = GameServer(port=19012)
-        client = GameClient(
-            server_port=19012,
-            player_name="Prune",
-            transport=UDPTransport(port=0),
-        )
-
+    def test_actions_resent_until_acknowledged(self):
+        """Unacked actions must be re-sent in subsequent packets."""
+        client = GameClient(transport=UDPTransport(port=0))
         try:
-            _connect_client_to_server(client, server)
+            client._state = ConnectionState.CONNECTED
+            client._local_tick = 100
+            client.send_input_state((False, False), ["jump"])
+            client._local_tick = 101
+            client.send_input_state((False, False), ["dash"])
+            # Both actions still pending (no ack received)
+            self.assertEqual(
+                [(seq, name) for seq, name, _ in client._pending_actions],
+                [(1, "jump"), (2, "dash")],
+            )
+            # Ack tick 100 → jump pruned, dash kept
+            client._input_ack_tick = 100
+            client._prune_input_history()
+            self.assertEqual(
+                [(seq, name) for seq, name, _ in client._pending_actions],
+                [(2, "dash")],
+            )
+        finally:
+            client.close()
 
-            # Add some inputs
-            client._input_history = {10: ["left"], 20: ["right"], 90: ["jump"]}
-            client._server_tick = 100
+    def test_old_inputs_pruned(self):
+        """Acknowledged input history should be pruned."""
+        client = GameClient(transport=UDPTransport(port=0))
+        try:
+            client._input_history = {
+                10: ((True, False), []),
+                20: ((False, False), []),
+                90: ((False, True), ["jump"]),
+            }
+            client._input_ack_tick = 88
+            client._local_tick = 95
 
             client._prune_input_history()
 
-            # Tick 10 and 20 are more than 60 behind tick 100 (cutoff=40)
+            # Everything older than ack-5 is gone; recent history kept
             self.assertNotIn(10, client._input_history)
             self.assertNotIn(20, client._input_history)
             self.assertIn(90, client._input_history)
         finally:
-            server.shutdown()
             client.close()
 
-    def test_send_inputs_ignored_when_disconnected(self):
-        """send_inputs should do nothing when not connected."""
+    def test_send_input_state_ignored_when_disconnected(self):
+        """send_input_state should do nothing when not connected."""
         client = GameClient(transport=UDPTransport(port=0))
         try:
-            client.send_inputs(10, ["left"])
+            client.send_input_state((True, False), ["jump"])
             self.assertEqual(client._input_history, {})
+            self.assertEqual(client._pending_actions, [])
         finally:
             client.close()
 
     def test_get_unacknowledged_inputs(self):
-        """get_unacknowledged_inputs should return inputs after given tick."""
+        """get_unacknowledged_inputs should return inputs after ack tick."""
         client = GameClient(transport=UDPTransport(port=0))
         try:
-            client._input_history = {5: ["a"], 10: ["b"], 15: ["c"]}
-            result = client.get_unacknowledged_inputs(8)
-            self.assertEqual(result, {10: ["b"], 15: ["c"]})
+            client._input_history = {
+                5: ((True, False), []),
+                10: ((False, False), ["jump"]),
+                15: ((False, True), []),
+            }
+            client._input_ack_tick = 8
+            result = client.get_unacknowledged_inputs()
+            self.assertEqual(sorted(result.keys()), [10, 15])
+        finally:
+            client.close()
+
+    def test_snapshot_ack_updates_input_ack_tick(self):
+        """Snapshot 'acks' payload should update the client's ack tick."""
+        client = GameClient(transport=UDPTransport(port=0))
+        try:
+            client._player_id = 3
+            client._handle_snapshot(
+                {
+                    "tick": 50,
+                    "is_delta": False,
+                    "acks": {"3": 47},
+                    "data": {"tick": 50, "rng_state": []},
+                }
+            )
+            self.assertEqual(client.input_ack_tick, 47)
         finally:
             client.close()
 

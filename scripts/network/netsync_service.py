@@ -64,9 +64,7 @@ class NetSyncService:
         msg = Message(type="input", payload={"tick": tick, "inputs": inputs})
         self._send(msg, address)
 
-    def send_snapshot(
-        self, tick: int, snapshot_data: Dict[str, Any], address: Optional[Address] = None
-    ) -> None:
+    def send_snapshot(self, tick: int, snapshot_data: Dict[str, Any], address: Optional[Address] = None) -> None:
         """Send game state snapshot."""
         msg = Message(type="snapshot", payload={"tick": tick, "snapshot_data": snapshot_data})
         self._send(msg, address)

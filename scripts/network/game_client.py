@@ -12,7 +12,7 @@ Usage:
     # In game loop:
     while running:
         client.update()
-        client.send_inputs(client.local_tick, ["left", "jump"])
+        client.send_input_state((left_held, right_held), ["jump"])
         snapshot = client.get_latest_snapshot()
 
     client.disconnect()
@@ -39,6 +39,9 @@ CONNECT_RETRY_INTERVAL = 1.0  # seconds between connect retries
 MAX_CONNECT_ATTEMPTS = 5  # give up after this many
 HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeats
 SERVER_TIMEOUT = 10.0  # disconnect if no messages for this long
+TICK_LEAD = 2  # how many ticks the client runs ahead of the server
+TICK_HARD_RESYNC = 30  # snap local tick if drift exceeds this
+ACTION_RESEND_WINDOW = 30  # re-send unacked actions for this many ticks
 
 
 class GameClient:
@@ -66,6 +69,7 @@ class GameClient:
         # Connection state
         self._state = ConnectionState.DISCONNECTED
         self._player_id: int | None = None
+        self._level = 0
 
         # Tick tracking
         self._server_tick = 0
@@ -75,8 +79,14 @@ class GameClient:
         self._snapshot_buffer = SnapshotBuffer(max_size=20)
         self._last_full_snapshot: SimulationSnapshot | None = None
 
-        # Input history for reconciliation
-        self._input_history: Dict[int, List[str]] = {}
+        # Input tracking (state + events model)
+        # History of what was input each local tick: {tick: (move, actions)}
+        self._input_history: Dict[int, Tuple[Tuple[bool, bool], List[str]]] = {}
+        # One-shot actions not yet acknowledged: [(seq, name, tick)]
+        self._pending_actions: List[Tuple[int, str, int]] = []
+        self._action_seq = 0
+        # Newest of our input ticks the server confirmed applying
+        self._input_ack_tick = 0
 
         # RTT measurement
         self._rtt_estimate = 0.0
@@ -119,6 +129,16 @@ class GameClient:
     @property
     def rtt(self) -> float:
         return self._rtt_estimate
+
+    @property
+    def input_ack_tick(self) -> int:
+        """Newest of our input ticks the server confirmed applying."""
+        return self._input_ack_tick
+
+    @property
+    def level(self) -> int:
+        """Level the server is running (valid once connected)."""
+        return self._level
 
     # --- Lifecycle ---
 
@@ -165,21 +185,35 @@ class GameClient:
 
     # --- Input ---
 
-    def send_inputs(self, tick: int, inputs: List[str]) -> None:
-        """Send input actions to the server and store in history.
+    def send_input_state(self, move: Tuple[bool, bool], actions: List[str]) -> None:
+        """Send this frame's input state to the server.
+
+        Movement is sent as held-key state every frame (drift/loss tolerant).
+        One-shot actions get sequence numbers and are re-sent in every packet
+        until acknowledged, so a lost packet cannot swallow a jump.
 
         Args:
-            tick: The simulation tick these inputs are for
-            inputs: List of input actions (e.g., ["left", "jump"])
+            move: (left_held, right_held)
+            actions: New one-shot actions triggered this frame
         """
         if self._state != ConnectionState.CONNECTED:
             return
+
+        tick = self._local_tick
+        for name in actions:
+            self._action_seq += 1
+            self._pending_actions.append((self._action_seq, name, tick))
+
         msg = Message(
             type="input",
-            payload={"tick": tick, "inputs": inputs},
+            payload={
+                "tick": tick,
+                "move": [bool(move[0]), bool(move[1])],
+                "actions": [[seq, name] for seq, name, _ in self._pending_actions],
+            },
         )
         self.transport.send(msg, self._server_addr)
-        self._input_history[tick] = inputs
+        self._input_history[tick] = ((bool(move[0]), bool(move[1])), list(actions))
 
     # --- Snapshot access ---
 
@@ -191,16 +225,20 @@ class GameClient:
 
     # --- Prediction support ---
 
-    def get_unacknowledged_inputs(self, since_tick: int) -> Dict[int, List[str]]:
-        """Get inputs sent but not yet confirmed by the server.
+    def get_unacknowledged_inputs(
+        self, since_tick: int | None = None
+    ) -> Dict[int, Tuple[Tuple[bool, bool], List[str]]]:
+        """Get inputs the server has not confirmed applying yet.
 
         Args:
-            since_tick: Return inputs for ticks > since_tick
+            since_tick: Return inputs for ticks > since_tick.
+                Defaults to the server's input ack tick.
 
         Returns:
-            Dict mapping tick -> inputs for unacknowledged ticks
+            Dict mapping tick -> (move, actions) for unacknowledged ticks
         """
-        return {t: inputs for t, inputs in self._input_history.items() if t > since_tick}
+        cutoff = self._input_ack_tick if since_tick is None else since_tick
+        return {t: inp for t, inp in self._input_history.items() if t > cutoff}
 
     # --- Callbacks ---
 
@@ -275,7 +313,8 @@ class GameClient:
             return
         self._player_id = payload["player_id"]
         self._server_tick = payload["server_tick"]
-        self._local_tick = self._server_tick
+        self._level = payload.get("level", 0)
+        self._local_tick = self._server_tick + TICK_LEAD
         self._state = ConnectionState.CONNECTED
         self._last_server_message_time = time.time()
         self._last_heartbeat_time = time.time()
@@ -296,6 +335,13 @@ class GameClient:
         is_delta = payload.get("is_delta", False)
         data = payload["data"]
 
+        # Input acknowledgement for prediction reconciliation
+        acks = payload.get("acks", {})
+        if self._player_id is not None:
+            ack = acks.get(str(self._player_id))
+            if ack is not None:
+                self._input_ack_tick = max(self._input_ack_tick, int(ack))
+
         if is_delta:
             if self._last_full_snapshot is None:
                 return  # No base to apply delta to; wait for full
@@ -310,6 +356,25 @@ class GameClient:
         self._last_full_snapshot = snapshot
         self._server_tick = tick
         self._snapshot_buffer.push(tick, snapshot)
+        self._resync_local_tick()
+
+    def _resync_local_tick(self) -> None:
+        """Keep the local tick slightly ahead of the server tick.
+
+        The client frame clock and the server tick clock drift apart over
+        time (they are independent 60 Hz loops). Without correction the
+        input ticks would wander arbitrarily far from the server timeline.
+        Large divergence snaps; small divergence is nudged one tick at a
+        time to avoid visible input timing jumps.
+        """
+        target = self._server_tick + TICK_LEAD
+        drift = self._local_tick - target
+        if abs(drift) > TICK_HARD_RESYNC:
+            self._local_tick = target
+        elif drift > TICK_LEAD:
+            self._local_tick -= 1
+        elif drift < -TICK_LEAD:
+            self._local_tick += 1
 
     def _handle_heartbeat_ack(self, payload: Dict[str, Any]) -> None:
         """Handle heartbeat acknowledgement and compute RTT."""
@@ -363,11 +428,18 @@ class GameClient:
     # --- Internal: cleanup ---
 
     def _prune_input_history(self) -> None:
-        """Remove inputs older than 60 ticks behind server_tick."""
-        cutoff = self._server_tick - 60
+        """Drop acknowledged/stale input history and pending actions."""
+        cutoff = max(self._input_ack_tick - 5, self._local_tick - 120)
         old_ticks = [t for t in self._input_history if t < cutoff]
         for t in old_ticks:
             del self._input_history[t]
+        # Stop re-sending actions once acked or too old to matter
+        action_cutoff = self._local_tick - ACTION_RESEND_WINDOW
+        self._pending_actions = [
+            (seq, name, tick)
+            for seq, name, tick in self._pending_actions
+            if tick > self._input_ack_tick and tick > action_cutoff
+        ]
 
     # --- Context manager ---
 

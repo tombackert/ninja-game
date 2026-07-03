@@ -57,6 +57,14 @@
         "perf.asset_cnt": "AssetCnt:",
         "perf.ui_img_cache": "UI ImgCache:",
         "perf.txt_cache": "TxtCache:",
-        "perf.txt_stats": "Txt h/m/e:"
+        "perf.txt_stats": "Txt h/m/e:",
+        "menu.multiplayer": "Multiplayer",
+        "mp.title": "Multiplayer",
+        "mp.host": "Host Game",
+        "mp.join": "Join Game",
+        "mp.back": "Back",
+        "mp.join_title": "Join Game",
+        "mp.join_hint": "Enter host address, then press Enter",
+        "mp.host_failed": "Could not start server"
     }
 }

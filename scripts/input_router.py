@@ -92,6 +92,12 @@ class InputRouter:
         for act, keys in pause_binds.items():
             pause_rules.extend(bind(keys, act))
 
+        # JoinGameState types free text; only Enter (confirm) and Escape
+        # (back) act as menu actions — Backspace etc. edit the text field.
+        join_rules: List[Rule] = []
+        join_rules.extend(bind(menu_binds.get("menu_select", []), "menu_select"))
+        join_rules.extend(bind(menu_binds.get("menu_quit", []), "menu_quit"))
+
         self._rules.update(
             {
                 "MenuState": menu_rules,
@@ -103,6 +109,8 @@ class InputRouter:
                 "OptionsState": menu_rules,
                 "LevelCompleteState": menu_rules,
                 "MultiplayerGameState": game_rules,
+                "MultiplayerMenuState": menu_rules,
+                "JoinGameState": join_rules,
             }
         )
 

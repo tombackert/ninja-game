@@ -208,7 +208,13 @@ class Enemy(PhysicsEntity):
                     self.services.play("hit")
                 else:
                     self.game.audio.play("hit")
-                self.game.cm.coins += 1
+                # Multiplayer servers credit the killing player; single player
+                # falls back to the global coin counter.
+                award = getattr(self.game, "award_coin", None)
+                if award:
+                    award(getattr(self.game.player, "id", None))
+                else:
+                    self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
                 self.game.sparks.append(Spark(self.rect().center, 0, 5 + rng.random()))
                 self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + rng.random()))

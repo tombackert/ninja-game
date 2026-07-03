@@ -27,8 +27,8 @@ from __future__ import annotations
 
 import json
 import socket
-from dataclasses import dataclass, asdict, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from typing import Dict, Optional, Tuple
 
 from .messages import Message
 
@@ -49,6 +49,7 @@ class PacketHeader:
         ack: Last received sequence number from peer
         ack_bitfield: Bitfield of 32 most recent acks (bit 0 = ack-1, bit 1 = ack-2, etc.)
     """
+
     sequence: int = 0
     ack: int = 0
     ack_bitfield: int = 0
@@ -62,6 +63,7 @@ class Packet:
         header: Packet sequencing and reliability info
         message: The actual message being sent
     """
+
     header: PacketHeader
     message: Message
 
@@ -72,7 +74,7 @@ class Packet:
             "message": {
                 "type": self.message.type,
                 "payload": self.message.payload,
-            }
+            },
         }
         return json.dumps(data).encode("utf-8")
 
@@ -329,6 +331,7 @@ class UDPServer:
         if result:
             message, addr, header = result
             import time
+
             self.clients[addr] = time.time()
         return result
 

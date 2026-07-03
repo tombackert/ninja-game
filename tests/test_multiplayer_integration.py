@@ -149,11 +149,12 @@ class TestMultiplayerIntegration:
             assert initial_snapshot is not None
             initial_x = initial_snapshot.players[0].pos[0]
 
-            # Send "right" inputs for several ticks
+            # Hold "right" for several ticks
             for i in range(30):
-                client.send_inputs(client.local_tick, ["right"])
+                client.send_input_state((False, True), [])
+                server.process_inputs()
                 game.simulate_tick()
-                server.update()
+                server.post_tick()
                 client.update()
                 time.sleep(0.005)
 

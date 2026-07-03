@@ -123,153 +123,127 @@ class TestRemotePlayerInterpolation:
 
 
 class TestClientSidePrediction:
-    """Tests for client-side prediction."""
+    """Tests for client-side prediction (_predict_local)."""
 
-    def test_apply_local_inputs_moves_player_immediately(self):
+    def _make_state_with_player(self):
         from scripts.multiplayer_state import MultiplayerGameState
 
         state = MultiplayerGameState()
-
-        # Create a mock game with player
         mock_game = MagicMock()
         mock_player = MagicMock()
+        mock_player.id = 1
         mock_player.pos = [100.0, 100.0]
-        mock_game.player = mock_player
+        mock_player.shoot_cooldown = 0
+        mock_game.players = [mock_player]
         mock_game.tilemap = MagicMock()
         state._game = mock_game
+        state._my_player_id = 1
+        return state, mock_player
 
-        # Set movement flags (moving right)
-        state._movement = [False, True]
+    def test_predict_local_moves_player_immediately(self):
+        state, mock_player = self._make_state_with_player()
 
-        # Apply local inputs
-        state._apply_local_inputs([])
+        state._predict_local((False, True), [])
 
-        # Player.update should have been called with rightward movement
         mock_player.update.assert_called_once()
         call_args = mock_player.update.call_args
         assert call_args[0][1] == (1, 0)  # movement = (1, 0) for right
 
-    def test_apply_local_inputs_triggers_jump(self):
-        from scripts.multiplayer_state import MultiplayerGameState
+    def test_predict_local_triggers_jump(self):
+        state, mock_player = self._make_state_with_player()
 
-        state = MultiplayerGameState()
-
-        mock_game = MagicMock()
-        mock_player = MagicMock()
-        mock_game.player = mock_player
-        mock_game.tilemap = MagicMock()
-        state._game = mock_game
-        state._movement = [False, False]
-
-        # Apply jump action
-        state._apply_local_inputs(["jump"])
+        state._predict_local((False, False), ["jump"])
 
         mock_player.jump.assert_called_once()
 
-    def test_apply_local_inputs_triggers_dash(self):
-        from scripts.multiplayer_state import MultiplayerGameState
+    def test_predict_local_triggers_dash(self):
+        state, mock_player = self._make_state_with_player()
 
-        state = MultiplayerGameState()
-
-        mock_game = MagicMock()
-        mock_player = MagicMock()
-        mock_game.player = mock_player
-        mock_game.tilemap = MagicMock()
-        state._game = mock_game
-        state._movement = [False, False]
-
-        state._apply_local_inputs(["dash"])
+        state._predict_local((False, False), ["dash"])
 
         mock_player.dash.assert_called_once()
 
 
 class TestReconciliation:
-    """Tests for server reconciliation."""
+    """Tests for rewind+replay reconciliation."""
 
-    def test_reconcile_snaps_when_divergence_exceeds_threshold(self):
-        from scripts.multiplayer_state import MultiplayerGameState, RECONCILE_THRESHOLD
-
-        state = MultiplayerGameState()
-
-        mock_player = MagicMock()
-        # Player predicted position is far from server
-        mock_player.pos = [200.0, 100.0]
-        mock_player.action = "idle"
-
-        # Server says player should be at 100, 100 (divergence = 100 > threshold)
-        server_snap = EntitySnapshot(
+    def _server_snap(self):
+        return EntitySnapshot(
             type="player", id=1, pos=[100.0, 100.0], velocity=[0.0, 0.0],
             flip=False, action="idle", lives=3
         )
 
-        # Mock client for replay
+    def test_reconcile_rewinds_to_server_state(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+
+        mock_player = MagicMock()
+        mock_player.pos = [200.0, 100.0]
+        mock_player.action = "idle"
+
         state._client = MagicMock()
         state._client.get_unacknowledged_inputs.return_value = {}
         state._game = MagicMock()
         state._game.tilemap = MagicMock()
 
-        state._reconcile_local_player(mock_player, server_snap, 100)
+        state._reconcile_local_player(mock_player, self._server_snap())
 
-        # Should have snapped to server position
+        # Rewound to authoritative position (no unacked inputs to replay)
         assert mock_player.pos == [100.0, 100.0]
-
-    def test_reconcile_preserves_position_when_divergence_small(self):
-        from scripts.multiplayer_state import MultiplayerGameState, RECONCILE_THRESHOLD
-
-        state = MultiplayerGameState()
-
-        mock_player = MagicMock()
-        # Player predicted position is close to server (divergence = 2 < threshold)
-        mock_player.pos = [102.0, 100.0]
-        mock_player.action = "idle"
-
-        server_snap = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 100.0], velocity=[0.0, 0.0],
-            flip=False, action="idle", lives=3
-        )
-
-        state._reconcile_local_player(mock_player, server_snap, 100)
-
-        # Position should NOT have changed (minor divergence tolerated)
-        assert mock_player.pos == [102.0, 100.0]
-        # But other state should be updated
         assert mock_player.lives == 3
 
-    def test_replay_unacknowledged_inputs_called_on_snap(self):
-        from scripts.multiplayer_state import MultiplayerGameState, RECONCILE_THRESHOLD
+    def test_reconcile_replays_unacknowledged_inputs(self):
+        from scripts.multiplayer_state import MultiplayerGameState
 
         state = MultiplayerGameState()
 
         mock_player = MagicMock()
-        mock_player.pos = [200.0, 100.0]  # Far from server
+        mock_player.pos = [200.0, 100.0]
         mock_player.action = "idle"
-
-        server_snap = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 100.0], velocity=[0.0, 0.0],
-            flip=False, action="idle", lives=3
-        )
 
         mock_client = MagicMock()
         mock_client.get_unacknowledged_inputs.return_value = {
-            101: ["right"],
-            102: ["right", "jump"],
+            101: ((False, True), []),
+            102: ((False, True), ["jump"]),
         }
         state._client = mock_client
 
         mock_game = MagicMock()
         mock_game.tilemap = MagicMock()
+        mock_game.particles = []
+        mock_game.sparks = []
         state._game = mock_game
 
-        state._reconcile_local_player(mock_player, server_snap, 100)
+        state._reconcile_local_player(mock_player, self._server_snap())
 
-        # Should have called get_unacknowledged_inputs
-        mock_client.get_unacknowledged_inputs.assert_called_once_with(100)
+        mock_client.get_unacknowledged_inputs.assert_called_once_with()
 
-        # Should have replayed jump
+        # Replayed the jump exactly once
         mock_player.jump.assert_called_once()
 
-        # Should have called update twice (once per tick)
+        # One physics step per unacked tick, rightward movement
         assert mock_player.update.call_count == 2
+        assert mock_player.update.call_args[0][1] == (1, 0)
+
+    def test_reconcile_tracks_prediction_error(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+
+        mock_player = MagicMock()
+        mock_player.pos = [130.0, 100.0]
+        mock_player.action = "idle"
+
+        state._client = MagicMock()
+        state._client.get_unacknowledged_inputs.return_value = {}
+        state._game = MagicMock()
+        state._game.tilemap = MagicMock()
+
+        state._reconcile_local_player(mock_player, self._server_snap())
+
+        assert state._stats["reconcile_error_px"] == 30.0
+        assert state._stats["reconcile_max_px"] == 30.0
 
 
 class TestInterpDelayConstant:
@@ -279,12 +253,3 @@ class TestInterpDelayConstant:
         from scripts.multiplayer_state import INTERP_DELAY
         assert INTERP_DELAY > 0
         assert INTERP_DELAY <= 10  # Reasonable upper bound
-
-
-class TestReconcileThresholdConstant:
-    """Test that reconciliation threshold constant exists and is sensible."""
-
-    def test_reconcile_threshold_exists_and_positive(self):
-        from scripts.multiplayer_state import RECONCILE_THRESHOLD
-        assert RECONCILE_THRESHOLD > 0
-        assert RECONCILE_THRESHOLD <= 50  # Reasonable upper bound for pixels

@@ -21,12 +21,14 @@ class Message:
 @dataclass
 class ConnectionRequest:
     """Client requests to join the game."""
+
     player_name: str = "Player"
 
 
 @dataclass
 class ConnectionAccept:
     """Server accepts the connection."""
+
     player_id: int
     server_tick: int
 
@@ -34,12 +36,14 @@ class ConnectionAccept:
 @dataclass
 class ConnectionReject:
     """Server rejects the connection."""
+
     reason: str
 
 
 @dataclass
 class PlayerJoined:
     """Broadcast when a new player joins."""
+
     player_id: int
     player_name: str
 
@@ -47,6 +51,7 @@ class PlayerJoined:
 @dataclass
 class PlayerLeft:
     """Broadcast when a player leaves."""
+
     player_id: int
     reason: str = "disconnected"
 
@@ -54,11 +59,13 @@ class PlayerLeft:
 @dataclass
 class Heartbeat:
     """Keep-alive message."""
+
     client_time: float
 
 
 @dataclass
 class HeartbeatAck:
     """Server response to heartbeat."""
+
     client_time: float
     server_time: float

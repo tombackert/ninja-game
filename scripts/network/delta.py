@@ -24,6 +24,8 @@ def compute_delta(prev: SimulationSnapshot, curr: SimulationSnapshot) -> Dict[st
         delta["transition"] = curr.transition
     if prev.rng_state != curr.rng_state:
         delta["rng_state"] = curr.rng_state  # Full tuple if changed
+    if prev.collected != curr.collected:
+        delta["collected"] = list(curr.collected)  # Small cumulative ID list
 
     # 2. Entities (Players) - ID-based matching (MP-02)
     players_delta = compute_entity_list_delta(prev.players, curr.players)
@@ -43,9 +45,7 @@ def compute_delta(prev: SimulationSnapshot, curr: SimulationSnapshot) -> Dict[st
     return delta
 
 
-def compute_entity_list_delta(
-    prev_list: List[EntitySnapshot], curr_list: List[EntitySnapshot]
-) -> Dict[str, Any]:
+def compute_entity_list_delta(prev_list: List[EntitySnapshot], curr_list: List[EntitySnapshot]) -> Dict[str, Any]:
     """Compute delta for entity list using ID-based matching."""
     result = {}
 
@@ -131,6 +131,7 @@ def apply_delta(base: SimulationSnapshot, delta: Dict[str, Any]) -> SimulationSn
     dead_count = delta.get("dead_count", base.dead_count)
     transition = delta.get("transition", base.transition)
     rng_state = delta.get("rng_state", base.rng_state)
+    collected = list(delta.get("collected", base.collected))
 
     # Players - ID-based delta (MP-02)
     players = apply_entity_list_delta(base.players, delta, "players_")
@@ -150,6 +151,7 @@ def apply_delta(base: SimulationSnapshot, delta: Dict[str, Any]) -> SimulationSn
         score=score,
         dead_count=dead_count,
         transition=transition,
+        collected=collected,
     )
 
 
@@ -235,6 +237,8 @@ def copy_entity(e: EntitySnapshot) -> EntitySnapshot:
         dashing=e.dashing,
         shoot_cooldown=e.shoot_cooldown,
         walking=e.walking,
+        coins=e.coins,
+        ammo=e.ammo,
     )
 
 
@@ -275,6 +279,10 @@ def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
         d["shoot_cooldown"] = b.shoot_cooldown
     if a.walking != b.walking:
         d["walking"] = b.walking
+    if a.coins != b.coins:
+        d["coins"] = b.coins
+    if a.ammo != b.ammo:
+        d["ammo"] = b.ammo
     return d
 
 

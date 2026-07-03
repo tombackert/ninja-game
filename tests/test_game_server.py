@@ -181,12 +181,13 @@ class TestClientConnection(unittest.TestCase):
 
 
 class TestInputHandling(unittest.TestCase):
-    """Tests for input buffering and processing."""
+    """Tests for the state+event input protocol."""
 
-    def test_server_buffers_client_input(self):
-        """Server should buffer client inputs by tick."""
+    def test_server_applies_movement_state_and_actions(self):
+        """Server should store movement state and apply queued actions."""
         server = GameServer(port=18007)
-        game = MockGame(tick=10)
+        player = MockPlayer(id=1)
+        game = MockGame(tick=10, players=[player])
         server.set_game(game)
         client = UDPTransport(port=0)
 
@@ -197,27 +198,33 @@ class TestInputHandling(unittest.TestCase):
             time.sleep(0.02)
             server.update()
 
-            # Send input
+            # Send input: holding left + a jump action (seq 1)
             input_msg = Message(
                 type="input",
-                payload={"tick": 15, "inputs": ["left", "jump"]},
+                payload={"tick": 15, "move": [True, False], "actions": [[1, "jump"]]},
             )
             client.send(input_msg, ("127.0.0.1", 18007))
             time.sleep(0.02)
             server.update()
 
-            # Check input was buffered
             client_state = server.clients.get_all_clients()[0]
-            self.assertTrue(client_state.has_inputs_for_tick(15))
+            self.assertEqual(client_state.movement, [True, False])
+            self.assertEqual(client_state.last_input_tick, 15)
+            # Action was applied to the player and drained
+            self.assertTrue(player._jumped)
+            self.assertEqual(client_state.pending_actions, [])
+            # Movement translated into a pending input vector
+            self.assertEqual(game._pending_inputs[1], (-1, 0))
 
         finally:
             server.shutdown()
             client.close()
 
-    def test_server_rejects_old_inputs(self):
-        """Server should reject inputs for ticks too far in the past."""
+    def test_server_deduplicates_resent_actions(self):
+        """Re-sent actions (same seq) must only be applied once."""
         server = GameServer(port=18008)
-        game = MockGame(tick=100)
+        player = MockPlayer(id=1)
+        game = MockGame(tick=100, players=[player])
         server.set_game(game)
         client = UDPTransport(port=0)
 
@@ -228,18 +235,56 @@ class TestInputHandling(unittest.TestCase):
             time.sleep(0.02)
             server.update()
 
-            # Send input for old tick (outside INPUT_PAST_WINDOW)
+            # Same action (seq 1) arrives in two consecutive packets
+            for tick in (50, 51):
+                input_msg = Message(
+                    type="input",
+                    payload={"tick": tick, "move": [False, False], "actions": [[1, "dash"]]},
+                )
+                client.send(input_msg, ("127.0.0.1", 18008))
+            time.sleep(0.02)
+            server.update()
+
+            client_state = server.clients.get_all_clients()[0]
+            self.assertEqual(client_state.last_action_seq, 1)
+            self.assertTrue(player._dashed)
+            # Reset and re-send the same seq: must not fire again
+            player._dashed = False
             input_msg = Message(
                 type="input",
-                payload={"tick": 50, "inputs": ["dash"]},  # 50 ticks behind
+                payload={"tick": 52, "move": [False, False], "actions": [[1, "dash"]]},
             )
             client.send(input_msg, ("127.0.0.1", 18008))
             time.sleep(0.02)
             server.update()
+            self.assertFalse(player._dashed)
 
-            # Input should be rejected
+        finally:
+            server.shutdown()
+            client.close()
+
+    def test_stale_packet_does_not_overwrite_movement(self):
+        """An out-of-order older packet must not overwrite newer movement."""
+        server = GameServer(port=18018)
+        player = MockPlayer(id=1)
+        game = MockGame(tick=10, players=[player])
+        server.set_game(game)
+        client = UDPTransport(port=0)
+
+        try:
+            msg = Message(type="connect_request", payload={"player_name": "P1"})
+            client.send(msg, ("127.0.0.1", 18018))
+            time.sleep(0.02)
+            server.update()
+
             client_state = server.clients.get_all_clients()[0]
-            self.assertFalse(client_state.has_inputs_for_tick(50))
+            # Newer packet first
+            client_state.receive_input(20, [False, True], [])
+            # Stale packet afterwards (simulated reorder)
+            client_state.receive_input(19, [True, False], [])
+
+            self.assertEqual(client_state.movement, [False, True])
+            self.assertEqual(client_state.last_input_tick, 20)
 
         finally:
             server.shutdown()
@@ -275,11 +320,20 @@ class TestSnapshotBroadcast(unittest.TestCase):
 
             time.sleep(0.02)
 
-            # Client should receive snapshot
-            result = client.receive()
-            self.assertIsNotNone(result)
-            snapshot_msg, _, _ = result
-            self.assertEqual(snapshot_msg.type, "snapshot")
+            # Client should receive a snapshot (skip stragglers such as a
+            # late-arriving connect_accept — UDP gives no ordering guarantee)
+            snapshot_msg = None
+            deadline = time.time() + 1.0
+            while time.time() < deadline:
+                result = client.receive()
+                if result is None:
+                    time.sleep(0.01)
+                    continue
+                msg, _, _ = result
+                if msg.type == "snapshot":
+                    snapshot_msg = msg
+                    break
+            self.assertIsNotNone(snapshot_msg)
             self.assertIn("tick", snapshot_msg.payload)
 
         finally:
@@ -369,8 +423,8 @@ class TestClientDisconnection(unittest.TestCase):
 class TestClientState(unittest.TestCase):
     """Tests for ClientState and ClientManager."""
 
-    def test_client_state_input_buffer(self):
-        """ClientState should buffer and retrieve inputs."""
+    def test_client_state_input_model(self):
+        """ClientState should track movement state and dedupe actions."""
         from scripts.network.client_state import ClientState
 
         client = ClientState(
@@ -379,19 +433,14 @@ class TestClientState(unittest.TestCase):
             address=("127.0.0.1", 12345),
         )
 
-        # Buffer some inputs
-        client.buffer_input(10, ["left", "jump"])
-        client.buffer_input(11, ["right"])
+        client.receive_input(10, [True, False], [[1, "jump"]])
+        client.receive_input(11, [True, False], [[1, "jump"], [2, "dash"]])
 
-        # Check inputs exist
-        self.assertTrue(client.has_inputs_for_tick(10))
-        self.assertTrue(client.has_inputs_for_tick(11))
-        self.assertFalse(client.has_inputs_for_tick(12))
-
-        # Get and remove inputs
-        inputs = client.get_inputs(10)
-        self.assertEqual(inputs, ["left", "jump"])
-        self.assertFalse(client.has_inputs_for_tick(10))
+        self.assertEqual(client.movement, [True, False])
+        self.assertEqual(client.last_input_tick, 11)
+        # jump (seq 1) only queued once despite being re-sent
+        self.assertEqual(client.drain_actions(), ["jump", "dash"])
+        self.assertEqual(client.drain_actions(), [])
 
     def test_client_manager_add_remove(self):
         """ClientManager should add and remove clients."""

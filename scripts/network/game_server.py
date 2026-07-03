@@ -17,10 +17,9 @@ Usage:
 from __future__ import annotations
 
 import time
-from dataclasses import asdict
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from scripts.network.client_state import ClientManager, ClientState, ConnectionState
+from scripts.network.client_state import ClientManager, ClientState
 from scripts.network.delta import compute_delta
 from scripts.network.messages import Message
 from scripts.network.udp_transport import UDPTransport
@@ -52,12 +51,6 @@ class GameServer:
     # Every Nth broadcast is a full snapshot to recover from UDP packet loss
     FULL_SNAPSHOT_INTERVAL = 30
 
-    # How many ticks in the future to accept inputs
-    INPUT_FUTURE_WINDOW = 30
-
-    # How many ticks in the past to accept inputs
-    INPUT_PAST_WINDOW = 10
-
     # Client timeout in seconds
     CLIENT_TIMEOUT = 10.0
 
@@ -82,6 +75,11 @@ class GameServer:
         self._clients_needing_full: set[Address] = set()
         self._snapshot_broadcast_count = 0
         self._running = False
+        # Lightweight performance counters (read by server.py metrics loop)
+        self.stats: Dict[str, int] = {
+            "snapshots_sent": 0,
+            "last_snapshot_bytes": 0,
+        }
 
         # Callbacks for game events
         self._on_player_join: Optional[Callable[[int, str], None]] = None
@@ -210,6 +208,7 @@ class GameServer:
             payload={
                 "player_id": client.player_id,
                 "server_tick": self.tick,
+                "level": getattr(self.game, "level", 0) if self.game else 0,
             },
         )
         self.transport.send(msg, addr)
@@ -236,26 +235,15 @@ class GameServer:
                 self.transport.send(msg, client.address)
 
     def _handle_input(self, payload: Dict[str, Any], addr: Address) -> None:
-        """Handle input message from client."""
+        """Handle input message from client (held movement state + action events)."""
         client = self.clients.get_client(addr)
         if not client:
             return  # Unknown client
 
         tick = payload.get("tick", 0)
-        inputs = payload.get("inputs", [])
-
-        # Validate tick is within acceptable window
-        if not self._is_valid_input_tick(tick):
-            return  # Ignore out-of-range inputs
-
-        # Buffer the inputs
-        client.buffer_input(tick, inputs)
-
-    def _is_valid_input_tick(self, input_tick: int) -> bool:
-        """Check if input tick is within acceptable range."""
-        current = self.tick
-        return (current - self.INPUT_PAST_WINDOW <= input_tick <=
-                current + self.INPUT_FUTURE_WINDOW)
+        move = payload.get("move", [False, False])
+        actions = payload.get("actions", [])
+        client.receive_input(tick, move, actions)
 
     def _handle_heartbeat(self, payload: Dict[str, Any], addr: Address) -> None:
         """Handle heartbeat from client."""
@@ -311,66 +299,39 @@ class GameServer:
             self._on_player_leave(client.player_id, reason)
 
     def _apply_client_inputs(self) -> None:
-        """Apply buffered inputs for the current tick."""
-        if not self.game:
-            return
+        """Apply each client's held movement state and queued actions.
 
-        current_tick = self.tick
-
-        for client in self.clients.get_all_clients():
-            inputs = client.get_inputs(current_tick)
-            if inputs:
-                self._apply_inputs_to_player(client.player_id, inputs)
-
-        # Cleanup old inputs periodically
-        if current_tick % 60 == 0:
-            self.clients.cleanup_all_old_inputs(current_tick)
-
-    def _apply_inputs_to_player(self, player_id: int, inputs: List[str]) -> None:
-        """Apply input actions to a player entity.
-
-        Args:
-            player_id: The player's ID
-            inputs: List of input actions (e.g., ["left", "jump"])
+        Movement is applied every tick from the latest known state, so
+        clock drift or lost packets never freeze or drop movement.
+        One-shot actions fire exactly once (deduplicated by sequence).
         """
         if not self.game or not hasattr(self.game, "players"):
             return
 
-        # Find player by ID
-        player = None
-        for p in self.game.players:
-            if getattr(p, "id", None) == player_id:
-                player = p
-                break
+        players_by_id = {getattr(p, "id", None): p for p in self.game.players}
 
-        if not player:
-            return
+        for client in self.clients.get_all_clients():
+            player = players_by_id.get(client.player_id)
+            if player is None:
+                client.drain_actions()
+                continue
 
-        # Apply movement inputs
-        # This maps to how the game processes inputs
-        movement = [False, False]  # [left, right]
+            for action in client.drain_actions():
+                if action == "jump":
+                    player.jump()
+                elif action == "dash":
+                    player.dash()
+                elif action == "shoot":
+                    # Prefer the game's multiplayer shoot hook (per-player ammo);
+                    # fall back to the entity's own shoot.
+                    if hasattr(self.game, "player_shoot"):
+                        self.game.player_shoot(player)
+                    elif hasattr(player, "shoot"):
+                        player.shoot()
 
-        for action in inputs:
-            if action == "left":
-                movement[0] = True
-            elif action == "right":
-                movement[1] = True
-            elif action == "jump":
-                player.jump()
-            elif action == "dash":
-                player.dash()
-            elif action == "shoot":
-                if hasattr(player, "shoot"):
-                    player.shoot()
-
-        # Apply movement to player
-        # The actual movement vector is computed from left/right
-        player_movement = (movement[1] - movement[0], 0)
-        if hasattr(player, "update"):
-            # Movement will be applied during entity update
-            # Store it for the game loop to use
+            movement = (int(client.movement[1]) - int(client.movement[0]), 0)
             if hasattr(self.game, "_pending_inputs"):
-                self.game._pending_inputs[player_id] = player_movement
+                self.game._pending_inputs[client.player_id] = movement
 
     def _broadcast_snapshot(self) -> None:
         """Broadcast game state snapshot to all clients.
@@ -382,8 +343,13 @@ class GameServer:
         if not self.game:
             return
 
-        # Capture current state
-        snapshot = SnapshotService.capture(self.game)
+        # Capture current state (without RNG state: clients never restore it
+        # and the Mersenne tuple would add ~5KB of JSON to every snapshot)
+        snapshot = SnapshotService.capture(self.game, include_rng=False)
+
+        # Per-player input acknowledgements (client tick of newest applied
+        # input) — clients use these for prediction reconciliation.
+        acks = {str(c.player_id): c.last_input_tick for c in self.clients.get_all_clients()}
 
         # Prepare full snapshot message
         full_msg = Message(
@@ -391,6 +357,7 @@ class GameServer:
             payload={
                 "tick": snapshot.tick,
                 "is_delta": False,
+                "acks": acks,
                 "data": SnapshotService.serialize(snapshot),
             },
         )
@@ -398,6 +365,9 @@ class GameServer:
         # Check if this broadcast should force full snapshots to everyone
         self._snapshot_broadcast_count += 1
         force_full = self._snapshot_broadcast_count % self.FULL_SNAPSHOT_INTERVAL == 0
+
+        self.stats["last_snapshot_bytes"] = len(full_msg.to_json())
+        self.stats["snapshots_sent"] += 1
 
         if force_full:
             # Send full snapshot to all clients to reset delta chain
@@ -414,9 +384,11 @@ class GameServer:
                     payload={
                         "tick": snapshot.tick,
                         "is_delta": True,
+                        "acks": acks,
                         "data": delta,
                     },
                 )
+                self.stats["last_delta_bytes"] = len(delta_msg.to_json())
 
             # Send per-client: full to new clients, delta to established ones
             for client in self.clients.get_all_clients():

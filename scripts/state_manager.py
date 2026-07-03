@@ -163,6 +163,7 @@ class MenuState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self.options_keys = [
             "menu.play",
+            "menu.multiplayer",
             "menu.levels",
             "menu.store",
             "menu.accessories",
@@ -172,7 +173,7 @@ class MenuState(State):
         # Translate initially
         self.options = [self.loc.translate(k) for k in self.options_keys]
 
-        self.list_widget = ScrollableListWidget(self.options, visible_rows=6, spacing=50, font_size=30)
+        self.list_widget = ScrollableListWidget(self.options, visible_rows=7, spacing=50, font_size=30)
         self.selected = 0  # legacy compatibility (to be removed)
         self.enter = False
         self.quit_requested = False
@@ -202,6 +203,8 @@ class MenuState(State):
                 self.start_game = True
             elif key == "menu.quit":
                 self.quit_requested = True
+            elif key == "menu.multiplayer":
+                self.next_state = "Multiplayer"
             elif key == "menu.levels":
                 self.next_state = "Levels"
             elif key == "menu.store":
@@ -568,6 +571,11 @@ class PauseState(State):
 
     def update(self, dt: float) -> None:
         self._ticks += 1
+        # Keep network connections alive while paused (multiplayer): the
+        # underlying state is frozen, but heartbeats/snapshots must continue
+        # or the server drops the client after its timeout.
+        if self._underlying and hasattr(self._underlying, "network_idle_update"):
+            self._underlying.network_idle_update()
 
     def render(self, surface: pygame.Surface) -> None:
         # Render underlying (frozen) game frame if available before overlay.

@@ -113,16 +113,24 @@ class ProjectileSystem:
             if proj["owner"] == "player":
                 # Check enemies
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
+                hit_something = False
                 for enemy in enemies.copy():
                     if enemy.rect().colliderect(rect):
                         if proj in self._projectiles:
                             self._projectiles.remove(proj)
                         self.game.screenshake = max(16, self.game.screenshake)
                         self.game.audio.play("hit")
-                        self.game.cm.coins += 1
+                        # Multiplayer servers credit the shooter; single player
+                        # falls back to the global coin counter.
+                        award = getattr(self.game, "award_coin", None)
+                        if award:
+                            award(proj.get("owner_id"))
+                        else:
+                            self.game.cm.coins += 1
                         spawn_hit_sparks(self.game, enemy.rect().center)
                         hits_enemy += 1
                         removed += 1
+                        hit_something = True
                         # Mark and remove enemy immediately for clarity
                         if hasattr(enemy, "alive"):
                             enemy.alive = False
@@ -131,6 +139,22 @@ class ProjectileSystem:
                         except ValueError:
                             pass
                         break
+                # PvP: player projectiles hit other players (multiplayer only —
+                # single-player spawns have owner_id None, so this never fires)
+                if not hit_something and proj.get("owner_id") is not None:
+                    for player in players:
+                        if getattr(player, "id", None) == proj.get("owner_id"):
+                            continue  # never hit the shooter
+                        if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                            if proj in self._projectiles:
+                                self._projectiles.remove(proj)
+                                player.lives -= 1
+                                self.game.audio.play("hit")
+                                self.game.screenshake = max(16, self.game.screenshake)
+                                spawn_hit_sparks(self.game, player.rect().center)
+                                hits_player += 1
+                                removed += 1
+                            break
             else:  # enemy owned
                 # Player damage (skip if heavily dashing similar to old logic)
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)

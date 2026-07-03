@@ -4,6 +4,12 @@ from typing import Any, List, Tuple, Dict
 from scripts.rng_service import RNGService
 
 
+def _int_attr(obj: Any, name: str) -> int:
+    """Read an optional int attribute; non-int values (mocks) become 0."""
+    value = getattr(obj, name, 0)
+    return value if isinstance(value, int) else 0
+
+
 @dataclass
 class EntitySnapshot:
     type: str
@@ -20,6 +26,8 @@ class EntitySnapshot:
     dashing: int = 0
     shoot_cooldown: int = 0
     walking: int = 0  # Enemy specific
+    coins: int = 0  # Player specific (multiplayer score)
+    ammo: int = 0  # Player specific (multiplayer)
 
 
 @dataclass
@@ -42,12 +50,22 @@ class SimulationSnapshot:
     score: int = 0
     dead_count: int = 0
     transition: int = 0
+    # IDs of collectables picked up so far this level (cumulative, multiplayer)
+    collected: List[int] = field(default_factory=list)
 
 
 class SnapshotService:
     @staticmethod
-    def capture(game, optimized: bool = False) -> SimulationSnapshot:
-        rng_state = () if optimized else RNGService.get().get_state()
+    def capture(game, optimized: bool = False, include_rng: bool = True) -> SimulationSnapshot:
+        """Capture the current simulation state.
+
+        Args:
+            game: Game-like object with players/enemies/projectiles.
+            optimized: Skip enemies, projectiles and RNG (fast player-only capture).
+            include_rng: Capture RNG state. Network snapshots set this to False —
+                the Mersenne state is ~5KB of JSON and clients never restore it.
+        """
+        rng_state = () if (optimized or not include_rng) else RNGService.get().get_state()
 
         # Capture Players (Always needed)
         players: List[EntitySnapshot] = []
@@ -68,6 +86,8 @@ class SnapshotService:
                 wall_slide=p.wall_slide,
                 dashing=p.dashing,
                 shoot_cooldown=p.shoot_cooldown,
+                coins=_int_attr(p, "mp_coins"),
+                ammo=_int_attr(p, "mp_ammo"),
             )
             players.append(player_snap)
 
@@ -111,6 +131,7 @@ class SnapshotService:
             score=game.cm.coins if hasattr(game, "cm") else 0,
             dead_count=game.dead,
             transition=game.transition,
+            collected=list(getattr(game, "collected_ids", [])),
         )
 
     @staticmethod
@@ -206,4 +227,5 @@ class SnapshotService:
             score=data.get("score", 0),
             dead_count=data.get("dead_count", 0),
             transition=data.get("transition", 0),
+            collected=list(data.get("collected", [])),
         )

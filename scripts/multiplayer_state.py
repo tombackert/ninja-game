@@ -1,28 +1,74 @@
-"""Multiplayer Game State (MP-07).
+"""Multiplayer Game State (MP-07/MP-08).
 
 Client-side state for multiplayer gameplay. Connects to a dedicated server,
-sends inputs, receives snapshots, and renders the game world with all
-remote players visible.
+sends inputs, receives snapshots, and renders the full game world:
 
-Features:
-- Client-side prediction: local player responds immediately to inputs
-- Remote player interpolation: smooth movement between server snapshots
-- Server reconciliation: corrects prediction errors when divergence detected
+- Local player: client-side prediction with rewind+replay reconciliation.
+  Every authoritative snapshot rewinds the local player to server state and
+  re-applies all inputs the server has not acknowledged yet.
+- Remote players & enemies: interpolated on a smooth per-frame clock that
+  trails the server by INTERP_DELAY ticks (snapshots arrive at ~20 Hz, the
+  interpolation clock advances at 60 Hz for fluid motion).
+- Projectiles: authoritative from snapshots, extrapolated linearly between
+  snapshots.
+- Collectables: removed by stable ID as the server reports pickups; own
+  coins/ammo are mirrored into the HUD (never persisted).
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pygame
 
+from scripts.constants import DASH_MIN_ACTIVE_ABS
+from scripts.entities import Enemy, Player
 from scripts.network.interpolation import SnapshotBuffer, interpolate_entity
-from scripts.snapshot import EntitySnapshot
+from scripts.snapshot import EntitySnapshot, SimulationSnapshot
 from scripts.state_manager import State
 
 # Tuning constants
-INTERP_DELAY = 3  # Ticks behind server for remote interpolation
-RECONCILE_THRESHOLD = 5.0  # Pixels divergence before snap to server
+INTERP_DELAY = 6  # Ticks the remote-entity clock trails the newest snapshot
+INTERP_HARD_SNAP = 20  # Snap the interp clock if it drifts further than this
+
+
+class MPPlayer(Player):
+    """Player entity for multiplayer rendering.
+
+    Always renders the gun overlay (all players carry guns in multiplayer)
+    without depending on the local user's persisted weapon selection.
+    """
+
+    def render(self, surf, offset=(0, 0)):
+        if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
+            # Skip Player.render (it checks local settings); use base sprite.
+            from scripts.entities import PhysicsEntity
+
+            PhysicsEntity.render(self, surf, offset=offset)
+        gun_img = self.game.assets["gun"]
+        if self.flip:
+            surf.blit(
+                pygame.transform.flip(gun_img, True, False),
+                (
+                    self.rect().centerx - 4 - gun_img.get_width() - offset[0],
+                    self.rect().centery - offset[1],
+                ),
+            )
+        else:
+            surf.blit(
+                gun_img,
+                (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]),
+            )
+
+
+class _SilentAudio:
+    """No-op audio used while replaying inputs during reconciliation."""
+
+    def play(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def trigger_ducking(self, **kwargs: Any) -> None:
+        pass
 
 
 class MultiplayerGameState(State):
@@ -30,38 +76,69 @@ class MultiplayerGameState(State):
 
     name = "MultiplayerGameState"
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 7777, player_name: str = "Player") -> None:
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 7777,
+        player_name: str = "Player",
+        host_process: Any = None,
+        host_ip: str | None = None,
+    ) -> None:
         self._host = host
         self._port = port
         self._player_name = player_name
+        # When we host, we own the dedicated server subprocess.
+        self._host_process = host_process
+        self._host_ip = host_ip
         self._game: Any = None
         self._client: Any = None
         self._my_player_id: int | None = None
         self._movement = [False, False]  # [left, right]
         self._action_buffer: List[str] = []
         self._connected = False
+        self._level_loaded = False
         self._disconnected = False
         self._disconnect_reason = ""
         self.request_pause = False
-        # Remote player interpolation buffers (keyed by player_id)
+
+        # Remote entity interpolation buffers (keyed by entity id)
         self._remote_player_buffers: Dict[int, SnapshotBuffer] = {}
-        # Track last processed server tick for reconciliation
-        self._last_server_tick = 0
+        self._enemy_buffers: Dict[int, SnapshotBuffer] = {}
+        self._enemy_entities: Dict[int, Enemy] = {}
+
+        # Smooth interpolation clock for remote entities (fractional ticks)
+        self._interp_tick = 0.0
+
+        # Snapshot bookkeeping
+        self._last_applied_tick = -1
+        self._known_projectile_ids: set[int] = set()
+        self._removed_collectables: set[int] = set()
+        self._collectable_registry: List[Tuple[int, str, Any]] = []
+
+        # Perf/diagnostics counters (rendered in HUD, dumped by E2E harness)
+        self._stats = {
+            "snapshots_applied": 0,
+            "reconcile_error_px": 0.0,
+            "reconcile_max_px": 0.0,
+            "replayed_ticks": 0,
+        }
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def on_enter(self, previous: State | None) -> None:
         from game import Game
 
         from scripts.network.game_client import GameClient
 
-        # Create full rendering game instance
+        # Create full rendering game instance. Game.__init__ loads the
+        # locally selected level; _setup_level reloads to the server's level
+        # once connected.
         self._game = Game(fullscreen=False)
-        self._game.load_level(0)
-        # Skip the fade-in transition (TRANSITION_START = -30 would stay
-        # black forever since MultiplayerGameState doesn't tick it).
         self._game.transition = 0
-
-        # Clear auto-spawned players — server is authoritative
         self._game.players = []
+        self._game.enemies = []
 
         # Create network client
         self._client = GameClient(
@@ -70,12 +147,10 @@ class MultiplayerGameState(State):
             player_name=self._player_name,
         )
 
-        # Register callbacks
         self._client.on_connected(self._on_connected)
         self._client.on_disconnected(self._on_disconnected)
         self._client.on_player_left(self._on_player_left)
 
-        # Initiate connection
         self._client.connect()
 
     def on_exit(self, next_state: State | None) -> None:
@@ -83,20 +158,38 @@ class MultiplayerGameState(State):
             if self._client.is_connected:
                 self._client.disconnect()
             self._client.close()
+        self._stop_host_process()
+
+    def _stop_host_process(self) -> None:
+        if self._host_process is not None:
+            try:
+                self._host_process.terminate()
+                self._host_process.wait(timeout=3)
+            except Exception:
+                try:
+                    self._host_process.kill()
+                except Exception:
+                    pass
+            self._host_process = None
+
+    # ------------------------------------------------------------------
+    # Network callbacks
+    # ------------------------------------------------------------------
 
     def _on_connected(self, player_id: int) -> None:
         self._my_player_id = player_id
         self._connected = True
-        print(f"Connected as player {player_id}")
 
     def _on_disconnected(self, reason: str) -> None:
         self._disconnected = True
         self._disconnect_reason = reason
-        print(f"Disconnected: {reason}")
 
     def _on_player_left(self, player_id: int, reason: str) -> None:
-        # Clean up interpolation buffer for departing player
         self._remote_player_buffers.pop(player_id, None)
+
+    # ------------------------------------------------------------------
+    # Input handling
+    # ------------------------------------------------------------------
 
     def handle(self, events: Sequence[pygame.event.Event]) -> None:
         """Track movement key presses/releases."""
@@ -115,7 +208,6 @@ class MultiplayerGameState(State):
     def handle_actions(self, actions: Sequence[str]) -> None:
         """Capture actions from InputRouter."""
         self.request_pause = False
-        self._action_buffer = []
         for act in actions:
             if act == "pause_toggle":
                 self.request_pause = True
@@ -130,122 +222,166 @@ class MultiplayerGameState(State):
             elif act in ("jump", "dash", "shoot"):
                 self._action_buffer.append(act)
 
-    def _apply_local_inputs(self, actions: List[str]) -> None:
-        """Apply inputs locally for immediate response (client-side prediction).
+    # ------------------------------------------------------------------
+    # Level setup (deferred until the server tells us its level)
+    # ------------------------------------------------------------------
 
-        This runs local physics for the local player so movement feels instant
-        instead of waiting for the server round-trip.
-        """
+    def _setup_level(self) -> None:
         g = self._game
-        if not g or not hasattr(g, "player") or g.player is None:
+        level = self._client.level
+        g.level = level
+        g.load_level(level)
+        g.transition = 0
+        g.players = []
+        g.enemies = []
+        self._enemy_entities = {}
+        # Build the collectable registry with the same stable IDs the server
+        # derives (extraction order: coins first, then ammo pickups)
+        self._collectable_registry = []
+        cid = 0
+        for coin in g.cm.coin_list:
+            self._collectable_registry.append((cid, "coin", coin))
+            cid += 1
+        for ammo in getattr(g.cm, "ammo_pickups", []):
+            self._collectable_registry.append((cid, "ammo", ammo))
+            cid += 1
+        self._removed_collectables = set()
+        self._level_loaded = True
+
+    # ------------------------------------------------------------------
+    # Frame update
+    # ------------------------------------------------------------------
+
+    def update(self, dt: float) -> None:
+        if not self._client:
             return
 
-        player = g.player
+        # 1. Network: receive messages, advance local tick
+        self._client.update()
 
-        # Build movement tuple from flags
-        movement = (0, 0)
-        if self._movement[0] and not self._movement[1]:
-            movement = (-1, 0)
-        elif self._movement[1] and not self._movement[0]:
-            movement = (1, 0)
+        if self._disconnected:
+            self._return_to_menu()
+            return
 
-        # Apply actions
+        if not self._connected:
+            self._action_buffer = []
+            return
+
+        if not self._level_loaded:
+            self._setup_level()
+
+        g = self._game
+
+        # 2. Apply the newest authoritative snapshot (rewind + replay)
+        self._apply_snapshot()
+
+        # 3. Gather and send this frame's input
+        actions = self._action_buffer
+        self._action_buffer = []
+        move = (self._movement[0], self._movement[1])
+        self._client.send_input_state(move, actions)
+
+        # 4. Predict local player for this frame
+        self._predict_local(move, actions)
+
+        # 5. Advance remote entities on the smooth interpolation clock
+        self._interp_tick += 1.0
+        self._sync_interp_clock()
+        self._update_remote_entities()
+
+        # 6. Extrapolate projectiles between snapshots
+        self._extrapolate_projectiles()
+
+        # 7. Cosmetic updates
+        if hasattr(g, "clouds"):
+            g.clouds.update()
+        if hasattr(g, "particle_system"):
+            g.particle_system.update()
+        g.screenshake = max(0, g.screenshake - 1)
+        g.dead = 0  # global death fade is meaningless in multiplayer
+        for _, _, obj in self._collectable_registry:
+            obj.animation.update()
+
+        # Remote entity animations (local player animates in player.update)
+        for player in g.players:
+            if self._my_player_id is not None and player.id == self._my_player_id:
+                continue
+            if getattr(player, "animation", None):
+                player.animation.update()
+        for enemy in self._enemy_entities.values():
+            if getattr(enemy, "animation", None):
+                enemy.animation.update()
+
+        # 8. Camera follows local player
+        if getattr(g, "player", None) and g.players:
+            g.scroll[0] += (g.player.rect().centerx - g.display.get_width() / 2 - g.scroll[0]) / 30
+            g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
+
+        g.clock.tick()
+
+    def network_idle_update(self) -> None:
+        """Keep the connection alive while an overlay (pause) is on top."""
+        if self._client and not self._disconnected:
+            self._client.update()
+
+    def _return_to_menu(self) -> None:
+        if self.manager:
+            from scripts.state_manager import MenuState
+
+            self.manager.set(MenuState())
+
+    # ------------------------------------------------------------------
+    # Local player prediction
+    # ------------------------------------------------------------------
+
+    def _predict_local(self, move: Tuple[bool, bool], actions: List[str]) -> None:
+        g = self._game
+        player = self._find_local_player()
+        if player is None or not getattr(g, "tilemap", None):
+            return
+
         for action in actions:
             if action == "jump":
                 player.jump()
             elif action == "dash":
                 player.dash()
             elif action == "shoot":
-                player.shoot()
+                # Server spawns the projectile; play feedback locally
+                if getattr(player, "mp_ammo", 1) > 0 and player.shoot_cooldown == 0:
+                    g.audio.play("shoot")
 
-        # Run local physics update
-        if hasattr(g, "tilemap") and g.tilemap:
-            player.update(g.tilemap, movement)
+        movement = (int(move[1]) - int(move[0]), 0)
+        player.update(g.tilemap, movement)
 
-    def update(self, dt: float) -> None:
-        if not self._client:
-            return
+    def _find_local_player(self) -> Any:
+        if self._my_player_id is None:
+            return None
+        for p in self._game.players:
+            if p.id == self._my_player_id:
+                return p
+        return None
 
-        # Build input list from movement flags + actions
-        inputs: List[str] = []
-        if self._movement[0]:
-            inputs.append("left")
-        if self._movement[1]:
-            inputs.append("right")
-        inputs.extend(self._action_buffer)
-        # Keep a copy of actions for local prediction
-        current_actions = list(self._action_buffer)
-        self._action_buffer = []
-
-        # Send inputs to server
-        if self._client.is_connected and inputs:
-            self._client.send_inputs(self._client.local_tick, inputs)
-
-        # Apply inputs locally for immediate response (client-side prediction)
-        self._apply_local_inputs(current_actions)
-
-        # Process network messages
-        self._client.update()
-
-        # Apply latest snapshot to game entities (with reconciliation)
-        self._apply_snapshot()
-
-        # Local cosmetic updates (not authoritative, just visual)
-        g = self._game
-        if hasattr(g, "clouds"):
-            g.clouds.update()
-        if hasattr(g, "particle_system"):
-            g.particle_system.update()
-        g.screenshake = max(0, g.screenshake - 1)
-
-        # Advance player animations locally (server sets action via snapshot,
-        # but animation.update() must be ticked to advance frames)
-        for player in g.players:
-            if hasattr(player, "animation") and player.animation:
-                player.animation.update()
-
-        # Update camera to follow local player
-        g = self._game
-        if hasattr(g, "player") and g.player and g.players:
-            g.scroll[0] += (g.player.rect().centerx - g.display.get_width() / 2 - g.scroll[0]) / 30
-            g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
-
-        g.clock.tick()
-
-        # Return to menu if disconnected
-        if self._disconnected and self.manager:
-            from scripts.state_manager import MenuState
-
-            self.manager.set(MenuState())
+    # ------------------------------------------------------------------
+    # Snapshot application
+    # ------------------------------------------------------------------
 
     def _apply_snapshot(self) -> None:
-        """Apply the latest server snapshot to local game entities.
-
-        Local player: reconciliation (snap if divergence > threshold)
-        Remote players: interpolation for smooth movement
-        """
-        if not self._client:
+        snapshot: Optional[SimulationSnapshot] = self._client.get_latest_snapshot()
+        if snapshot is None or snapshot.tick == self._last_applied_tick:
             return
+        self._last_applied_tick = snapshot.tick
+        self._stats["snapshots_applied"] += 1
 
-        snapshot = self._client.get_latest_snapshot()
-        if snapshot is None:
-            return
-
-        server_tick = snapshot.tick
-        self._last_server_tick = server_tick
         g = self._game
-        from scripts.entities import Player
+        server_tick = snapshot.tick
 
-        # Build lookup of existing local players by ID
+        # --- Players ---
         existing: Dict[int, Any] = {p.id: p for p in g.players}
-
-        # Update or create players from snapshot
         new_players: List[Any] = []
         for p_snap in snapshot.players:
             player = existing.get(p_snap.id)
             if player is None:
-                # Create new player entity
-                player = Player(
+                player = MPPlayer(
                     g,
                     list(p_snap.pos),
                     (8, 15),
@@ -254,78 +390,76 @@ class MultiplayerGameState(State):
                     respawn_pos=list(p_snap.pos),
                 )
                 player.skin = 0
-
-            # Split handling: local player vs remote players
+                player.mp_coins = 0
+                player.mp_ammo = 0
             if p_snap.id == self._my_player_id:
-                # Local player: reconciliation
-                self._reconcile_local_player(player, p_snap, server_tick)
+                self._reconcile_local_player(player, p_snap)
             else:
-                # Remote player: interpolation
-                self._update_remote_player(player, p_snap, server_tick)
-
+                self._buffer_remote_player(p_snap, server_tick)
+            player.mp_coins = p_snap.coins
+            player.mp_ammo = p_snap.ammo
             new_players.append(player)
-
         g.players = new_players
 
-        # Set local player reference
-        if self._my_player_id is not None:
-            for p in g.players:
-                if p.id == self._my_player_id:
-                    g.player = p
-                    break
+        # Bind local player reference (camera, HUD)
+        local = self._find_local_player()
+        if local is not None:
+            g.player = local
+            # Mirror own score into the HUD (display only, never saved)
+            g.cm.coins = local.mp_coins
+            g.cm.ammo = local.mp_ammo
 
-        # Update game tick
+        # --- Enemies ---
+        self._apply_enemy_snapshots(snapshot.enemies, server_tick)
+
+        # --- Projectiles ---
+        self._apply_projectile_snapshots(snapshot.projectiles)
+
+        # --- Collectables ---
+        self._apply_collected(snapshot.collected)
+
         g.tick = snapshot.tick
 
-    def _update_remote_player(self, player: Any, p_snap: EntitySnapshot, server_tick: int) -> None:
-        """Update remote player using interpolation for smooth movement."""
-        player_id = p_snap.id
+    # --- Local player reconciliation (rewind + replay) ---
 
-        # Get or create buffer for this player
-        if player_id not in self._remote_player_buffers:
-            self._remote_player_buffers[player_id] = SnapshotBuffer(max_size=20)
+    def _reconcile_local_player(self, player: Any, p_snap: EntitySnapshot) -> None:
+        g = self._game
+        predicted = list(player.pos)
 
-        buffer = self._remote_player_buffers[player_id]
-        buffer.push(server_tick, p_snap)
+        # Rewind to authoritative state
+        self._snap_player_to_state(player, p_snap)
 
-        # Calculate render tick (delayed behind server for interpolation)
-        render_tick = server_tick - INTERP_DELAY
+        # Replay inputs the server has not applied yet
+        unacked = self._client.get_unacknowledged_inputs()
+        if unacked and getattr(g, "tilemap", None):
+            real_audio = g.audio
+            real_particles = g.particles
+            real_sparks = g.sparks
+            g.audio = _SilentAudio()
+            g.particles = []
+            g.sparks = []
+            try:
+                for tick in sorted(unacked.keys()):
+                    move, actions = unacked[tick]
+                    for act in actions:
+                        if act == "jump":
+                            player.jump()
+                        elif act == "dash":
+                            player.dash()
+                    movement = (int(move[1]) - int(move[0]), 0)
+                    player.update(g.tilemap, movement)
+                    self._stats["replayed_ticks"] += 1
+            finally:
+                g.audio = real_audio
+                g.particles = real_particles
+                g.sparks = real_sparks
 
-        # Get surrounding snapshots for interpolation
-        prev_snap, next_snap, t = buffer.get_surrounding_snapshots(render_tick)
-
-        if prev_snap is not None and next_snap is not None:
-            # Interpolate between two snapshots
-            _, prev_state = prev_snap
-            _, next_state = next_snap
-            interp = interpolate_entity(prev_state, next_state, t)
-            player.pos = list(interp.pos)
-            player.velocity = list(interp.velocity)
-            player.flip = interp.flip
-            if player.action != interp.action:
-                player.set_action(interp.action)
-        elif prev_snap is not None:
-            # Only have one snapshot - use it directly (extrapolation case)
-            _, state = prev_snap
-            player.pos = list(state.pos)
-            player.velocity = list(state.velocity)
-            player.flip = state.flip
-            if player.action != state.action:
-                player.set_action(state.action)
-        else:
-            # No interpolation data - snap to latest
-            self._snap_player_to_state(player, p_snap)
-
-        # Always update non-interpolated fields from latest snapshot
-        player.lives = p_snap.lives
-        player.air_time = p_snap.air_time
-        player.jumps = p_snap.jumps
-        player.wall_slide = p_snap.wall_slide
-        player.dashing = p_snap.dashing
-        player.shoot_cooldown = p_snap.shoot_cooldown
+        # Diagnostics: how far prediction was off
+        err = max(abs(player.pos[0] - predicted[0]), abs(player.pos[1] - predicted[1]))
+        self._stats["reconcile_error_px"] = err
+        self._stats["reconcile_max_px"] = max(self._stats["reconcile_max_px"], err)
 
     def _snap_player_to_state(self, player: Any, p_snap: EntitySnapshot) -> None:
-        """Snap player to exact snapshot state (no interpolation)."""
         player.pos = list(p_snap.pos)
         player.velocity = list(p_snap.velocity)
         player.flip = p_snap.flip
@@ -338,71 +472,136 @@ class MultiplayerGameState(State):
         if player.action != p_snap.action:
             player.set_action(p_snap.action)
 
-    def _reconcile_local_player(self, player: Any, p_snap: EntitySnapshot, server_tick: int) -> None:
-        """Reconcile local player with server state.
+    # --- Remote players ---
 
-        If predicted position diverges too far from server, snap to server state
-        and replay unacknowledged inputs.
-        """
-        # Calculate position divergence
-        dx = abs(player.pos[0] - p_snap.pos[0])
-        dy = abs(player.pos[1] - p_snap.pos[1])
-        divergence = max(dx, dy)
+    def _buffer_remote_player(self, p_snap: EntitySnapshot, server_tick: int) -> None:
+        if p_snap.id not in self._remote_player_buffers:
+            self._remote_player_buffers[p_snap.id] = SnapshotBuffer(max_size=20)
+        self._remote_player_buffers[p_snap.id].push(server_tick, p_snap)
 
-        if divergence > RECONCILE_THRESHOLD:
-            # Snap to server state
-            self._snap_player_to_state(player, p_snap)
-            # Replay unacknowledged inputs for smoother correction
-            self._replay_unacknowledged_inputs(player, server_tick)
-        else:
-            # Minor divergence - update non-position state only
-            player.lives = p_snap.lives
-            player.air_time = p_snap.air_time
-            player.jumps = p_snap.jumps
-            player.wall_slide = p_snap.wall_slide
-            player.dashing = p_snap.dashing
-            player.shoot_cooldown = p_snap.shoot_cooldown
-            if player.action != p_snap.action:
-                player.set_action(p_snap.action)
+    def _sync_interp_clock(self) -> None:
+        """Keep the interpolation clock trailing the newest snapshot."""
+        target = self._client.server_tick - INTERP_DELAY
+        drift = self._interp_tick - target
+        if abs(drift) > INTERP_HARD_SNAP:
+            self._interp_tick = float(target)
+        elif drift > 1.0:
+            self._interp_tick -= 0.1  # running too hot: ease back
+        elif drift < -1.0:
+            self._interp_tick += 0.1  # falling behind: catch up
 
-    def _replay_unacknowledged_inputs(self, player: Any, server_tick: int) -> None:
-        """Replay inputs that server hasn't acknowledged yet.
-
-        After snapping to server state, we re-apply any inputs we sent that
-        the server hasn't confirmed yet. This smooths out the correction.
-        """
-        if not self._client or not self._game:
-            return
-
+    def _update_remote_entities(self) -> None:
         g = self._game
-        if not hasattr(g, "tilemap") or g.tilemap is None:
+        for player in g.players:
+            if self._my_player_id is not None and player.id == self._my_player_id:
+                continue
+            buffer = self._remote_player_buffers.get(player.id)
+            if buffer:
+                self._interpolate_onto(player, buffer)
+
+        for enemy_id, enemy in self._enemy_entities.items():
+            buffer = self._enemy_buffers.get(enemy_id)
+            if buffer:
+                self._interpolate_onto(enemy, buffer)
+
+    def _interpolate_onto(self, entity: Any, buffer: SnapshotBuffer) -> None:
+        prev_snap, next_snap, t = buffer.get_surrounding_snapshots(self._interp_tick)
+        if prev_snap is not None and next_snap is not None:
+            _, prev_state = prev_snap
+            _, next_state = next_snap
+            interp = interpolate_entity(prev_state, next_state, t)
+            entity.pos = list(interp.pos)
+            entity.velocity = list(interp.velocity)
+            entity.flip = interp.flip
+            if entity.action != interp.action:
+                entity.set_action(interp.action)
+        elif prev_snap is not None:
+            _, state = prev_snap
+            entity.pos = list(state.pos)
+            entity.velocity = list(state.velocity)
+            entity.flip = state.flip
+            if entity.action != state.action:
+                entity.set_action(state.action)
+
+    # --- Enemies ---
+
+    def _apply_enemy_snapshots(self, enemy_snaps: List[EntitySnapshot], server_tick: int) -> None:
+        g = self._game
+        seen: set[int] = set()
+        for e_snap in enemy_snaps:
+            seen.add(e_snap.id)
+            enemy = self._enemy_entities.get(e_snap.id)
+            if enemy is None:
+                enemy = Enemy(g, list(e_snap.pos), (8, 15), e_snap.id)
+                self._enemy_entities[e_snap.id] = enemy
+                self._enemy_buffers[e_snap.id] = SnapshotBuffer(max_size=20)
+            self._enemy_buffers[e_snap.id].push(server_tick, e_snap)
+            enemy.walking = e_snap.walking
+
+        # Remove enemies the server no longer reports (killed)
+        for enemy_id in list(self._enemy_entities.keys()):
+            if enemy_id not in seen:
+                enemy = self._enemy_entities.pop(enemy_id)
+                self._enemy_buffers.pop(enemy_id, None)
+                from scripts.effects_util import spawn_hit_sparks
+
+                spawn_hit_sparks(g, enemy.rect().center)
+                g.audio.play("hit")
+
+        g.enemies = list(self._enemy_entities.values())
+
+    # --- Projectiles ---
+
+    def _apply_projectile_snapshots(self, proj_snaps: List[Any]) -> None:
+        g = self._game
+        if not hasattr(g, "projectiles") or not hasattr(g.projectiles, "_projectiles"):
             return
+        new_ids = set()
+        rebuilt = []
+        for p in proj_snaps:
+            new_ids.add(p.id)
+            rebuilt.append(
+                {
+                    "id": p.id,
+                    "pos": list(p.pos),
+                    "vel": [p.velocity, 0.0],
+                    "age": p.timer,
+                    "owner": p.owner,
+                    "owner_id": p.owner_id,
+                }
+            )
+            # Shot feedback for projectiles we did not fire ourselves
+            if p.id not in self._known_projectile_ids and p.owner_id != self._my_player_id:
+                g.audio.play("shoot")
+        g.projectiles._projectiles = rebuilt
+        self._known_projectile_ids = new_ids
 
-        # Get all inputs since the server tick
-        unacked = self._client.get_unacknowledged_inputs(server_tick)
+    def _extrapolate_projectiles(self) -> None:
+        g = self._game
+        if not hasattr(g, "projectiles") or not hasattr(g.projectiles, "_projectiles"):
+            return
+        for proj in g.projectiles._projectiles:
+            proj["pos"][0] += proj["vel"][0]
 
-        # Replay each set of inputs in tick order
-        for tick in sorted(unacked.keys()):
-            inputs = unacked[tick]
+    # --- Collectables ---
 
-            # Build movement from inputs
-            movement = (0, 0)
-            has_left = "left" in inputs
-            has_right = "right" in inputs
-            if has_left and not has_right:
-                movement = (-1, 0)
-            elif has_right and not has_left:
-                movement = (1, 0)
+    def _apply_collected(self, collected: List[int]) -> None:
+        g = self._game
+        newly = set(collected) - self._removed_collectables
+        if not newly:
+            return
+        for cid, kind, obj in self._collectable_registry:
+            if cid in newly:
+                if kind == "coin" and obj in g.cm.coin_list:
+                    g.cm.coin_list.remove(obj)
+                elif kind == "ammo" and obj in getattr(g.cm, "ammo_pickups", []):
+                    g.cm.ammo_pickups.remove(obj)
+                g.audio.play("collect")
+        self._removed_collectables.update(newly)
 
-            # Apply actions (skip shoot during replay to avoid duplicate projectiles)
-            for inp in inputs:
-                if inp == "jump":
-                    player.jump()
-                elif inp == "dash":
-                    player.dash()
-
-            # Run physics for this tick
-            player.update(g.tilemap, movement)
+    # ------------------------------------------------------------------
+    # Rendering
+    # ------------------------------------------------------------------
 
     def render(self, surface: pygame.Surface) -> None:
         if not self._game:
@@ -410,32 +609,35 @@ class MultiplayerGameState(State):
 
         g = self._game
 
-        # Use the existing Renderer for the full render pipeline
         from scripts.renderer import Renderer
 
         if not hasattr(self, "_renderer"):
             self._renderer = Renderer(show_perf=False)
         self._renderer.render(g, surface)
 
-        # Draw multiplayer HUD overlay
         self._render_mp_hud(surface)
 
     def _render_mp_hud(self, surface: pygame.Surface) -> None:
         """Render minimal multiplayer HUD info."""
-        font = pygame.font.SysFont(None, 24)
+        if not hasattr(self, "_hud_font"):
+            self._hud_font = pygame.font.SysFont(None, 24)
+        font = self._hud_font
 
-        # Connection status
         if self._connected and self._client:
             status = f"Players: {len(self._game.players)} | RTT: {self._client.rtt * 1000:.0f}ms"
+        elif self._disconnected:
+            status = f"Disconnected: {self._disconnect_reason}"
         else:
             status = "Connecting..."
 
         text_surf = font.render(status, True, (255, 255, 255))
         surface.blit(text_surf, (10, surface.get_height() - 30))
 
-        # Player name
-        name_surf = font.render(self._player_name, True, (200, 200, 200))
+        label = self._player_name
+        if self._host_ip:
+            label += f"  |  Hosting on {self._host_ip}:{self._port}"
+        name_surf = font.render(label, True, (200, 200, 200))
         surface.blit(name_surf, (10, surface.get_height() - 50))
 
 
-__all__ = ["MultiplayerGameState"]
+__all__ = ["MultiplayerGameState", "MPPlayer"]

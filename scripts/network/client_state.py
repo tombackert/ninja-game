@@ -19,6 +19,7 @@ Address = Tuple[str, int]
 
 class ConnectionState(Enum):
     """Connection state machine states."""
+
     CONNECTING = auto()
     CONNECTED = auto()
     DISCONNECTING = auto()
@@ -29,62 +30,65 @@ class ConnectionState(Enum):
 class ClientState:
     """Tracks state for a connected client.
 
+    Input model (state + events):
+    - ``movement`` holds the most recently received held-key state
+      ([left, right]). The server applies it every tick, so clock drift
+      between client and server never drops movement.
+    - ``pending_actions`` queues one-shot actions (jump/dash/shoot).
+      Clients send each action with a monotonically increasing sequence
+      number and re-send unacknowledged actions in every packet;
+      ``last_action_seq`` deduplicates them here.
+
     Attributes:
         player_id: Unique ID assigned to this player
         player_name: Display name for the player
         address: Network address (host, port)
         state: Current connection state
-        input_buffer: Inputs keyed by tick number
-        last_ack_tick: Last tick the client acknowledged
+        movement: Latest held movement state [left, right]
+        pending_actions: One-shot actions awaiting application this tick
+        last_action_seq: Highest action sequence number processed
+        last_input_tick: Client tick of the newest input packet (echoed as ack)
         last_activity: Timestamp of last received message
         rtt_estimate: Estimated round-trip time in seconds
         pending_heartbeat: Timestamp of sent heartbeat awaiting response
     """
+
     player_id: int
     player_name: str
     address: Address
     state: ConnectionState = ConnectionState.CONNECTED
-    input_buffer: Dict[int, List[str]] = field(default_factory=dict)
-    last_ack_tick: int = 0
+    movement: List[bool] = field(default_factory=lambda: [False, False])
+    pending_actions: List[str] = field(default_factory=list)
+    last_action_seq: int = 0
+    last_input_tick: int = 0
     last_activity: float = field(default_factory=time.time)
     rtt_estimate: float = 0.0
     pending_heartbeat: float = 0.0
 
-    def buffer_input(self, tick: int, inputs: List[str]) -> bool:
-        """Buffer inputs for a specific tick.
+    def receive_input(self, tick: int, move: List[bool], actions: List[List]) -> None:
+        """Ingest an input packet from the client.
 
         Args:
-            tick: The simulation tick these inputs are for
-            inputs: List of input actions
-
-        Returns:
-            True if inputs were buffered, False if tick is too old
+            tick: Client tick the packet was generated at
+            move: Held movement state [left, right]
+            actions: List of [seq, name] pairs (includes re-sent unacked ones)
         """
         self.last_activity = time.time()
-        self.input_buffer[tick] = inputs
-        return True
+        # Movement is last-writer-wins; ignore stale (out-of-order) packets.
+        if tick >= self.last_input_tick:
+            self.last_input_tick = tick
+            self.movement = [bool(move[0]), bool(move[1])]
+        # Actions are deduplicated by sequence number.
+        new_actions = sorted((int(seq), str(name)) for seq, name in actions if int(seq) > self.last_action_seq)
+        for seq, name in new_actions:
+            self.pending_actions.append(name)
+            self.last_action_seq = seq
 
-    def get_inputs(self, tick: int) -> List[str]:
-        """Get and remove buffered inputs up to and including the given tick.
-
-        Merges all buffered inputs from past ticks to handle clock drift
-        between client and server.
-
-        Args:
-            tick: The simulation tick (inclusive upper bound)
-
-        Returns:
-            Combined list of input actions, empty if none buffered
-        """
-        merged: List[str] = []
-        consumed = [t for t in self.input_buffer if t <= tick]
-        for t in sorted(consumed):
-            merged.extend(self.input_buffer.pop(t))
-        return merged
-
-    def has_inputs_for_tick(self, tick: int) -> bool:
-        """Check if inputs are buffered for a specific tick."""
-        return tick in self.input_buffer
+    def drain_actions(self) -> List[str]:
+        """Return and clear the queued one-shot actions."""
+        actions = self.pending_actions
+        self.pending_actions = []
+        return actions
 
     def update_rtt(self, client_time: float, server_time: float) -> None:
         """Update RTT estimate from heartbeat response.
@@ -112,21 +116,6 @@ class ClientState:
             True if client has exceeded timeout
         """
         return time.time() - self.last_activity > timeout
-
-    def cleanup_old_inputs(self, current_tick: int, max_age: int = 60) -> int:
-        """Remove inputs older than max_age ticks.
-
-        Args:
-            current_tick: Current simulation tick
-            max_age: Maximum tick age to keep
-
-        Returns:
-            Number of inputs removed
-        """
-        old_ticks = [t for t in self.input_buffer if t < current_tick - max_age]
-        for tick in old_ticks:
-            del self.input_buffer[tick]
-        return len(old_ticks)
 
 
 class ClientManager:
@@ -204,13 +193,6 @@ class ClientManager:
     def get_timed_out_clients(self, timeout: float = 10.0) -> List[ClientState]:
         """Get clients that have timed out."""
         return [c for c in self.clients.values() if c.is_timed_out(timeout)]
-
-    def cleanup_all_old_inputs(self, current_tick: int) -> int:
-        """Cleanup old inputs for all clients."""
-        total = 0
-        for client in self.clients.values():
-            total += client.cleanup_old_inputs(current_tick)
-        return total
 
     @property
     def client_count(self) -> int:
