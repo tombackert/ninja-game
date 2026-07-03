@@ -246,6 +246,25 @@ class TestReconciliation:
         assert state._stats["reconcile_max_px"] == 30.0
 
 
+class TestPauseNetworking:
+    """While paused, the connection must stay alive with neutral inputs."""
+
+    def test_network_idle_update_sends_neutral_input(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+        client = MagicMock()
+        client.is_connected = True
+        state._client = client
+        state._movement = [True, False]  # was holding a key when pausing
+
+        state.network_idle_update()
+
+        client.update.assert_called_once()
+        client.send_input_state.assert_called_once_with((False, False), [])
+        assert state._movement == [False, False]
+
+
 class TestInterpDelayConstant:
     """Test that interpolation delay constant exists and is sensible."""
 

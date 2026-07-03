@@ -45,8 +45,8 @@ class GameServer:
         tick: Current simulation tick
     """
 
-    # Broadcast snapshot every N ticks (~20 Hz at 60 fps)
-    SNAPSHOT_INTERVAL = 3
+    # Broadcast snapshot every N ticks (~30 Hz at 60 fps)
+    SNAPSHOT_INTERVAL = 2
 
     # Every Nth broadcast is a full snapshot to recover from UDP packet loss
     FULL_SNAPSHOT_INTERVAL = 30

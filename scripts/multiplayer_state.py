@@ -17,6 +17,9 @@ sends inputs, receives snapshots, and renders the full game world:
 
 from __future__ import annotations
 
+import json
+import os
+import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pygame
@@ -28,8 +31,29 @@ from scripts.snapshot import EntitySnapshot, SimulationSnapshot
 from scripts.state_manager import State
 
 # Tuning constants
-INTERP_DELAY = 6  # Ticks the remote-entity clock trails the newest snapshot
+INTERP_DELAY = 4  # Ticks the remote-entity clock trails the newest snapshot (~67ms)
 INTERP_HARD_SNAP = 20  # Snap the interp clock if it drifts further than this
+
+
+def _autopilot_input(pattern: str, frame: int) -> Tuple[Tuple[bool, bool], List[str]]:
+    """Scripted inputs for automated E2E runs (NINJA_MP_AUTOPILOT)."""
+    actions: List[str] = []
+    if pattern == "runner":
+        phase = (frame // 120) % 2
+        move = (False, True) if phase == 0 else (True, False)
+        if frame % 90 == 45:
+            actions.append("jump")
+        if frame % 200 == 100:
+            actions.append("dash")
+    elif pattern == "shooter":
+        move = (False, False)
+        if frame % 120 == 60:
+            actions.append("jump")
+        if frame % 45 == 10:
+            actions.append("shoot")
+    else:
+        move = (False, False)
+    return move, actions
 
 
 class MPPlayer(Player):
@@ -123,6 +147,12 @@ class MultiplayerGameState(State):
             "replayed_ticks": 0,
         }
 
+        # E2E hooks: scripted inputs + per-second metrics logging
+        self._autopilot = os.environ.get("NINJA_MP_AUTOPILOT", "")
+        self._metrics_path = os.environ.get("NINJA_MP_METRICS", "")
+        self._metrics_fh: Any = None
+        self._frame = 0
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -158,6 +188,9 @@ class MultiplayerGameState(State):
             if self._client.is_connected:
                 self._client.disconnect()
             self._client.close()
+        if self._metrics_fh is not None:
+            self._metrics_fh.close()
+            self._metrics_fh = None
         self._stop_host_process()
 
     def _stop_host_process(self) -> None:
@@ -271,6 +304,13 @@ class MultiplayerGameState(State):
             self._setup_level()
 
         g = self._game
+        self._frame += 1
+
+        # E2E: scripted inputs replace user input when autopilot is active
+        if self._autopilot:
+            auto_move, auto_actions = _autopilot_input(self._autopilot, self._frame)
+            self._movement = list(auto_move)
+            self._action_buffer.extend(auto_actions)
 
         # 2. Apply the newest authoritative snapshot (rewind + replay)
         self._apply_snapshot()
@@ -318,11 +358,46 @@ class MultiplayerGameState(State):
             g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
 
         g.clock.tick()
+        self._write_metrics()
+
+    def _write_metrics(self) -> None:
+        """Append one JSONL metrics sample per second (NINJA_MP_METRICS)."""
+        if not self._metrics_path or self._frame % 60 != 0:
+            return
+        if self._metrics_fh is None:
+            self._metrics_fh = open(self._metrics_path, "a")
+        g = self._game
+        sample = {
+            "t": time.time(),
+            "frame": self._frame,
+            "fps": round(g.clock.get_fps(), 2),
+            "rtt_ms": round(self._client.rtt * 1000, 2),
+            "server_tick": self._client.server_tick,
+            "local_tick": self._client.local_tick,
+            "ack_lag": self._client.local_tick - self._client.input_ack_tick,
+            "snapshots_applied": self._stats["snapshots_applied"],
+            "reconcile_error_px": round(self._stats["reconcile_error_px"], 3),
+            "reconcile_max_px": round(self._stats["reconcile_max_px"], 3),
+            "replayed_ticks": self._stats["replayed_ticks"],
+            "players": len(g.players),
+            "enemies": len(g.enemies),
+            "projectiles": len(getattr(g, "projectiles", [])),
+        }
+        self._metrics_fh.write(json.dumps(sample) + "\n")
+        self._metrics_fh.flush()
 
     def network_idle_update(self) -> None:
-        """Keep the connection alive while an overlay (pause) is on top."""
+        """Keep the connection alive while an overlay (pause) is on top.
+
+        Also sends a neutral input state: movement is last-writer-wins on the
+        server, so without this a player who paused while holding a key would
+        keep running server-side until they resume.
+        """
         if self._client and not self._disconnected:
             self._client.update()
+            if self._client.is_connected:
+                self._movement = [False, False]
+                self._client.send_input_state((False, False), [])
 
     def _return_to_menu(self) -> None:
         if self.manager:
@@ -618,10 +693,8 @@ class MultiplayerGameState(State):
         self._render_mp_hud(surface)
 
     def _render_mp_hud(self, surface: pygame.Surface) -> None:
-        """Render minimal multiplayer HUD info."""
-        if not hasattr(self, "_hud_font"):
-            self._hud_font = pygame.font.SysFont(None, 24)
-        font = self._hud_font
+        """Render minimal multiplayer HUD info (game font + outline)."""
+        from scripts.ui import UI
 
         if self._connected and self._client:
             status = f"Players: {len(self._game.players)} | RTT: {self._client.rtt * 1000:.0f}ms"
@@ -630,14 +703,25 @@ class MultiplayerGameState(State):
         else:
             status = "Connecting..."
 
-        text_surf = font.render(status, True, (255, 255, 255))
-        surface.blit(text_surf, (10, surface.get_height() - 30))
-
         label = self._player_name
         if self._host_ip:
-            label += f"  |  Hosting on {self._host_ip}:{self._port}"
-        name_surf = font.render(label, True, (200, 200, 200))
-        surface.blit(name_surf, (10, surface.get_height() - 50))
+            label += f" | Hosting on {self._host_ip}:{self._port}"
+
+        font = UI.get_font(14)
+        UI.draw_text_with_outline(
+            surface=surface,
+            font=font,
+            text=label,
+            x=10,
+            y=surface.get_height() - 50,
+        )
+        UI.draw_text_with_outline(
+            surface=surface,
+            font=font,
+            text=status,
+            x=10,
+            y=surface.get_height() - 30,
+        )
 
 
 __all__ = ["MultiplayerGameState", "MPPlayer"]

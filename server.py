@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import time
 
 import pygame
@@ -35,6 +36,11 @@ def main() -> None:
     pygame.init()
 
     game = HeadlessGame(level=args.level)
+
+    # SDL swallows SIGTERM (it queues an SDL_QUIT event the headless loop
+    # never polls), so a host calling Popen.terminate() would leave a zombie
+    # server. Install our own handler for a clean shutdown instead.
+    signal.signal(signal.SIGTERM, lambda signum, frame: setattr(game, "running", False))
     server = GameServer(port=args.port, max_clients=args.max_clients, game=game)
 
     # Wire callbacks

@@ -255,7 +255,9 @@ class HeadlessGame:
         self.dead = 0
 
         # --- Enemies: AI targets nearest player; dash kills for everyone ---
-        for enemy in self.enemies.copy():
+        # (idle until at least one player is connected — Enemy.update and its
+        # policy dereference game.player)
+        for enemy in self.enemies.copy() if self.players else []:
             target = self._nearest_player(enemy)
             if target is not None:
                 self.player = target
