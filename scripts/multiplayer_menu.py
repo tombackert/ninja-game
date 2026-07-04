@@ -67,11 +67,14 @@ class MultiplayerMenuState(State):
     name = "MultiplayerMenuState"
 
     def __init__(self) -> None:
+        from scripts.displayManager import DisplayManager
         from scripts.localization import LocalizationService
         from scripts.ui import UI
 
         self.loc = LocalizationService.get()
         self._ui = UI
+        self.dm = DisplayManager()
+        self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
         self.options_keys = ["mp.host", "mp.join", "mp.back"]
         self.widget = ScrollableListWidget(
@@ -110,8 +113,7 @@ class MultiplayerMenuState(State):
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
-        display = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        UI.render_menu_bg(surface, display, self.bg)
+        UI.render_menu_bg(surface, self.display, self.bg)
         UI.render_menu_title(surface, self.loc.translate("mp.title"), surface.get_width() // 2, 200)
         self.widget.render(surface, surface.get_width() // 2, 300)
         if self.error:
@@ -130,11 +132,14 @@ class JoinGameState(State):
     name = "JoinGameState"
 
     def __init__(self, initial: str = "") -> None:
+        from scripts.displayManager import DisplayManager
         from scripts.localization import LocalizationService
         from scripts.ui import UI
 
         self.loc = LocalizationService.get()
         self._ui = UI
+        self.dm = DisplayManager()
+        self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
         self.text = initial or "127.0.0.1"
         self.request_back = False
@@ -160,8 +165,7 @@ class JoinGameState(State):
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
-        display = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        UI.render_menu_bg(surface, display, self.bg)
+        UI.render_menu_bg(surface, self.display, self.bg)
         UI.render_menu_title(surface, self.loc.translate("mp.join_title"), surface.get_width() // 2, 200)
         # Address input box
         font = UI.get_font(30)
