@@ -86,6 +86,25 @@ class InputRouter:
             game_rules.extend(bind(game_binds["right"], "right", pygame.KEYDOWN))
             game_rules.extend(bind(game_binds["right"], "stop_right", pygame.KEYUP))
 
+        # MultiplayerGameState: like GameState, but dash is on Space
+        # (Space therefore no longer jumps in multiplayer).
+        mp_game_rules: List[Rule] = []
+        for act in ["pause_toggle", "debug_toggle", "shoot"]:
+            if act in game_binds:
+                mp_game_rules.extend(bind(game_binds[act], act))
+        mp_jump_keys = [k for k in game_binds.get("jump", []) if k != pygame.K_SPACE]
+        mp_game_rules.extend(bind(mp_jump_keys, "jump"))
+        mp_dash_keys = list(game_binds.get("dash", []))
+        if pygame.K_SPACE not in mp_dash_keys:
+            mp_dash_keys.append(pygame.K_SPACE)
+        mp_game_rules.extend(bind(mp_dash_keys, "dash"))
+        if "left" in game_binds:
+            mp_game_rules.extend(bind(game_binds["left"], "left", pygame.KEYDOWN))
+            mp_game_rules.extend(bind(game_binds["left"], "stop_left", pygame.KEYUP))
+        if "right" in game_binds:
+            mp_game_rules.extend(bind(game_binds["right"], "right", pygame.KEYDOWN))
+            mp_game_rules.extend(bind(game_binds["right"], "stop_right", pygame.KEYUP))
+
         # PauseState
         pause_binds = settings.key_bindings.get("PauseState", {})
         pause_rules: List[Rule] = []
@@ -108,7 +127,7 @@ class InputRouter:
                 "AccessoriesState": menu_rules,
                 "OptionsState": menu_rules,
                 "LevelCompleteState": menu_rules,
-                "MultiplayerGameState": game_rules,
+                "MultiplayerGameState": mp_game_rules,
                 "MultiplayerMenuState": menu_rules,
                 "JoinGameState": join_rules,
             }
