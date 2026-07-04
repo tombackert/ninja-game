@@ -78,6 +78,14 @@ class GameClient:
         # Snapshot storage
         self._snapshot_buffer = SnapshotBuffer(max_size=20)
         self._last_full_snapshot: SimulationSnapshot | None = None
+        # Snapshots received since the last drain_new_snapshots() call.
+        # Bounded so a paused client cannot grow it without limit.
+        self._new_snapshots: List[SimulationSnapshot] = []
+        self._last_full_request_time = 0.0
+        # Recently reconstructed snapshots by tick (delta base lookup) and
+        # deltas that arrived before their base (reordered packets).
+        self._recent_by_tick: Dict[int, SimulationSnapshot] = {}
+        self._pending_deltas: Dict[int, Tuple[int, Any]] = {}
 
         # Input tracking (state + events model)
         # History of what was input each local tick: {tick: (move, actions)}
@@ -91,6 +99,20 @@ class GameClient:
         # RTT measurement
         self._rtt_estimate = 0.0
         self._pending_heartbeat_time = 0.0
+
+        # Network health counters (read by metrics logging / diagnostics)
+        self.net_stats: Dict[str, int] = {
+            "snapshots_recv": 0,
+            "fulls_recv": 0,
+            "deltas_dropped": 0,
+            "deltas_deferred": 0,  # arrived before their base (reordered)
+            "deltas_pruned": 0,  # parked delta whose base never arrived (lost)
+            "snap_late": 0,  # arrival tick gap > snapshot interval
+            "snap_gap_max": 0,
+            "snap_bursts": 0,  # >= 2 snapshots processed in one update()
+        }
+        self._last_snap_recv_tick: int | None = None
+        self._snaps_this_update = 0
 
         # Timing
         self._last_heartbeat_time = 0.0
@@ -170,7 +192,10 @@ class GameClient:
             self._update_connecting(now)
 
         # Process all incoming messages
+        self._snaps_this_update = 0
         self._process_incoming_messages()
+        if self._snaps_this_update >= 2:
+            self.net_stats["snap_bursts"] += 1
 
         # Connected state updates
         if self._state == ConnectionState.CONNECTED:
@@ -219,6 +244,17 @@ class GameClient:
 
     def get_latest_snapshot(self) -> SimulationSnapshot | None:
         return self._last_full_snapshot
+
+    def drain_new_snapshots(self) -> List[SimulationSnapshot]:
+        """Return every snapshot received since the last call (arrival order).
+
+        Under bursty delivery (Wi-Fi aggregation/power-save) several
+        snapshots can arrive within one frame; consumers that only read
+        get_latest_snapshot() would silently drop interpolation samples.
+        """
+        out = self._new_snapshots
+        self._new_snapshots = []
+        return out
 
     def get_snapshot_buffer(self) -> SnapshotBuffer:
         return self._snapshot_buffer
@@ -335,6 +371,18 @@ class GameClient:
         is_delta = payload.get("is_delta", False)
         data = payload["data"]
 
+        # Arrival-stream diagnostics (gaps = lost/late snapshots)
+        self.net_stats["snapshots_recv"] += 1
+        self._snaps_this_update += 1
+        if not is_delta:
+            self.net_stats["fulls_recv"] += 1
+        if self._last_snap_recv_tick is not None:
+            gap = tick - self._last_snap_recv_tick
+            if gap > 2:
+                self.net_stats["snap_late"] += 1
+            self.net_stats["snap_gap_max"] = max(self.net_stats["snap_gap_max"], gap)
+        self._last_snap_recv_tick = tick
+
         # Input acknowledgement for prediction reconciliation
         acks = payload.get("acks", {})
         if self._player_id is not None:
@@ -343,20 +391,73 @@ class GameClient:
                 self._input_ack_tick = max(self._input_ack_tick, int(ack))
 
         if is_delta:
-            if self._last_full_snapshot is None:
-                return  # No base to apply delta to; wait for full
+            # Deltas are computed against the server's previous broadcast.
+            # Applying one to the wrong base silently corrupts state, so
+            # resolve the exact base by tick. A delta whose base has not
+            # arrived yet (reordered packet) is parked and re-applied the
+            # moment its base is reconstructed.
+            base_tick = payload.get("base_tick")
+            base = self._resolve_delta_base(base_tick)
+            if base is None:
+                if base_tick is not None and len(self._pending_deltas) < 8:
+                    self._pending_deltas[base_tick] = (tick, data)
+                    self.net_stats["deltas_deferred"] += 1
+                else:
+                    self.net_stats["deltas_dropped"] += 1
+                self._request_full_snapshot()
+                return
             try:
-                snapshot = apply_delta(self._last_full_snapshot, data)
+                snapshot = apply_delta(base, data)
             except Exception:
                 self._last_full_snapshot = None  # Reset; wait for next full
+                self.net_stats["deltas_dropped"] += 1
+                self._request_full_snapshot()
                 return
         else:
             snapshot = SnapshotService.deserialize(data)
 
-        self._last_full_snapshot = snapshot
-        self._server_tick = tick
+        self._accept_snapshot(tick, snapshot)
+
+    def _resolve_delta_base(self, base_tick: Any) -> SimulationSnapshot | None:
+        """Find the snapshot a delta must be applied to."""
+        if base_tick is None:  # server without base_tick support
+            return self._last_full_snapshot
+        return self._recent_by_tick.get(base_tick)
+
+    def _accept_snapshot(self, tick: int, snapshot: SimulationSnapshot) -> None:
+        """Store a reconstructed snapshot and resolve any deltas waiting on it.
+
+        Reordered (older) snapshots still serve as interpolation samples,
+        but must not roll back the delta base or the tick clock.
+        """
+        if tick > self._server_tick or self._last_full_snapshot is None:
+            self._last_full_snapshot = snapshot
+            self._server_tick = tick
+            self._resync_local_tick()
         self._snapshot_buffer.push(tick, snapshot)
-        self._resync_local_tick()
+        self._new_snapshots.append(snapshot)
+        if len(self._new_snapshots) > 30:
+            self._new_snapshots.pop(0)
+        self._recent_by_tick[tick] = snapshot
+        while len(self._recent_by_tick) > 32:
+            self._recent_by_tick.pop(next(iter(self._recent_by_tick)))
+
+        pending = self._pending_deltas.pop(tick, None)
+        if pending is not None:
+            p_tick, p_data = pending
+            try:
+                self._accept_snapshot(p_tick, apply_delta(snapshot, p_data))
+            except Exception:
+                self.net_stats["deltas_dropped"] += 1
+                self._request_full_snapshot()
+
+    def _request_full_snapshot(self) -> None:
+        """Ask the server to reset our delta chain with a full snapshot."""
+        now = time.time()
+        if now - self._last_full_request_time < 0.1:
+            return
+        self._last_full_request_time = now
+        self.transport.send(Message(type="request_full", payload={}), self._server_addr)
 
     def _resync_local_tick(self) -> None:
         """Keep the local tick slightly ahead of the server tick.
@@ -429,6 +530,12 @@ class GameClient:
 
     def _prune_input_history(self) -> None:
         """Drop acknowledged/stale input history and pending actions."""
+        # Parked deltas whose base never arrived are unrecoverable
+        stale = [bt for bt in self._pending_deltas if bt < self._server_tick - 30]
+        for bt in stale:
+            del self._pending_deltas[bt]
+            self.net_stats["deltas_dropped"] += 1
+            self.net_stats["deltas_pruned"] += 1
         cutoff = max(self._input_ack_tick - 5, self._local_tick - 120)
         old_ticks = [t for t in self._input_history if t < cutoff]
         for t in old_ticks:

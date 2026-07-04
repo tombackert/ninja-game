@@ -168,6 +168,8 @@ class GameServer:
             self._handle_heartbeat(payload, addr)
         elif msg_type == "disconnect":
             self._handle_disconnect(addr)
+        elif msg_type == "request_full":
+            self._handle_request_full(addr)
 
     def _handle_connect_request(self, payload: Dict[str, Any], addr: Address) -> None:
         """Handle connection request from new client."""
@@ -266,6 +268,11 @@ class GameServer:
             },
         )
         self.transport.send(msg, addr)
+
+    def _handle_request_full(self, addr: Address) -> None:
+        """Client detected a broken delta chain; send it a full snapshot."""
+        if self.clients.get_client(addr) is not None:
+            self._clients_needing_full.add(addr)
 
     def _handle_disconnect(self, addr: Address) -> None:
         """Handle disconnect message from client."""
@@ -384,6 +391,8 @@ class GameServer:
                     payload={
                         "tick": snapshot.tick,
                         "is_delta": True,
+                        # Clients verify their base matches before applying
+                        "base_tick": self._last_full_snapshot.tick,
                         "acks": acks,
                         "data": delta,
                     },

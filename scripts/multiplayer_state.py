@@ -31,8 +31,11 @@ from scripts.snapshot import EntitySnapshot, SimulationSnapshot
 from scripts.state_manager import State
 
 # Tuning constants
-INTERP_DELAY = 4  # Ticks the remote-entity clock trails the newest snapshot (~67ms)
-INTERP_HARD_SNAP = 20  # Snap the interp clock if it drifts further than this
+INTERP_DELAY = 4  # Minimum ticks the remote-entity clock trails the newest snapshot (~67ms)
+INTERP_DELAY_MAX = 24  # Adaptive ceiling under jitter/burst delivery (~400ms)
+INTERP_HARD_SNAP = 40  # Snap the interp clock if it drifts further than this
+INTERP_HEADROOM_MARGIN = 2.5  # Spare buffered ticks required before shrinking the delay
+INTERP_SHRINK_WINDOW = 300  # Frames of sustained headroom before shrinking (~5s)
 
 
 def _autopilot_input(pattern: str, frame: int) -> Tuple[Tuple[bool, bool], List[str]]:
@@ -130,8 +133,14 @@ class MultiplayerGameState(State):
         self._enemy_buffers: Dict[int, SnapshotBuffer] = {}
         self._enemy_entities: Dict[int, Enemy] = {}
 
-        # Smooth interpolation clock for remote entities (fractional ticks)
+        # Smooth interpolation clock for remote entities (fractional ticks).
+        # The delay it trails by adapts to measured delivery quality
+        # (jitter/bursts on Wi-Fi), AIMD-style: grow fast on starvation,
+        # shrink slowly after sustained smooth delivery.
         self._interp_tick = 0.0
+        self._interp_delay = float(INTERP_DELAY)
+        self._headroom_min = float("inf")
+        self._headroom_frames = 0
 
         # Snapshot bookkeeping
         self._last_applied_tick = -1
@@ -145,7 +154,15 @@ class MultiplayerGameState(State):
             "reconcile_error_px": 0.0,
             "reconcile_max_px": 0.0,
             "replayed_ticks": 0,
+            # Remote-view smoothness (the "laggy picture" symptom)
+            "interp_underruns": 0,  # frames where the interp clock passed the newest snapshot
+            "remote_frozen_frames": 0,  # remote player rendered motionless while it should move
+            "remote_jump_frames": 0,  # remote player teleported > 5px between frames
+            "remote_jump_max_px": 0.0,
         }
+        self._remote_prev_pos: Dict[int, Tuple[float, float]] = {}
+        self._frame_times: List[float] = []
+        self._last_frame_t = 0.0
 
         # E2E hooks: scripted inputs + per-second metrics logging
         self._autopilot = os.environ.get("NINJA_MP_AUTOPILOT", "")
@@ -306,6 +323,13 @@ class MultiplayerGameState(State):
         g = self._game
         self._frame += 1
 
+        # Real frame interval (includes render + flip of the previous frame)
+        if self._metrics_path:
+            now = time.perf_counter()
+            if self._last_frame_t:
+                self._frame_times.append((now - self._last_frame_t) * 1000.0)
+            self._last_frame_t = now
+
         # E2E: scripted inputs replace user input when autopilot is active
         if self._autopilot:
             auto_move, auto_actions = _autopilot_input(self._autopilot, self._frame)
@@ -367,6 +391,8 @@ class MultiplayerGameState(State):
         if self._metrics_fh is None:
             self._metrics_fh = open(self._metrics_path, "a")
         g = self._game
+        frame_ms = sorted(self._frame_times)
+        self._frame_times = []
         sample = {
             "t": time.time(),
             "frame": self._frame,
@@ -382,9 +408,25 @@ class MultiplayerGameState(State):
             "players": len(g.players),
             "enemies": len(g.enemies),
             "projectiles": len(getattr(g, "projectiles", [])),
+            # Remote-view smoothness (cumulative counters)
+            "interp_underruns": self._stats["interp_underruns"],
+            "remote_frozen_frames": self._stats["remote_frozen_frames"],
+            "remote_jump_frames": self._stats["remote_jump_frames"],
+            "remote_jump_max_px": round(self._stats["remote_jump_max_px"], 2),
+            "interp_delay": self._current_interp_delay(),
+            # Real frame intervals for this window (render + flip included)
+            "frame_ms_p50": round(frame_ms[len(frame_ms) // 2], 2) if frame_ms else 0,
+            "frame_ms_p95": round(frame_ms[int(len(frame_ms) * 0.95)], 2) if frame_ms else 0,
+            "frame_ms_max": round(frame_ms[-1], 2) if frame_ms else 0,
+            # Network arrival health (cumulative counters)
+            **{f"net_{k}": v for k, v in self._client.net_stats.items()},
         }
         self._metrics_fh.write(json.dumps(sample) + "\n")
         self._metrics_fh.flush()
+
+    def _current_interp_delay(self) -> float:
+        """Interpolation delay in ticks the remote view currently trails by."""
+        return round(self._interp_delay, 2)
 
     def network_idle_update(self) -> None:
         """Keep the connection alive while an overlay (pause) is on top.
@@ -441,8 +483,30 @@ class MultiplayerGameState(State):
     # ------------------------------------------------------------------
 
     def _apply_snapshot(self) -> None:
-        snapshot: Optional[SimulationSnapshot] = self._client.get_latest_snapshot()
-        if snapshot is None or snapshot.tick == self._last_applied_tick:
+        new_snaps: List[SimulationSnapshot] = self._client.drain_new_snapshots()
+        if not new_snaps:
+            return
+
+        # Feed EVERY received snapshot into the interpolation buffers.
+        # Under bursty delivery (Wi-Fi aggregation/power-save) several
+        # snapshots arrive in one frame; buffering only the newest would
+        # halve the effective sample rate exactly when jitter is worst.
+        newest: Optional[SimulationSnapshot] = None
+        for snap in new_snaps:
+            if newest is None or snap.tick > newest.tick:
+                newest = snap
+        for snap in new_snaps:
+            if snap is newest:
+                continue  # buffered below via the full apply path
+            for p_snap in snap.players:
+                if p_snap.id != self._my_player_id:
+                    self._buffer_remote_player(p_snap, snap.tick)
+            for e_snap in snap.enemies:
+                if e_snap.id in self._enemy_buffers:
+                    self._enemy_buffers[e_snap.id].push(snap.tick, e_snap)
+
+        snapshot = newest
+        if snapshot is None or snapshot.tick <= self._last_applied_tick:
             return
         self._last_applied_tick = snapshot.tick
         self._stats["snapshots_applied"] += 1
@@ -555,15 +619,42 @@ class MultiplayerGameState(State):
         self._remote_player_buffers[p_snap.id].push(server_tick, p_snap)
 
     def _sync_interp_clock(self) -> None:
-        """Keep the interpolation clock trailing the newest snapshot."""
-        target = self._client.server_tick - INTERP_DELAY
+        """Keep the interpolation clock trailing the newest snapshot.
+
+        The trailing delay is an adaptive jitter buffer: when the clock
+        starves (catches up with the newest snapshot, so remote entities
+        would freeze and then jump) the delay grows immediately; after a
+        sustained window of comfortable headroom it shrinks again. The
+        clock itself is slewed proportionally (max ~±12% playback speed)
+        so corrections stay invisible instead of stepping.
+        """
+        newest = self._client.server_tick
+        headroom = newest - self._interp_tick
+
+        # Grow fast on starvation (a freeze is imminent or already visible):
+        # cover the observed deficit in one step instead of creeping up,
+        # so one bad burst is enough to size the buffer for the next one.
+        if headroom < 0.5 and self._interp_delay < INTERP_DELAY_MAX:
+            grow = max(1.0, 0.5 - headroom)
+            self._interp_delay = min(self._interp_delay + grow, INTERP_DELAY_MAX)
+            self._headroom_min = float("inf")
+            self._headroom_frames = 0
+
+        # Shrink slowly once delivery has been smooth for a sustained window
+        self._headroom_min = min(self._headroom_min, headroom)
+        self._headroom_frames += 1
+        if self._headroom_frames >= INTERP_SHRINK_WINDOW:
+            if self._headroom_min > INTERP_HEADROOM_MARGIN and self._interp_delay > INTERP_DELAY:
+                self._interp_delay = max(INTERP_DELAY, self._interp_delay - 0.5)
+            self._headroom_min = float("inf")
+            self._headroom_frames = 0
+
+        target = newest - self._interp_delay
         drift = self._interp_tick - target
         if abs(drift) > INTERP_HARD_SNAP:
             self._interp_tick = float(target)
-        elif drift > 1.0:
-            self._interp_tick -= 0.1  # running too hot: ease back
-        elif drift < -1.0:
-            self._interp_tick += 0.1  # falling behind: catch up
+        else:
+            self._interp_tick += max(-0.12, min(0.12, -drift * 0.05))
 
     def _update_remote_entities(self) -> None:
         g = self._game
@@ -573,14 +664,33 @@ class MultiplayerGameState(State):
             buffer = self._remote_player_buffers.get(player.id)
             if buffer:
                 self._interpolate_onto(player, buffer)
+                self._track_remote_motion(player, buffer)
 
         for enemy_id, enemy in self._enemy_entities.items():
             buffer = self._enemy_buffers.get(enemy_id)
             if buffer:
                 self._interpolate_onto(enemy, buffer)
 
+    def _track_remote_motion(self, player: Any, buffer: SnapshotBuffer) -> None:
+        """Measure rendered smoothness of a remote player (metrics only)."""
+        prev = self._remote_prev_pos.get(player.id)
+        self._remote_prev_pos[player.id] = (player.pos[0], player.pos[1])
+        if prev is None or not buffer.buffer:
+            return
+        d = max(abs(player.pos[0] - prev[0]), abs(player.pos[1] - prev[1]))
+        _, newest = buffer.buffer[-1]
+        should_move = max(abs(newest.velocity[0]), abs(newest.velocity[1])) > 0.3
+        if d < 0.01 and should_move:
+            self._stats["remote_frozen_frames"] += 1
+        elif d > 5.0:
+            self._stats["remote_jump_frames"] += 1
+            self._stats["remote_jump_max_px"] = max(self._stats["remote_jump_max_px"], d)
+
     def _interpolate_onto(self, entity: Any, buffer: SnapshotBuffer) -> None:
         prev_snap, next_snap, t = buffer.get_surrounding_snapshots(self._interp_tick)
+        if prev_snap is not None and next_snap is None and len(buffer.buffer) >= 2:
+            # Interp clock ran past the newest snapshot: entity freezes
+            self._stats["interp_underruns"] += 1
         if prev_snap is not None and next_snap is not None:
             _, prev_state = prev_snap
             _, next_state = next_snap
@@ -591,12 +701,23 @@ class MultiplayerGameState(State):
             if entity.action != interp.action:
                 entity.set_action(interp.action)
         elif prev_snap is not None:
-            _, state = prev_snap
+            newest_tick, state = prev_snap
             entity.pos = list(state.pos)
             entity.velocity = list(state.velocity)
             entity.flip = state.flip
             if entity.action != state.action:
                 entity.set_action(state.action)
+            # Brief starvation: dead-reckon a few ticks past the newest
+            # snapshot instead of freezing. Per-tick motion is derived from
+            # the last two samples because movement-driven entities carry
+            # their speed in position deltas, not in `velocity`.
+            if len(buffer.buffer) >= 2:
+                prev_tick, prev_state = buffer.buffer[-2]
+                span = newest_tick - prev_tick
+                ahead = min(self._interp_tick - newest_tick, 4.0)
+                if span > 0 and ahead > 0:
+                    entity.pos[0] += (state.pos[0] - prev_state.pos[0]) / span * ahead
+                    entity.pos[1] += (state.pos[1] - prev_state.pos[1]) / span * ahead
 
     # --- Enemies ---
 
@@ -697,7 +818,10 @@ class MultiplayerGameState(State):
         from scripts.ui import UI
 
         if self._connected and self._client:
-            status = f"Players: {len(self._game.players)} | RTT: {self._client.rtt * 1000:.0f}ms"
+            status = (
+                f"Players: {len(self._game.players)} | RTT: {self._client.rtt * 1000:.0f}ms"
+                f" | FPS: {self._game.clock.get_fps():.0f}"
+            )
         elif self._disconnected:
             status = f"Disconnected: {self._disconnect_reason}"
         else:
