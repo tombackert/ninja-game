@@ -17,6 +17,7 @@ from scripts.constants import (
 from scripts.displayManager import DisplayManager
 from scripts.effects import Effects
 from scripts.entities import Enemy, Player
+from scripts.entity_id import EntityIDGenerator
 from scripts.keyboardManager import KeyboardManager
 from scripts.level_cache import list_levels
 from scripts.particle_system import ParticleSystem
@@ -45,7 +46,7 @@ Note:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, fullscreen=True):
         pygame.init()
 
         dm = DisplayManager()
@@ -55,7 +56,10 @@ class Game:
         self.WIN_H = dm.WIN_H
 
         pygame.display.set_caption("Ninja Game")
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        if fullscreen:
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
         self.WIN_W, self.WIN_H = self.screen.get_size()
 
         self.display = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
@@ -85,23 +89,26 @@ class Game:
             "clouds": am.get_image_frames("clouds"),
             "enemy/idle": am.get_animation("entities/enemy/idle", img_dur=6),
             "enemy/run": am.get_animation("entities/enemy/run", img_dur=4),
-            "player/default/idle": am.get_animation("entities/player/default/idle", img_dur=6),
-            "player/default/run": am.get_animation("entities/player/default/run", img_dur=4),
-            "player/default/jump": am.get_animation("entities/player/default/jump"),
-            "player/default/slide": am.get_animation("entities/player/default/slide"),
-            "player/default/wall_slide": am.get_animation("entities/player/default/wall_slide"),
-            "player/red/idle": am.get_animation("entities/player/red/idle", img_dur=6),
-            "player/red/run": am.get_animation("entities/player/red/run", img_dur=4),
-            "player/red/jump": am.get_animation("entities/player/red/jump"),
-            "player/red/slide": am.get_animation("entities/player/red/slide"),
-            "player/red/wall_slide": am.get_animation("entities/player/red/wall_slide"),
             "particle/leaf": am.get_animation("particles/leaf", img_dur=20, loop=False),
             "particle/particle": am.get_animation("particles/particle", img_dur=6, loop=False),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
             "gun": am.get_image("gun.png"),
+            "rifle": am.get_image("rifle.png"),
+            "sword": am.get_image("sword.png"),
+            "slash": am.get_image("slash.png"),
+            "star": am.get_image("star.png"),
+            "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
+        # Register every store skin's animation set (all palette swaps of default)
+        for skin_path in CollectableManager.SKIN_PATHS:
+            base = f"entities/player/{skin_path}"
+            self.assets[f"player/{skin_path}/idle"] = am.get_animation(f"{base}/idle", img_dur=6)
+            self.assets[f"player/{skin_path}/run"] = am.get_animation(f"{base}/run", img_dur=4)
+            self.assets[f"player/{skin_path}/jump"] = am.get_animation(f"{base}/jump")
+            self.assets[f"player/{skin_path}/slide"] = am.get_animation(f"{base}/slide")
+            self.assets[f"player/{skin_path}/wall_slide"] = am.get_animation(f"{base}/wall_slide")
 
         # Audio service replaces direct sound dict (Issue 16)
         self.audio = AudioService.get()
@@ -140,6 +147,10 @@ class Game:
         # Legacy pause flag retained only for backward compatibility; the
         # new architecture uses PauseState overlays.
         self.paused = False
+
+        # Global simulation tick counter for multiplayer synchronization
+        # Incremented once per simulation frame in GameState.update()
+        self.tick = 0
         # Performance HUD (shared abstraction with modern renderer)
         from scripts.perf_hud import PerformanceHUD  # local import to avoid early cost if unused
 
@@ -179,13 +190,16 @@ class Game:
         from scripts.rng_service import RNGService
 
         rng = RNGService.get()
+        id_gen = EntityIDGenerator.get()
 
         if respawn:
             # Restore RNG state to ensure deterministic replay
             if hasattr(self, "level_rng_state") and self.level_rng_state is not None:
                 rng.set_state(self.level_rng_state)
+            # Restore entity ID generator state for deterministic enemy IDs (MP-02)
+            if hasattr(self, "level_id_gen_state"):
+                id_gen.set_state(self.level_id_gen_state)
 
-            enemy_id = 0
             for player in self.players:
                 # Enforce strict coordinate reset
                 player.pos = list(player.respawn_pos)
@@ -193,32 +207,37 @@ class Game:
                 player.velocity = [0, 0]  # Reset velocity too for safety
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
-                    enemy_id += 1
+                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
         else:
             # Capture RNG state at start of level
             self.level_rng_state = rng.get_state()
+            # Reset and capture entity ID generator state (MP-02)
+            id_gen.reset(0)
+            self.level_id_gen_state = id_gen.get_state()
 
-            enemy_id = 0
-            player_id = 0
             skin = self.playerSkin
+            # Lucky Charm gear: +1 life on fresh level start (not on respawn)
+            try:
+                gear_name = CollectableManager.GEAR[settings.selected_gear]
+            except (IndexError, AttributeError):
+                gear_name = "None"
+            if gear_name == "Lucky Charm" and self.cm.lucky_charm > 0:
+                lives += 1
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 0:
                     player = Player(
                         self,
                         spawner["pos"],
                         (8, 15),
-                        player_id,
+                        id_gen.next_id(),
                         lives=lives,
                         respawn_pos=list(spawner["pos"]),
                     )
                     player.skin = skin
                     player.air_time = 0
                     self.players.append(player)
-                    player_id += 1
                 else:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), enemy_id))
-                    enemy_id += 1
+                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
             self.saves = 1
 
             # Set the current player if there are any players
@@ -311,8 +330,9 @@ class Game:
                     self.enemies.remove(enemy)
 
             if not self.dead:
-                for player in self.players:
-                    if player.id == self.playerID:
+                for idx, player in enumerate(self.players):
+                    # Use list index (not entity ID) to match playerID selection
+                    if idx == self.playerID:
                         player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                         if self.replay:
                             try:

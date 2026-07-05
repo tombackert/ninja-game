@@ -144,16 +144,24 @@ class Renderer:
             if seq is not None and self.perf_hud.last_sample:
                 seq.append("perf")
 
-        # 7. Post effects (screenshake) then present
-        Effects.screenshake(game)
+        # 7. Compute screenshake offset
+        import random
+
+        screenshake_offset = (0, 0)
+        if getattr(game, "screenshake", 0):
+            screenshake_offset = (
+                random.random() * game.screenshake - game.screenshake / 2,
+                random.random() * game.screenshake - game.screenshake / 2,
+            )
         if seq is not None:
             seq.append("effects_post")
 
+        # 8. Scale + blit to target surface with screenshake
         if game.display_2.get_size() != target_surface.get_size():
             scaled = pygame.transform.scale(game.display_2, target_surface.get_size())
-            target_surface.blit(scaled, (0, 0))
+            target_surface.blit(scaled, screenshake_offset)
         else:
-            target_surface.blit(game.display_2, (0, 0))
+            target_surface.blit(game.display_2, screenshake_offset)
         if seq is not None:
             seq.append("blit")
         # Finalize full frame timing (sample available next frame)
@@ -172,6 +180,20 @@ class Renderer:
             UI.render_game_ui_element(game.display_2, f"Lives: {lives}", 5, 5)
         UI.render_game_ui_element(game.display_2, f"${game.cm.coins}", 5, 15)
         UI.render_game_ui_element(game.display_2, f"Ammo:  {game.cm.ammo}", 5, 25)
+        # Contextual HUD lines for new store items (only when relevant)
+        y = 35
+        try:
+            from scripts.collectableManager import CollectableManager as CM
+            from scripts.settings import settings as _settings
+
+            if 0 <= _settings.selected_weapon < len(CM.WEAPONS) and CM.WEAPONS[_settings.selected_weapon] == "Ninja Stars":
+                UI.render_game_ui_element(game.display_2, f"Stars: {game.cm.ninja_stars}", 5, y)
+                y += 10
+            if 0 <= _settings.selected_gear < len(CM.GEAR) and CM.GEAR[_settings.selected_gear] == "Shield":
+                UI.render_game_ui_element(game.display_2, f"Shield: {game.cm.shield}", 5, y)
+                y += 10
+        except Exception:  # pragma: no cover - HUD is best-effort
+            pass
         # Pass counts to performance HUD via perf_hud.render call later
         if game_counts is not None:
             try:

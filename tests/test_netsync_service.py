@@ -1,4 +1,8 @@
-from scripts.network.netsync_service import NetSyncService, LocalLoopbackTransport
+from scripts.network.netsync_service import (
+    NetSyncService,
+    LocalLoopbackTransport,
+    LOOPBACK_ADDRESS,
+)
 
 
 def test_netsync_loopback_roundtrip():
@@ -11,7 +15,8 @@ def test_netsync_loopback_roundtrip():
     # Receive
     msgs = service.process_messages()
     assert len(msgs) == 1
-    msg = msgs[0]
+    msg, addr = msgs[0]
+    assert addr == LOOPBACK_ADDRESS
     assert msg.type == "input"
     assert msg.payload["tick"] == 10
     assert msg.payload["inputs"] == ["jump", "right"]
@@ -26,8 +31,10 @@ def test_netsync_snapshot_serialization():
 
     msgs = service.process_messages()
     assert len(msgs) == 1
-    assert msgs[0].type == "snapshot"
-    assert msgs[0].payload["snapshot_data"] == dummy_snap
+    msg, addr = msgs[0]
+    assert addr == LOOPBACK_ADDRESS
+    assert msg.type == "snapshot"
+    assert msg.payload["snapshot_data"] == dummy_snap
 
 
 def test_ack_message():
@@ -38,6 +45,8 @@ def test_ack_message():
 
     msgs = service.process_messages()
     assert len(msgs) == 1
-    assert msgs[0].type == "ack"
-    assert msgs[0].payload["tick"] == 55
-    assert "received_ts" in msgs[0].payload
+    msg, addr = msgs[0]
+    assert addr == LOOPBACK_ADDRESS
+    assert msg.type == "ack"
+    assert msg.payload["tick"] == 55
+    assert "received_ts" in msg.payload

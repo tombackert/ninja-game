@@ -1,5 +1,5 @@
 # Backlog Issues
-- Multiplayer mode
+- Multiplayer mode — implemented on `multiplayer` branch (host/join lobby, full world sync, E2E-tested; see docs/multiplayer.md)
 - Add restart button to pause menu
 - Settings are not deterministically loaded from memory
 - UI rendering is not handeled at one spot
@@ -18,6 +18,7 @@
 - Add Game Over screen
 - Verify deterministic respawn
 - Investigate how the state manager system works (down on process management level) + Check for possible efficiency upgrade
+- Add Replay button to pause menu
 
 ## Architecture-Patch Backlog
 - Localization support

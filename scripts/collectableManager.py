@@ -20,25 +20,6 @@ class ItemDef:
 
 
 class CollectableManager:
-    PURCHASEABLES = {
-        "Default",
-        "Gun",
-        "Ammo",
-        "Red Ninja",
-    }
-
-    NOT_PURCHASEABLES = {
-        "Shield",
-        "Moon Boots",
-        "Ninja Stars",
-        "Red Ninja",
-        "Gold Ninja",
-        "Platinum Ninja",
-        "Diamond Ninja",
-        "Assassin",
-        "Berserker",
-    }
-
     SKINS = [
         "Default",
         "Red Ninja",
@@ -58,36 +39,51 @@ class CollectableManager:
         "berserker",
     ]
 
+    # Active weapons (single equip slot, index = settings.selected_weapon)
     WEAPONS = [
         "Default",
         "Gun",
-        "Shield",
         "Rifle",
-        "Moon Boots",
         "Ninja Stars",
-        "Grapple Hook",
         "Sword",
+        "Grapple Hook",
+    ]
+
+    # Passive gear (single equip slot, index = settings.selected_gear)
+    GEAR = [
+        "None",
+        "Shield",
+        "Moon Boots",
+        "Coin Magnet",
+        "Lucky Charm",
     ]
 
     # Centralized item registry (Issue 6 refinement)
     _ITEM_DEFS: Dict[str, ItemDef] = {
-        # Weapons / utilities
+        # Weapons
         "Gun": ItemDef("Gun", "gun", 500, "weapon", True, 1),
         "Ammo": ItemDef("Ammo", "ammo", 50, "weapon", True, 25),
-        "Shield": ItemDef("Shield", "shield", 100, "weapon", False, 1),
-        "Rifle": ItemDef("Rifle", "gun", 2000, "weapon", False, 1),  # shares attr?
-        "Moon Boots": ItemDef("Moon Boots", "moon_boots", 2500, "weapon", False, 1),
-        "Ninja Stars": ItemDef("Ninja Stars", "ninja_stars", 500, "weapon", False, 3),
-        "Sword": ItemDef("Sword", "sword", 1000, "weapon", False, 1),
-        "Grapple Hook": ItemDef("Grapple Hook", "grapple_hook", 5000, "weapon", False, 1),
+        "Rifle": ItemDef("Rifle", "rifle", 2000, "weapon", True, 1),
+        "Ninja Stars": ItemDef("Ninja Stars", "ninja_stars", 300, "weapon", True, 20),
+        "Sword": ItemDef("Sword", "sword", 1000, "weapon", True, 1),
+        "Grapple Hook": ItemDef("Grapple Hook", "grapple_hook", 5000, "weapon", True, 1),
+        # Gear (passive)
+        "Shield": ItemDef("Shield", "shield", 100, "gear", True, 1),
+        "Moon Boots": ItemDef("Moon Boots", "moon_boots", 2500, "gear", True, 1),
+        "Coin Magnet": ItemDef("Coin Magnet", "coin_magnet", 1500, "gear", True, 1),
+        "Lucky Charm": ItemDef("Lucky Charm", "lucky_charm", 3000, "gear", True, 1),
         # Skins
         "Red Ninja": ItemDef("Red Ninja", "red_ninja", 1000, "skin", True, 1),
-        "Gold Ninja": ItemDef("Gold Ninja", "gold_ninja", 2000, "skin", False, 1),
-        "Platinum Ninja": ItemDef("Platinum Ninja", "platinum_ninja", 3000, "skin", False, 1),
-        "Diamond Ninja": ItemDef("Diamond Ninja", "diamond_ninja", 5000, "skin", False, 1),
-        "Assassin": ItemDef("Assassin", "assassin", 7000, "skin", False, 1),
-        "Berserker": ItemDef("Berserker", "berserker", 10000, "skin", False, 1),
+        "Gold Ninja": ItemDef("Gold Ninja", "gold_ninja", 2000, "skin", True, 1),
+        "Platinum Ninja": ItemDef("Platinum Ninja", "platinum_ninja", 3000, "skin", True, 1),
+        "Diamond Ninja": ItemDef("Diamond Ninja", "diamond_ninja", 5000, "skin", True, 1),
+        "Assassin": ItemDef("Assassin", "assassin", 7000, "skin", True, 1),
+        "Berserker": ItemDef("Berserker", "berserker", 10000, "skin", True, 1),
     }
+
+    # Legacy sets kept for backward compatibility (derived from registry)
+    PURCHASEABLES = {name for name, idef in _ITEM_DEFS.items() if idef.purchaseable}
+    NOT_PURCHASEABLES = {name for name, idef in _ITEM_DEFS.items() if not idef.purchaseable}
 
     # Derived price mapping kept for backward compatibility (tests & menu store)
     ITEMS = {name: idef.price for name, idef in _ITEM_DEFS.items()}
@@ -99,8 +95,11 @@ class CollectableManager:
         self.coins = 0
         self.gun = 0
         self.ammo = 0
+        self.rifle = 0
         self.shield = 0
         self.moon_boots = 0
+        self.coin_magnet = 0
+        self.lucky_charm = 0
         self.ninja_stars = 0
         self.sword = 0
         self.grapple_hook = 0
@@ -128,6 +127,7 @@ class CollectableManager:
             self.ammo_pickups.append(Collectables(self.game, tile["pos"], self.game.assets["ammo"]))
 
     def update(self, player_rect):
+        self._apply_coin_magnet(player_rect)
         for coin in self.coin_list[:]:
             if coin.update(player_rect):
                 self.coin_list.remove(coin)
@@ -139,6 +139,29 @@ class CollectableManager:
                 self.ammo_pickups.remove(ammo)
                 self.ammo += 5
                 self.game.audio.play("collect")
+
+    def _apply_coin_magnet(self, player_rect):
+        """Pull nearby coins toward the player when Coin Magnet gear is equipped."""
+        from scripts.constants import MAGNET_PULL_SPEED, MAGNET_RADIUS
+        from scripts.settings import settings  # lazy import (no circular at module load)
+
+        try:
+            gear_name = self.GEAR[settings.selected_gear]
+        except (IndexError, AttributeError):
+            return
+        if gear_name != "Coin Magnet" or self.coin_magnet <= 0:
+            return
+        px, py = player_rect.centerx, player_rect.centery
+        for coin in self.coin_list:
+            cx = coin.pos[0] + coin.size[0] / 2
+            cy = coin.pos[1] + coin.size[1] / 2
+            dx, dy = px - cx, py - cy
+            dist = (dx * dx + dy * dy) ** 0.5
+            if 0 < dist <= MAGNET_RADIUS:
+                step = min(MAGNET_PULL_SPEED, dist)
+                coin.pos[0] += dx / dist * step
+                coin.pos[1] += dy / dist * step
+                coin.rect.topleft = (coin.pos[0], coin.pos[1])
 
     def render(self, surf, offset=(0, 0)):
         for coin in self.coin_list:
@@ -153,8 +176,11 @@ class CollectableManager:
                 self.coins = data.get("coins", data.get("coin_count", 0))
                 self.gun = data.get("gun", 0)
                 self.ammo = data.get("ammo", 0)
+                self.rifle = data.get("rifle", 0)
                 self.shield = data.get("shield", 0)
                 self.moon_boots = data.get("moon_boots", 0)
+                self.coin_magnet = data.get("coin_magnet", 0)
+                self.lucky_charm = data.get("lucky_charm", 0)
                 self.ninja_stars = data.get("ninja_stars", 0)
                 self.sword = data.get("sword", 0)
                 self.grapple_hook = data.get("grapple_hook", 0)
@@ -174,8 +200,11 @@ class CollectableManager:
             "coins": self.coins,
             "gun": self.gun,
             "ammo": self.ammo,
+            "rifle": self.rifle,
             "shield": self.shield,
             "moon_boots": self.moon_boots,
+            "coin_magnet": self.coin_magnet,
+            "lucky_charm": self.lucky_charm,
             "ninja_stars": self.ninja_stars,
             "sword": self.sword,
             "grapple_hook": self.grapple_hook,
@@ -223,7 +252,7 @@ class CollectableManager:
         return self.ITEMS[item]
 
     def get_amount(self, item: str) -> int:
-        if item == "Default":
+        if item in ("Default", "None"):
             return 1
         idef = self.get_item_def(item)
         if not idef:
@@ -245,10 +274,17 @@ class CollectableManager:
         for w in self.WEAPONS:
             if w == "Default":
                 continue
-            # Some weapons share attributes (e.g., Rifle -> gun).
-            # If their attr > 0 consider owned.
             if w in self._ITEM_DEFS:
                 idef = self._ITEM_DEFS[w]
                 if getattr(self, idef.attr, 0) > 0:
                     owned.append(w)
+        return owned
+
+    def list_owned_gear(self) -> List[str]:
+        owned = ["None"]
+        for g in self.GEAR:
+            if g == "None":
+                continue
+            if g in self._ITEM_DEFS and self.get_amount(g) > 0:
+                owned.append(g)
         return owned

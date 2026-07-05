@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List
+from typing import Any, Dict
 import json
 
 
@@ -17,19 +17,55 @@ class Message:
         return Message(type=data["type"], payload=data["payload"])
 
 
+# Connection protocol messages
 @dataclass
-class InputMessage:
-    tick: int
-    inputs: List[str]
+class ConnectionRequest:
+    """Client requests to join the game."""
 
-
-@dataclass
-class SnapshotMessage:
-    tick: int
-    snapshot_data: Dict[str, Any]  # Serialized SimulationSnapshot
+    player_name: str = "Player"
 
 
 @dataclass
-class AckMessage:
-    tick: int
-    received_ts: float
+class ConnectionAccept:
+    """Server accepts the connection."""
+
+    player_id: int
+    server_tick: int
+
+
+@dataclass
+class ConnectionReject:
+    """Server rejects the connection."""
+
+    reason: str
+
+
+@dataclass
+class PlayerJoined:
+    """Broadcast when a new player joins."""
+
+    player_id: int
+    player_name: str
+
+
+@dataclass
+class PlayerLeft:
+    """Broadcast when a player leaves."""
+
+    player_id: int
+    reason: str = "disconnected"
+
+
+@dataclass
+class Heartbeat:
+    """Keep-alive message."""
+
+    client_time: float
+
+
+@dataclass
+class HeartbeatAck:
+    """Server response to heartbeat."""
+
+    client_time: float
+    server_time: float

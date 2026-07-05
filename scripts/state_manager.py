@@ -163,6 +163,7 @@ class MenuState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self.options_keys = [
             "menu.play",
+            "menu.multiplayer",
             "menu.levels",
             "menu.store",
             "menu.accessories",
@@ -172,7 +173,7 @@ class MenuState(State):
         # Translate initially
         self.options = [self.loc.translate(k) for k in self.options_keys]
 
-        self.list_widget = ScrollableListWidget(self.options, visible_rows=6, spacing=50, font_size=30)
+        self.list_widget = ScrollableListWidget(self.options, visible_rows=7, spacing=50, font_size=30)
         self.selected = 0  # legacy compatibility (to be removed)
         self.enter = False
         self.quit_requested = False
@@ -202,6 +203,8 @@ class MenuState(State):
                 self.start_game = True
             elif key == "menu.quit":
                 self.quit_requested = True
+            elif key == "menu.multiplayer":
+                self.next_state = "Multiplayer"
             elif key == "menu.levels":
                 self.next_state = "Levels"
             elif key == "menu.store":
@@ -235,7 +238,7 @@ class GameState(State):
         from game import Game
 
         # Underlying legacy Game object (entities, systems, assets)
-        self._game = Game()
+        self._game = Game(fullscreen=False)
         # Allow renderer to query state flags (performance HUD toggle) without tight coupling
         try:
             setattr(self._game, "state_ref", self)
@@ -336,6 +339,10 @@ class GameState(State):
         # If a PauseState render is freezing this frame, skip simulation changes.
         if getattr(g, "_paused_freeze", False):
             return
+
+        # Increment global simulation tick (for multiplayer sync, replay, etc.)
+        g.tick += 1
+
         replay_mgr = getattr(g, "replay", None)
 
         # --- Core time & housekeeping ---
@@ -459,8 +466,9 @@ class GameState(State):
 
         # Players
         if not g.dead:
-            for player in g.players:
-                if player.id == g.playerID:
+            for idx, player in enumerate(g.players):
+                # Use list index (not entity ID) to match playerID selection
+                if idx == g.playerID:
                     # Movement driven by legacy input flags
                     player.update(g.tilemap, (g.movement[1] - g.movement[0], 0))
                     replay_mgr = getattr(g, "replay", None)
@@ -563,6 +571,11 @@ class PauseState(State):
 
     def update(self, dt: float) -> None:
         self._ticks += 1
+        # Keep network connections alive while paused (multiplayer): the
+        # underlying state is frozen, but heartbeats/snapshots must continue
+        # or the server drops the client after its timeout.
+        if self._underlying and hasattr(self._underlying, "network_idle_update"):
+            self._underlying.network_idle_update()
 
     def render(self, surface: pygame.Surface) -> None:
         # Render underlying (frozen) game frame if available before overlay.
@@ -843,27 +856,32 @@ class AccessoriesState(State):
         self.settings = settings
         self.cm = CollectableManager(None)
         self.weapons = list(self.cm.WEAPONS)
+        self.gear = list(self.cm.GEAR)
         self.skins = list(self.cm.SKINS)
         self.weapon_widget = ScrollableListWidget(self.weapons, visible_rows=4, spacing=50, font_size=30)
+        self.gear_widget = ScrollableListWidget(self.gear, visible_rows=4, spacing=50, font_size=30)
         self.skin_widget = ScrollableListWidget(self.skins, visible_rows=4, spacing=50, font_size=30)
-        self.active_panel = 0  # 0 weapons, 1 skins
+        self.active_panel = 0  # 0 weapons, 1 gear, 2 skins
         self.request_back = False
         self.enter = False
         self.message: str | None = None
         self.message_timer = 0.0
 
+    def _active_widget(self):
+        return (self.weapon_widget, self.gear_widget, self.skin_widget)[self.active_panel]
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
             if a == "menu_up":
-                (self.weapon_widget if self.active_panel == 0 else self.skin_widget).move_up()
+                self._active_widget().move_up()
             elif a == "menu_down":
-                (self.weapon_widget if self.active_panel == 0 else self.skin_widget).move_down()
+                self._active_widget().move_down()
             elif a == "menu_select":
                 self.enter = True
             elif a in ("menu_back", "menu_quit"):
                 self.request_back = True
             elif a == "accessories_switch":
-                self.active_panel = (self.active_panel + 1) % 2
+                self.active_panel = (self.active_panel + 1) % 3
 
     def update(self, dt: float) -> None:
         if self.enter:
@@ -872,6 +890,14 @@ class AccessoriesState(State):
                 name = self.weapons[idx]
                 if self.cm.get_amount(name) > 0:
                     self.settings.selected_weapon = idx
+                    self.message = self.loc.translate("accessories.equipped", name)
+                else:
+                    self.message = self.loc.translate("accessories.locked", name)
+            elif self.active_panel == 1:  # gear
+                idx = self.gear_widget.selected_index
+                name = self.gear[idx]
+                if self.cm.get_amount(name) > 0:
+                    self.settings.selected_gear = idx
                     self.message = self.loc.translate("accessories.equipped", name)
                 else:
                     self.message = self.loc.translate("accessories.locked", name)
@@ -892,40 +918,34 @@ class AccessoriesState(State):
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
+        w = surface.get_width()
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, self.loc.translate("accessories.title"), surface.get_width() // 2, 120)
-        UI.render_menu_subtitle(surface, self.loc.translate("accessories.weapons"), surface.get_width() // 2 - 350, 260)
-        UI.render_menu_subtitle(surface, self.loc.translate("accessories.skins"), surface.get_width() // 2 + 350, 260)
-        # Render weapon list
-        self.weapon_widget.render(surface, surface.get_width() // 2 - 350, 330)
-        self.skin_widget.render(surface, surface.get_width() // 2 + 350, 330)
-        # Padlocks for each visible item
-        for i in range(self.weapon_widget.visible_rows):
-            idx = self.weapon_widget._scroll_offset + i
-            if idx >= len(self.weapons):
-                break
-            name = self.weapons[idx]
-            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(name) else "data/images/padlock-c.png"
-            UI.render_ui_img(
-                surface,
-                icon,
-                surface.get_width() // 2 - 150,
-                330 + (i * self.weapon_widget.spacing),
-                0.15,
-            )
-        for i in range(self.skin_widget.visible_rows):
-            idx = self.skin_widget._scroll_offset + i
-            if idx >= len(self.skins):
-                break
-            name = self.skins[idx]
-            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(name) else "data/images/padlock-c.png"
-            UI.render_ui_img(
-                surface,
-                icon,
-                surface.get_width() // 2 + 600,
-                330 + (i * self.skin_widget.spacing),
-                0.15,
-            )
+        UI.render_menu_title(surface, self.loc.translate("accessories.title"), w // 2, 120)
+        panel_x = [w // 2 - 500, w // 2, w // 2 + 500]
+        UI.render_menu_subtitle(surface, self.loc.translate("accessories.weapons"), panel_x[0], 260)
+        UI.render_menu_subtitle(surface, self.loc.translate("accessories.gear"), panel_x[1], 260)
+        UI.render_menu_subtitle(surface, self.loc.translate("accessories.skins"), panel_x[2], 260)
+        panels = [
+            (self.weapon_widget, self.weapons),
+            (self.gear_widget, self.gear),
+            (self.skin_widget, self.skins),
+        ]
+        for px, (widget, names) in zip(panel_x, panels):
+            widget.render(surface, px, 330)
+            # Padlock = ownership indicator (open when owned/equippable)
+            for i in range(widget.visible_rows):
+                idx = widget._scroll_offset + i
+                if idx >= len(names):
+                    break
+                owned = self.cm.get_amount(names[idx]) > 0
+                icon = "data/images/padlock-o.png" if owned else "data/images/padlock-c.png"
+                UI.render_ui_img(
+                    surface,
+                    icon,
+                    px + 200,
+                    330 + (i * widget.spacing),
+                    0.15,
+                )
         UI.render_menu_ui_element(surface, self.loc.translate("accessories.coins", self.cm.coins), 20, 20)
         UI.render_menu_ui_element(
             surface,
@@ -935,9 +955,15 @@ class AccessoriesState(State):
         )
         UI.render_menu_ui_element(
             surface,
-            self.loc.translate("accessories.equipped_skin", self.cm.SKINS[self.settings.selected_skin]),
+            self.loc.translate("accessories.equipped_gear", self.cm.GEAR[self.settings.selected_gear]),
             20,
             60,
+        )
+        UI.render_menu_ui_element(
+            surface,
+            self.loc.translate("accessories.equipped_skin", self.cm.SKINS[self.settings.selected_skin]),
+            20,
+            80,
         )
         UI.render_menu_ui_element(
             surface,
@@ -961,10 +987,7 @@ class AccessoriesState(State):
         # Highlight active panel title
         highlight_rect = pygame.Surface((300, 40), pygame.SRCALPHA)
         highlight_rect.fill((255, 255, 255, 40))
-        if self.active_panel == 0:
-            surface.blit(highlight_rect, (surface.get_width() // 2 - 500, 250))
-        else:
-            surface.blit(highlight_rect, (surface.get_width() // 2 + 200, 250))
+        surface.blit(highlight_rect, (panel_x[self.active_panel] - 150, 250))
 
 
 class OptionsState(State):

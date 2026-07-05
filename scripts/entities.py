@@ -4,6 +4,7 @@ import pygame
 
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
+    AIR_JUMP_VELOCITY,
     AIR_TIME_FATAL,
     DASH_DECEL_TRIGGER_FRAME,
     DASH_DURATION_FRAMES,
@@ -12,10 +13,14 @@ from scripts.constants import (
     DASH_TRAIL_PARTICLE_SPEED,
     ENEMY_SHOOT_BASE,
     ENEMY_SHOOT_SCALE_LOG,
+    GRAPPLE_ARRIVE_DIST,
+    GRAPPLE_MAX_FRAMES,
+    GRAPPLE_PULL_SPEED,
     GRAVITY_ACCEL,
     HORIZONTAL_FRICTION,
     JUMP_VELOCITY,
     MAX_FALL_SPEED,
+    SHIELD_REARM_FRAMES,
     WALL_JUMP_HORIZONTAL_VEL,
     WALL_JUMP_VERTICAL_VEL,
     WALL_SLIDE_MAX_SPEED,
@@ -208,7 +213,13 @@ class Enemy(PhysicsEntity):
                     self.services.play("hit")
                 else:
                     self.game.audio.play("hit")
-                self.game.cm.coins += 1
+                # Multiplayer servers credit the killing player; single player
+                # falls back to the global coin counter.
+                award = getattr(self.game, "award_coin", None)
+                if award:
+                    award(getattr(self.game.player, "id", None))
+                else:
+                    self.game.cm.coins += 1
                 spawn_hit_sparks(self.game, self.rect().center)
                 self.game.sparks.append(Spark(self.rect().center, 0, 5 + rng.random()))
                 self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + rng.random()))
@@ -261,6 +272,13 @@ class Player(PhysicsEntity):
         self._lives = lives
         self.respawn_pos = respawn_pos
         self.shoot_cooldown = 10
+        # Store item state (new game elements)
+        self.air_jumps = 0  # extra air jumps left (moon boots)
+        self.slash_timer = 0  # frames the sword slash VFX stays visible
+        self.grapple_point = None  # active grapple anchor [x, y] or None
+        self.grapple_frames = 0  # frames spent in current pull (safety timeout)
+        self.shield_ready = False  # armed shield charge absorbs next hit
+        self.shield_rearm = 0  # frames until next charge arms
 
     # --- New canonical attribute ---
     @property
@@ -282,26 +300,79 @@ class Player(PhysicsEntity):
 
     def shoot(self):
         from scripts.collectableManager import CollectableManager as cm
-        from scripts.weapons import get_weapon  # local import to avoid circulars
+        from scripts.weapons import WEAPON_KEYS, get_weapon  # local import to avoid circulars
 
         # Map selected index to weapon name list
         try:
             name = cm.WEAPONS[settings.selected_weapon]
         except Exception:  # pragma: no cover - defensive
             name = "Default"
-        # Registry uses lowercase canonical names
-        key = name.lower()
-        # Normalize some known names
-        if key == "default":
-            key = "none"
-        weapon = get_weapon(key if key in ("gun", "none") else "gun")
+        weapon = get_weapon(WEAPON_KEYS.get(name, "none"))
         return weapon.fire(self)
 
+    # --- Gear helpers (passive store items) ---
+    def gear_name(self) -> str:
+        from scripts.collectableManager import CollectableManager as cm
+
+        try:
+            return cm.GEAR[settings.selected_gear]
+        except Exception:  # pragma: no cover - defensive
+            return "None"
+
+    def absorb_hit(self) -> bool:
+        """Consume an armed shield charge instead of a life. Returns True if absorbed."""
+        game_cm = getattr(self.game, "cm", None)
+        if not self.shield_ready or game_cm is None or game_cm.shield <= 0:
+            return False
+        game_cm.shield -= 1
+        self.shield_ready = False
+        self.shield_rearm = SHIELD_REARM_FRAMES
+        spawn_hit_sparks(self.game, self.rect().center)
+        return True
+
     def update(self, tilemap, movement=(0, 0)):
+        # Grapple pull: steer velocity toward the anchor; gravity is
+        # overwritten each frame while the pull is active.
+        if self.grapple_point is not None:
+            cx, cy = self.rect().center
+            dx = self.grapple_point[0] - cx
+            dy = self.grapple_point[1] - cy
+            dist = math.hypot(dx, dy)
+            if dist > 0:
+                self.velocity[0] = dx / dist * GRAPPLE_PULL_SPEED
+                self.velocity[1] = dy / dist * GRAPPLE_PULL_SPEED
+            self.grapple_frames += 1
+
         super().update(tilemap, movement=movement)
+
+        # Grapple release: arrival, collision or safety timeout
+        if self.grapple_point is not None:
+            cx, cy = self.rect().center
+            dx = self.grapple_point[0] - cx
+            dy = self.grapple_point[1] - cy
+            if (
+                dx * dx + dy * dy <= GRAPPLE_ARRIVE_DIST**2
+                or any(self.collisions.values())
+                or self.grapple_frames > GRAPPLE_MAX_FRAMES
+            ):
+                self.grapple_point = None
+
         rng = RNGService.get()
         if self.shoot_cooldown > 0:
             self.shoot_cooldown -= 1
+        if self.slash_timer > 0:
+            self.slash_timer -= 1
+
+        # Shield gear: arm a charge after the re-arm delay
+        game_cm = getattr(self.game, "cm", None)
+        if self.gear_name() == "Shield" and game_cm is not None and game_cm.shield > 0:
+            if not self.shield_ready:
+                if self.shield_rearm > 0:
+                    self.shield_rearm -= 1
+                if self.shield_rearm == 0:
+                    self.shield_ready = True
+        else:
+            self.shield_ready = False
 
         self.air_time += 1
 
@@ -318,6 +389,7 @@ class Player(PhysicsEntity):
         if self.collisions["down"]:
             self.air_time = 0
             self.jumps = 1
+            self.air_jumps = 1  # moon boots double jump recharges on landing
 
         self.wall_slide = False
         if (self.collisions["right"] or self.collisions["left"]) and self.air_time > 4:
@@ -378,35 +450,104 @@ class Player(PhysicsEntity):
         else:
             self.velocity[0] = min(self.velocity[0] + HORIZONTAL_FRICTION, 0)
 
+    # Held-weapon overlay: weapon display name -> (asset key, ownership attr)
+    _HELD_WEAPON_ASSETS = {
+        "Gun": ("gun", "gun"),
+        "Rifle": ("rifle", "rifle"),
+        "Sword": ("sword", "sword"),
+        "Grapple Hook": ("hook", "grapple_hook"),
+    }
+
     def render(self, surf, offset=(0, 0)):
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
-        # Render gun overlay only if equipped weapon is gun
+
+        # Grapple rope behind the player sprite additions
+        if self.grapple_point is not None:
+            pygame.draw.line(
+                surf,
+                (200, 205, 215),
+                (self.rect().centerx - offset[0], self.rect().centery - offset[1]),
+                (self.grapple_point[0] - offset[0], self.grapple_point[1] - offset[1]),
+                1,
+            )
+
+        self._render_held_weapon(surf, offset)
+        self._render_slash_vfx(surf, offset)
+        self._render_shield_bubble(surf, offset)
+
+    def _render_held_weapon(self, surf, offset):
         from scripts.collectableManager import CollectableManager as cm
 
         try:
-            gun_index = cm.WEAPONS.index("Gun")
-        except ValueError:  # pragma: no cover
-            gun_index = 1
-        if self.game.cm.gun and settings.selected_weapon == gun_index:
-            if self.flip:
-                surf.blit(
-                    pygame.transform.flip(self.game.assets["gun"], True, False),
-                    (
-                        self.rect().centerx - 4 - self.game.assets["gun"].get_width() - offset[0],
-                        self.rect().centery - offset[1],
-                    ),
-                )
-            else:
-                surf.blit(
-                    self.game.assets["gun"],
-                    (
-                        self.rect().centerx + 4 - offset[0],
-                        self.rect().centery - offset[1],
-                    ),
-                )
+            name = cm.WEAPONS[settings.selected_weapon]
+        except (IndexError, TypeError):  # pragma: no cover - defensive
+            return
+        entry = self._HELD_WEAPON_ASSETS.get(name)
+        if entry is None:
+            return
+        asset_key, owned_attr = entry
+        if getattr(self.game.cm, owned_attr, 0) <= 0:
+            return
+        img = self.game.assets.get(asset_key) if hasattr(self.game.assets, "get") else None
+        if img is None:
+            return
+        if self.flip:
+            surf.blit(
+                pygame.transform.flip(img, True, False),
+                (
+                    self.rect().centerx - 4 - img.get_width() - offset[0],
+                    self.rect().centery - offset[1],
+                ),
+            )
+        else:
+            surf.blit(
+                img,
+                (
+                    self.rect().centerx + 4 - offset[0],
+                    self.rect().centery - offset[1],
+                ),
+            )
+
+    def _render_slash_vfx(self, surf, offset):
+        if self.slash_timer <= 0:
+            return
+        img = self.game.assets.get("slash") if hasattr(self.game.assets, "get") else None
+        if img is None:
+            return
+        prect = self.rect()
+        if self.flip:
+            surf.blit(
+                pygame.transform.flip(img, True, False),
+                (prect.left - img.get_width() - 2 - offset[0], prect.centery - img.get_height() // 2 - offset[1]),
+            )
+        else:
+            surf.blit(
+                img,
+                (prect.right + 2 - offset[0], prect.centery - img.get_height() // 2 - offset[1]),
+            )
+
+    def _render_shield_bubble(self, surf, offset):
+        if not self.shield_ready:
+            return
+        radius = 13
+        bubble = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(bubble, (120, 200, 255, 60), (radius, radius), radius)
+        pygame.draw.circle(bubble, (170, 220, 250, 150), (radius, radius), radius, 1)
+        surf.blit(
+            bubble,
+            (self.rect().centerx - radius - offset[0], self.rect().centery - radius - offset[1]),
+        )
 
     def jump(self):
+        # Jump input releases an active grapple with a small upward boost
+        # (skill move: swing release).
+        if self.grapple_point is not None:
+            self.grapple_point = None
+            self.velocity[1] = AIR_JUMP_VELOCITY
+            self.air_time = 5
+            return True
+
         if self.wall_slide:
             if self.flip and self.last_movement[0] < 0:
                 self.velocity[0] = WALL_JUMP_HORIZONTAL_VEL
@@ -425,6 +566,31 @@ class Player(PhysicsEntity):
             self.velocity[1] = JUMP_VELOCITY
             self.jumps -= 1
             self.air_time = 5
+            return True
+
+        # Moon boots gear: one extra (weaker) air jump
+        elif (
+            self.air_jumps > 0
+            and self.gear_name() == "Moon Boots"
+            and getattr(self.game, "cm", None) is not None
+            and self.game.cm.moon_boots > 0
+        ):
+            self.velocity[1] = AIR_JUMP_VELOCITY
+            self.air_jumps -= 1
+            self.air_time = 5
+            rng = RNGService.get()
+            for _ in range(10):
+                angle = rng.random() * math.pi + math.pi  # downward burst
+                speed = rng.random() * 0.5 + 0.5
+                self.game.particles.append(
+                    Particle(
+                        self.game,
+                        "particle",
+                        self.rect().midbottom,
+                        velocity=[math.cos(angle) * speed, -math.sin(angle) * speed],
+                        frame=rng.randint(0, 7),
+                    )
+                )
             return True
 
     def dash(self):

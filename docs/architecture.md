@@ -68,19 +68,49 @@ The game uses a **State Pattern** via `StateManager`. The active state controls 
 ## 4. Determinism & Replay System
 A critical pillar of the architecture is **Determinism**, enabling Ghosts, Replays, and future Rollback Netcode.
 
-### 4.1 RNG Service
+### 4.1 Global Tick Counter
+`game.tick`: A global simulation frame counter critical for multiplayer synchronization.
+- **Initialization:** Starts at 0 when Game is created.
+- **Increment:** Incremented exactly once per `GameState.update()` call.
+- **Pause Behavior:** Does NOT increment when game is paused (`_paused_freeze` flag).
+- **Snapshots:** Captured and restored via `SnapshotService`.
+- **Usage:** Network messages, replay timestamps, reconciliation all reference this tick.
+
+### 4.2 RNG Service
 `scripts/rng_service.py`: A singleton wrapper around `random.Random`. All gameplay logic (enemy decisions, particle spreads, procedural generation) uses this service. The RNG state is serialized in snapshots to ensure perfectly reproducible runs.
 
-### 4.2 Snapshots
+### 4.3 Snapshots
 `scripts/snapshot.py`: Captures the complete state of the simulation (Tick, RNG, Players, Enemies, Projectiles, Score).
 - **Serialization:** `dataclass` based structure serialized to JSON compatible dicts.
 - **Optimization:** Supports `optimized=True` (LITE mode) which strips enemies/projectiles for lightweight Ghost recordings (99% size reduction).
 
-### 4.3 Replay & Ghost System
+### 4.4 Replay & Ghost System
 `scripts/replay.py`:
 - **Recording:** Captures a stream of **Inputs** (per frame) and **Sparse Snapshots** (every 10 frames / 6Hz).
 - **Playback (Ghost):** Instead of playing back a video of positions, the system **re-simulates** a `GhostPlayer` entity by feeding it the recorded inputs.
 - **Drift Correction:** To prevent divergence (butterfly effect), the Ghost's state is hard-synced to the recorded snapshots at 6Hz intervals. This ensures smooth movement (via local physics) with absolute correctness (via snapshots).
+
+### 4.5 Entity ID System
+`scripts/entity_id.py`: Centralized, deterministic unique ID generation for all game entities.
+
+**EntityIDGenerator (Singleton):**
+- **Global Uniqueness:** All entities (players, enemies, projectiles) receive globally unique IDs from the same generator.
+- **Determinism:** Generator can be reset at level load to ensure identical ID sequences across clients.
+- **Serialization:** State (`get_state()`, `set_state()`) enables snapshot/restore for network sync.
+
+**Entity ID Fields:**
+- `EntitySnapshot.id`: Unique entity identifier.
+- `EntitySnapshot.owner_id`: Player ID who controls this entity (for multiplayer authority).
+- `ProjectileSnapshot.id`: Unique projectile identifier.
+- `ProjectileSnapshot.owner_id`: Player ID who fired the projectile.
+
+**Delta Compression (ID-Based):**
+The delta system uses ID-based matching instead of index-based:
+- `*_added`: Full data for new entities.
+- `*_removed`: IDs of deleted entities.
+- `*_diff`: Changed fields keyed by entity ID.
+
+This allows proper delta compression even when entities are reordered or dynamically added/removed in multiplayer.
 
 ---
 ## 5. AI & Behavior
@@ -123,7 +153,42 @@ The codebase contains a complete foundation for Multiplayer and Reinforcement Le
 
 ### 8.2 Networking Primitives
 - **Interpolation:** `scripts/network/interpolation.py` implements a `SnapshotBuffer` that smoothly interpolates entity positions/velocities between server snapshots for remote rendering.
-- **Delta Compression:** `scripts/network/delta.py` computes diffs between snapshots (`compute_delta`, `apply_delta`) to minimize bandwidth.
+- **Delta Compression:** `scripts/network/delta.py` computes diffs between snapshots (`compute_delta`, `apply_delta`) using ID-based entity matching to minimize bandwidth.
+
+### 8.3 UDP Transport Layer
+`scripts/network/udp_transport.py`: Real network communication for multiplayer.
+
+**UDPTransport Class:**
+- Non-blocking UDP socket operations
+- Packet sequencing with monotonically increasing sequence numbers
+- Ack tracking with 32-bit bitfield for reliability detection
+- Graceful handling of malformed packets
+- Context manager support for automatic cleanup
+
+**Packet Structure:**
+```python
+Packet:
+  header:
+    sequence: int      # Packet sequence number
+    ack: int           # Last received sequence from peer
+    ack_bitfield: int  # Bitfield of 32 recent acks
+  message:
+    type: str          # Message type (input, snapshot, ack)
+    payload: dict      # Message-specific data
+```
+
+**Convenience Classes:**
+- `UDPClient`: Client-side wrapper with default server address
+- `UDPServer`: Server-side wrapper with client tracking and broadcast
+
+**NetSyncService:**
+`scripts/network/netsync_service.py`: High-level API for game networking.
+- `send_input(tick, inputs)` - Send player inputs
+- `send_snapshot(tick, snapshot_data)` - Send game state
+- `send_ack(tick)` - Acknowledge received data
+- `process_messages() -> List[Tuple[Message, Address]]` - Receive pending messages with sender addresses (uniform return type for all transports)
+- Works with both `LocalLoopbackTransport` (testing) and `UDPTransport` (real network)
+- `LOOPBACK_ADDRESS = ("127.0.0.1", 0)` sentinel used as default address for loopback transport
 
 ---
 ## 9. Rendering Pipeline

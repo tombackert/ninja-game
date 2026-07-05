@@ -7,6 +7,7 @@ pause request which results in a PauseState being pushed.
 
 from __future__ import annotations
 
+import argparse
 import os
 
 import pygame
@@ -25,6 +26,13 @@ from scripts.state_manager import (
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Ninja Game")
+    parser.add_argument("--multiplayer", action="store_true", help="Connect to multiplayer server")
+    parser.add_argument("--host", default="127.0.0.1", help="Server host for multiplayer")
+    parser.add_argument("--port", type=int, default=7777, help="Server port for multiplayer")
+    parser.add_argument("--name", default="Player", help="Player name for multiplayer")
+    args = parser.parse_args()
+
     os.environ.setdefault("NINJA_GAME_TESTING", "0")
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))  # windowed for development
@@ -32,8 +40,35 @@ def main():
 
     sm = StateManager()
     router = InputRouter()
-    # # # # Start in menu
-    sm.set(MenuState())
+
+    if args.multiplayer:
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        sm.set(MultiplayerGameState(args.host, args.port, args.name))
+    else:
+        sm.set(MenuState())
+
+    def _start_hosting() -> None:
+        """Spawn the dedicated server and enter the game as host."""
+        from scripts.multiplayer_menu import (
+            DEFAULT_PORT,
+            default_player_name,
+            get_lan_ip,
+            start_host_server,
+        )
+        from scripts.multiplayer_state import MultiplayerGameState
+        from scripts.settings import settings
+
+        proc = start_host_server(level=settings.selected_level, port=DEFAULT_PORT)
+        sm.set(
+            MultiplayerGameState(
+                "127.0.0.1",
+                DEFAULT_PORT,
+                default_player_name(),
+                host_process=proc,
+                host_ip=get_lan_ip(),
+            )
+        )
 
     running = True
     while running:
@@ -69,6 +104,39 @@ def main():
                     sm.set(AccessoriesState())
                 elif nxt == "Options":
                     sm.set(OptionsState())
+                elif nxt == "Multiplayer":
+                    from scripts.multiplayer_menu import MultiplayerMenuState
+
+                    sm.set(MultiplayerMenuState())
+                cur = sm.current
+        # Multiplayer menu transitions (host/join/back)
+        if hasattr(cur, "name") and cur.name == "MultiplayerMenuState":
+            if getattr(cur, "next_action", None) == "host":
+                cur.next_action = None
+                _start_hosting()
+                cur = sm.current
+            elif getattr(cur, "next_action", None) == "join":
+                cur.next_action = None
+                from scripts.multiplayer_menu import JoinGameState
+
+                sm.set(JoinGameState())
+                cur = sm.current
+            elif getattr(cur, "request_back", False):
+                sm.set(MenuState())
+                cur = sm.current
+        if hasattr(cur, "name") and cur.name == "JoinGameState":
+            if getattr(cur, "join_request", None):
+                host, port = cur.join_request
+                cur.join_request = None
+                from scripts.multiplayer_menu import default_player_name
+                from scripts.multiplayer_state import MultiplayerGameState
+
+                sm.set(MultiplayerGameState(host, port, default_player_name()))
+                cur = sm.current
+            elif getattr(cur, "request_back", False):
+                from scripts.multiplayer_menu import MultiplayerMenuState
+
+                sm.set(MultiplayerMenuState())
                 cur = sm.current
         # Generic back handling for submenu states
         if isinstance(cur, (LevelsState, StoreState, AccessoriesState, OptionsState)):
@@ -76,6 +144,8 @@ def main():
                 sm.set(MenuState())
                 cur = sm.current
         if isinstance(cur, GameState) and getattr(cur, "request_pause", False):
+            sm.push(PauseState())
+        if hasattr(cur, "name") and cur.name == "MultiplayerGameState" and getattr(cur, "request_pause", False):
             sm.push(PauseState())
         if isinstance(cur, PauseState) and cur.closed:
             return_to_menu = cur.return_to_menu

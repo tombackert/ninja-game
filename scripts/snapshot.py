@@ -4,6 +4,12 @@ from typing import Any, List, Tuple, Dict
 from scripts.rng_service import RNGService
 
 
+def _int_attr(obj: Any, name: str) -> int:
+    """Read an optional int attribute; non-int values (mocks) become 0."""
+    value = getattr(obj, name, 0)
+    return value if isinstance(value, int) else 0
+
+
 @dataclass
 class EntitySnapshot:
     type: str
@@ -12,6 +18,7 @@ class EntitySnapshot:
     velocity: List[float]
     flip: bool
     action: str
+    owner_id: int | None = None  # Player ID who controls this entity (for multiplayer authority)
     lives: int = 0  # Player specific
     air_time: int = 0
     jumps: int = 0
@@ -19,14 +26,18 @@ class EntitySnapshot:
     dashing: int = 0
     shoot_cooldown: int = 0
     walking: int = 0  # Enemy specific
+    coins: int = 0  # Player specific (multiplayer score)
+    ammo: int = 0  # Player specific (multiplayer)
 
 
 @dataclass
 class ProjectileSnapshot:
+    id: int  # Unique projectile ID for network sync
     pos: List[float]
     velocity: float
     timer: float
     owner: str
+    owner_id: int | None = None  # Player ID who fired this projectile
 
 
 @dataclass
@@ -39,12 +50,22 @@ class SimulationSnapshot:
     score: int = 0
     dead_count: int = 0
     transition: int = 0
+    # IDs of collectables picked up so far this level (cumulative, multiplayer)
+    collected: List[int] = field(default_factory=list)
 
 
 class SnapshotService:
     @staticmethod
-    def capture(game, optimized: bool = False) -> SimulationSnapshot:
-        rng_state = () if optimized else RNGService.get().get_state()
+    def capture(game, optimized: bool = False, include_rng: bool = True) -> SimulationSnapshot:
+        """Capture the current simulation state.
+
+        Args:
+            game: Game-like object with players/enemies/projectiles.
+            optimized: Skip enemies, projectiles and RNG (fast player-only capture).
+            include_rng: Capture RNG state. Network snapshots set this to False —
+                the Mersenne state is ~5KB of JSON and clients never restore it.
+        """
+        rng_state = () if (optimized or not include_rng) else RNGService.get().get_state()
 
         # Capture Players (Always needed)
         players: List[EntitySnapshot] = []
@@ -58,12 +79,15 @@ class SnapshotService:
                 velocity=list(p.velocity),
                 flip=p.flip,
                 action=p.action,
+                owner_id=p.id,  # Players own themselves
                 lives=lives_val,
                 air_time=p.air_time,
                 jumps=p.jumps,
                 wall_slide=p.wall_slide,
                 dashing=p.dashing,
                 shoot_cooldown=p.shoot_cooldown,
+                coins=_int_attr(p, "mp_coins"),
+                ammo=_int_attr(p, "mp_ammo"),
             )
             players.append(player_snap)
 
@@ -78,6 +102,7 @@ class SnapshotService:
                     velocity=list(e.velocity),
                     flip=e.flip,
                     action=e.action,
+                    owner_id=None,  # Enemies are server-owned in multiplayer
                     walking=e.walking,
                 )
                 enemies.append(enemy_snap)
@@ -88,12 +113,17 @@ class SnapshotService:
             # Iterate over the system (yields dicts)
             for p in game.projectiles:
                 proj_snap = ProjectileSnapshot(
-                    pos=list(p["pos"]), velocity=p["vel"][0], timer=p["age"], owner=p["owner"]
+                    id=p.get("id", 0),
+                    pos=list(p["pos"]),
+                    velocity=p["vel"][0],
+                    timer=p["age"],
+                    owner=p["owner"],
+                    owner_id=p.get("owner_id"),
                 )
                 projectiles.append(proj_snap)
 
         return SimulationSnapshot(
-            tick=0,  # TODO: Game needs a global tick counter
+            tick=getattr(game, "tick", 0),
             rng_state=rng_state,
             players=players,
             enemies=enemies,
@@ -101,6 +131,7 @@ class SnapshotService:
             score=game.cm.coins if hasattr(game, "cm") else 0,
             dead_count=game.dead,
             transition=game.transition,
+            collected=list(getattr(game, "collected_ids", [])),
         )
 
     @staticmethod
@@ -108,6 +139,10 @@ class SnapshotService:
         # Restore RNG (only if captured)
         if snapshot.rng_state:
             RNGService.get().set_state(snapshot.rng_state)
+
+        # Restore tick counter
+        if hasattr(game, "tick"):
+            game.tick = snapshot.tick
 
         # Restore Globals
         game.dead = snapshot.dead_count
@@ -149,10 +184,12 @@ class SnapshotService:
             if hasattr(game.projectiles, "_projectiles"):
                 for proj_snap in snapshot.projectiles:
                     proj = {
+                        "id": proj_snap.id,
                         "pos": list(proj_snap.pos),
                         "vel": [proj_snap.velocity, 0.0],
                         "age": proj_snap.timer,
                         "owner": proj_snap.owner,
+                        "owner_id": proj_snap.owner_id,
                     }
                     game.projectiles._projectiles.append(proj)
 
@@ -190,4 +227,5 @@ class SnapshotService:
             score=data.get("score", 0),
             dead_count=data.get("dead_count", 0),
             transition=data.get("transition", 0),
+            collected=list(data.get("collected", [])),
         )

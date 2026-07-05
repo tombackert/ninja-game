@@ -60,3 +60,12 @@ Every Push and Pull Request triggers the `CI` workflow (`.github/workflows/ci.ym
 - **Unit Tests:** Located in `tests/`. Should be fast and mock external dependencies (like Pygame display)
 - **Headless Mode:** Tests set `SDL_VIDEODRIVER=dummy` to run without a display
 - **Coverage:** Focus on core logic in `scripts/` (Entities, Physics, AI, Networking)
+
+## Code Quality
+- Always write code for clartiy first.
+- Keep it simple stupid.
+- The code should be easy to read to quickly review.
+- Variable names should be meaningfull but short and clear.
+- No clever one-liners or code-golf.
+- Only comments where essential for future understanding.
+- Stricly make use of english language.
