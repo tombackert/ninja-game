@@ -180,6 +180,20 @@ class Renderer:
             UI.render_game_ui_element(game.display_2, f"Lives: {lives}", 5, 5)
         UI.render_game_ui_element(game.display_2, f"${game.cm.coins}", 5, 15)
         UI.render_game_ui_element(game.display_2, f"Ammo:  {game.cm.ammo}", 5, 25)
+        # Contextual HUD lines for new store items (only when relevant)
+        y = 35
+        try:
+            from scripts.collectableManager import CollectableManager as CM
+            from scripts.settings import settings as _settings
+
+            if 0 <= _settings.selected_weapon < len(CM.WEAPONS) and CM.WEAPONS[_settings.selected_weapon] == "Ninja Stars":
+                UI.render_game_ui_element(game.display_2, f"Stars: {game.cm.ninja_stars}", 5, y)
+                y += 10
+            if 0 <= _settings.selected_gear < len(CM.GEAR) and CM.GEAR[_settings.selected_gear] == "Shield":
+                UI.render_game_ui_element(game.display_2, f"Shield: {game.cm.shield}", 5, y)
+                y += 10
+        except Exception:  # pragma: no cover - HUD is best-effort
+            pass
         # Pass counts to performance HUD via perf_hud.render call later
         if game_counts is not None:
             try:

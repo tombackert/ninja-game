@@ -17,6 +17,7 @@ class Settings:
         self._selected_level = 0
         self.selected_editor_level = 0
         self.selected_weapon = 0
+        self.selected_gear = 0
         self.selected_skin = 0
         self.show_perf_overlay = True
         self._ghost_enabled = True
@@ -192,7 +193,21 @@ class Settings:
                     self._selected_level = data.get("selected_level", self._selected_level)
                     self.selected_editor_level = data.get("selected_editor_level", self.selected_editor_level)
                     self.selected_weapon = data.get("selected_weapon", self.selected_weapon)
+                    self.selected_gear = data.get("selected_gear", self.selected_gear)
                     self.selected_skin = data.get("selected_skin", self.selected_skin)
+                    # Migration safety: clamp equip indices to current lists
+                    # (WEAPONS was re-cut when the gear category was added).
+                    try:
+                        from scripts.collectableManager import CollectableManager as _CM
+
+                        if not (0 <= self.selected_weapon < len(_CM.WEAPONS)):
+                            self.selected_weapon = 0
+                        if not (0 <= self.selected_gear < len(_CM.GEAR)):
+                            self.selected_gear = 0
+                        if not (0 <= self.selected_skin < len(_CM.SKINS)):
+                            self.selected_skin = 0
+                    except Exception:  # pragma: no cover - defensive
+                        pass
                     self.show_perf_overlay = data.get("show_perf_overlay", self.show_perf_overlay)
                     self._ghost_enabled = bool(data.get("ghost_enabled", self._ghost_enabled))
                     self._ghost_mode = str(data.get("ghost_mode", self._ghost_mode))
@@ -230,6 +245,7 @@ class Settings:
             "selected_editor_level": self.selected_editor_level,
             "selected_skin": self.selected_skin,
             "selected_weapon": self.selected_weapon,
+            "selected_gear": self.selected_gear,
             "playable_levels": {str(k): v for k, v in self.playable_levels.items()},
             "show_perf_overlay": self.show_perf_overlay,
             "ghost_enabled": self._ghost_enabled,

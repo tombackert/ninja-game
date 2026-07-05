@@ -89,23 +89,26 @@ class Game:
             "clouds": am.get_image_frames("clouds"),
             "enemy/idle": am.get_animation("entities/enemy/idle", img_dur=6),
             "enemy/run": am.get_animation("entities/enemy/run", img_dur=4),
-            "player/default/idle": am.get_animation("entities/player/default/idle", img_dur=6),
-            "player/default/run": am.get_animation("entities/player/default/run", img_dur=4),
-            "player/default/jump": am.get_animation("entities/player/default/jump"),
-            "player/default/slide": am.get_animation("entities/player/default/slide"),
-            "player/default/wall_slide": am.get_animation("entities/player/default/wall_slide"),
-            "player/red/idle": am.get_animation("entities/player/red/idle", img_dur=6),
-            "player/red/run": am.get_animation("entities/player/red/run", img_dur=4),
-            "player/red/jump": am.get_animation("entities/player/red/jump"),
-            "player/red/slide": am.get_animation("entities/player/red/slide"),
-            "player/red/wall_slide": am.get_animation("entities/player/red/wall_slide"),
             "particle/leaf": am.get_animation("particles/leaf", img_dur=20, loop=False),
             "particle/particle": am.get_animation("particles/particle", img_dur=6, loop=False),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
             "gun": am.get_image("gun.png"),
+            "rifle": am.get_image("rifle.png"),
+            "sword": am.get_image("sword.png"),
+            "slash": am.get_image("slash.png"),
+            "star": am.get_image("star.png"),
+            "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
+        # Register every store skin's animation set (all palette swaps of default)
+        for skin_path in CollectableManager.SKIN_PATHS:
+            base = f"entities/player/{skin_path}"
+            self.assets[f"player/{skin_path}/idle"] = am.get_animation(f"{base}/idle", img_dur=6)
+            self.assets[f"player/{skin_path}/run"] = am.get_animation(f"{base}/run", img_dur=4)
+            self.assets[f"player/{skin_path}/jump"] = am.get_animation(f"{base}/jump")
+            self.assets[f"player/{skin_path}/slide"] = am.get_animation(f"{base}/slide")
+            self.assets[f"player/{skin_path}/wall_slide"] = am.get_animation(f"{base}/wall_slide")
 
         # Audio service replaces direct sound dict (Issue 16)
         self.audio = AudioService.get()
@@ -213,6 +216,13 @@ class Game:
             self.level_id_gen_state = id_gen.get_state()
 
             skin = self.playerSkin
+            # Lucky Charm gear: +1 life on fresh level start (not on respawn)
+            try:
+                gear_name = CollectableManager.GEAR[settings.selected_gear]
+            except (IndexError, AttributeError):
+                gear_name = "None"
+            if gear_name == "Lucky Charm" and self.cm.lucky_charm > 0:
+                lives += 1
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 0:
                     player = Player(
