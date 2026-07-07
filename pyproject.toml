@@ -1,3 +1,58 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ninja-game"
+version = "3.0.0"
+description = "A deterministic 2D platformer built with Pygame, featuring modular AI, ghost replays and multiplayer."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Tom Backert" }]
+keywords = ["game", "pygame", "platformer", "2d", "multiplayer", "arcade"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment :: Arcade",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pygame-ce",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "mypy",
+    "pre-commit",
+]
+
+[project.urls]
+Homepage = "https://github.com/tombackert/ninja-game"
+Repository = "https://github.com/tombackert/ninja-game"
+Issues = "https://github.com/tombackert/ninja-game/issues"
+
+[project.scripts]
+ninja-game = "scripts.launcher:game"
+ninja-editor = "scripts.launcher:editor"
+ninja-server = "scripts.launcher:server"
+
+# The game keeps its top-level entry modules (app/game/editor/server) at the
+# repo root and its code under scripts/, so package discovery is declared
+# explicitly rather than auto-detected from the flat layout.
+[tool.setuptools]
+py-modules = ["app", "game", "editor", "server"]
+
+[tool.setuptools.packages.find]
+include = ["scripts*"]
+namespaces = true
+
 [tool.black]
 line-length = 120
 skip-string-normalization = true
@@ -22,6 +77,3 @@ allow_untyped_calls = true
 
 [tool.pytest.ini_options]
 addopts = "-q"
-
-[build-system]
-requires = ["setuptools", "wheel"]

@@ -57,10 +57,35 @@ For detailed architecture documentation, see [docs/architecture.md](docs/archite
 git clone https://github.com/tombackert/ninja-game.git
 cd ninja-game
 
-# Install dependencies
-pip install pygame-ce
+# Install the game (editable install pulls in pygame-ce automatically)
+pip install -e .
 
-# Run the game
+# Run the game from anywhere
+ninja-game
+```
+
+This installs three console commands:
+
+| Command | Description |
+|---------|-------------|
+| `ninja-game` | Launch the game (accepts `--multiplayer`, `--host`, `--port`, `--name`) |
+| `ninja-editor` | Launch the level editor |
+| `ninja-server` | Launch the dedicated multiplayer server |
+
+> Use an **editable** install (`pip install -e .`). Assets are loaded relative
+> to the cloned repo, so the source tree must stay in place — the commands
+> switch into it automatically before starting.
+
+To also install the development tools (pytest, black, ruff, mypy, pre-commit):
+
+```bash
+pip install -e ".[dev]"
+```
+
+Alternatively, run directly without installing:
+
+```bash
+pip install pygame-ce
 python app.py
 ```
 

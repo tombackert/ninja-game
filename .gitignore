@@ -4,6 +4,10 @@ __pycache__/
 *.pyc
 .DS_Store
 
+# Packaging (editable install / build artifacts)
+*.egg-info/
+.eggs/
+
 
 
 .gemini/

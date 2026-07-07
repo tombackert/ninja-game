@@ -437,4 +437,9 @@ class Editor:
                     break
 
 
-Editor().run()
+def main():
+    Editor().run()
+
+
+if __name__ == "__main__":
+    main()
