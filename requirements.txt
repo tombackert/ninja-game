@@ -1,5 +1,10 @@
 pygame-ce
 pytest
-black
-ruff
-mypy
+# Lint/format tooling is pinned so CI, local, and pre-commit all agree.
+# Unpinned versions let CI pull a newer black/ruff that reformats differently
+# than the version used locally, turning CI red for no real reason.
+# Keep these in sync with .pre-commit-config.yaml.
+ruff==0.12.9
+black==25.1.0
+mypy==1.17.1
+pre-commit==4.3.0
