@@ -186,7 +186,10 @@ class Renderer:
             from scripts.collectableManager import CollectableManager as CM
             from scripts.settings import settings as _settings
 
-            if 0 <= _settings.selected_weapon < len(CM.WEAPONS) and CM.WEAPONS[_settings.selected_weapon] == "Ninja Stars":
+            if (
+                0 <= _settings.selected_weapon < len(CM.WEAPONS)
+                and CM.WEAPONS[_settings.selected_weapon] == "Ninja Stars"
+            ):
                 UI.render_game_ui_element(game.display_2, f"Stars: {game.cm.ninja_stars}", 5, y)
                 y += 10
             if 0 <= _settings.selected_gear < len(CM.GEAR) and CM.GEAR[_settings.selected_gear] == "Shield":

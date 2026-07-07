@@ -20,6 +20,7 @@ from scripts.network.udp_transport import UDPTransport
 @dataclass
 class MockPlayer:
     """Mock player for testing."""
+
     id: int
     pos: List[float] = field(default_factory=lambda: [0.0, 0.0])
     velocity: List[float] = field(default_factory=lambda: [0.0, 0.0])
@@ -47,12 +48,14 @@ class MockPlayer:
 @dataclass
 class MockCollectableManager:
     """Mock collectable manager."""
+
     coins: int = 0
 
 
 @dataclass
 class MockGame:
     """Mock game for testing server without pygame."""
+
     tick: int = 0
     dead: int = 0
     transition: int = 0

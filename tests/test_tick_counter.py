@@ -6,7 +6,6 @@ messages, snapshots, and reconciliation depend on a shared tick reference.
 
 import os
 
-import pytest
 
 # Set testing environment before imports
 os.environ["SDL_VIDEODRIVER"] = "dummy"

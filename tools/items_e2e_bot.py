@@ -228,7 +228,9 @@ def phase_accessories(d: Driver) -> None:
     for _ in range(sword_idx):
         d.press(pygame.K_DOWN)
     d.press(pygame.K_RETURN, frames_after=3)
-    check("accessories.equip_sword", settings.selected_weapon == sword_idx, f"selected_weapon={settings.selected_weapon}")
+    check(
+        "accessories.equip_sword", settings.selected_weapon == sword_idx, f"selected_weapon={settings.selected_weapon}"
+    )
 
     # TAB -> gear panel: equip Shield
     d.press(pygame.K_TAB)
@@ -364,7 +366,11 @@ def phase_gameplay(d: Driver) -> None:
             sx = int(projs[0]["pos"][0] - g.scroll[0])
             sy = int(projs[0]["pos"][1] - g.scroll[1])
             # Dark hub color (75,78,90) cannot be confused with sky/clouds
-            check("render.star_sprite", color_near(g.display, sx, sy, 6, (75, 78, 90), tol=10), "star hub pixels at star pos")
+            check(
+                "render.star_sprite",
+                color_near(g.display, sx, sy, 6, (75, 78, 90), tol=10),
+                "star hub pixels at star pos",
+            )
     screenshot("08_star_flight")
     d.step(40)
 
@@ -377,7 +383,11 @@ def phase_gameplay(d: Driver) -> None:
     g.player.shoot_cooldown = 0
     d.press(pygame.K_x, frames_after=1)
     px, py = player_screen_pos(g)
-    check("render.slash_vfx", color_near(g.display, px + 12, py, 12, (170, 220, 250), tol=20), "slash cyan in front of player")
+    check(
+        "render.slash_vfx",
+        color_near(g.display, px + 12, py, 12, (170, 220, 250), tol=20),
+        "slash cyan in front of player",
+    )
     screenshot("09a_sword_swing")
     d.step(30)
 
@@ -512,7 +522,11 @@ def phase_gameplay(d: Driver) -> None:
     from scripts.collectableManager import CollectableManager
 
     fresh = CollectableManager(None)
-    check("exit.persists_consumables", fresh.ammo == g.cm.ammo and fresh.shield == g.cm.shield, f"ammo={fresh.ammo} shield={fresh.shield}")
+    check(
+        "exit.persists_consumables",
+        fresh.ammo == g.cm.ammo and fresh.shield == g.cm.shield,
+        f"ammo={fresh.ammo} shield={fresh.shield}",
+    )
 
 
 def main() -> int:

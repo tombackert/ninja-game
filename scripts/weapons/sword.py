@@ -31,11 +31,7 @@ class SwordWeapon(Weapon):
             sword_index = cm.WEAPONS.index("Sword")
         except ValueError:  # pragma: no cover
             sword_index = 4
-        return (
-            player.game.cm.sword > 0
-            and player.shoot_cooldown == 0
-            and settings.selected_weapon == sword_index
-        )
+        return player.game.cm.sword > 0 and player.shoot_cooldown == 0 and settings.selected_weapon == sword_index
 
     def slash_rect(self, player) -> pygame.Rect:
         prect = player.rect()

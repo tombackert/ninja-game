@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from scripts.network.client_state import ConnectionState
-from scripts.network.delta import compute_delta
 from scripts.network.game_client import (
     CONNECT_RETRY_INTERVAL,
     HEARTBEAT_INTERVAL,
@@ -26,7 +25,6 @@ from scripts.network.game_client import (
 from scripts.network.game_server import GameServer
 from scripts.network.messages import Message
 from scripts.network.udp_transport import UDPTransport
-from scripts.snapshot import EntitySnapshot, SimulationSnapshot, SnapshotService
 
 
 # --- Mock objects (reuse pattern from test_game_server.py) ---
@@ -83,9 +81,7 @@ class MockGame:
 # --- Helper ---
 
 
-def _connect_client_to_server(
-    client: GameClient, server: GameServer, sleep: float = 0.02
-) -> None:
+def _connect_client_to_server(client: GameClient, server: GameServer, sleep: float = 0.02) -> None:
     """Helper: drive a client through the connect handshake."""
     client.connect()
     time.sleep(sleep)

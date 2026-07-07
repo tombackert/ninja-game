@@ -38,7 +38,7 @@ def get_lan_ip() -> str:
 
 
 def default_player_name() -> str:
-    return os.environ.get("NINJA_PLAYER_NAME") or os.environ.get("USER", "Player")
+    return os.environ.get("NINJA_PLAYER_NAME") or os.environ.get("USER") or "Player"
 
 
 def start_host_server(level: int, port: int = DEFAULT_PORT) -> subprocess.Popen:

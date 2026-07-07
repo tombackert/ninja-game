@@ -7,7 +7,7 @@ MultiplayerGameState.
 from __future__ import annotations
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pygame
 import pytest
@@ -31,10 +31,7 @@ class TestSnapshotBuffer:
 
     def test_push_and_retrieve_single_snapshot(self):
         buffer = SnapshotBuffer(max_size=10)
-        state = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 200.0], velocity=[0.0, 0.0],
-            flip=False, action="idle"
-        )
+        state = EntitySnapshot(type="player", id=1, pos=[100.0, 200.0], velocity=[0.0, 0.0], flip=False, action="idle")
         buffer.push(10, state)
 
         prev, next_, t = buffer.get_surrounding_snapshots(10)
@@ -44,14 +41,8 @@ class TestSnapshotBuffer:
 
     def test_interpolation_between_two_snapshots(self):
         buffer = SnapshotBuffer(max_size=10)
-        state1 = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 200.0], velocity=[1.0, 0.0],
-            flip=False, action="run"
-        )
-        state2 = EntitySnapshot(
-            type="player", id=1, pos=[110.0, 200.0], velocity=[1.0, 0.0],
-            flip=False, action="run"
-        )
+        state1 = EntitySnapshot(type="player", id=1, pos=[100.0, 200.0], velocity=[1.0, 0.0], flip=False, action="run")
+        state2 = EntitySnapshot(type="player", id=1, pos=[110.0, 200.0], velocity=[1.0, 0.0], flip=False, action="run")
         buffer.push(10, state1)
         buffer.push(20, state2)
 
@@ -64,14 +55,8 @@ class TestSnapshotBuffer:
         assert abs(t - 0.5) < 0.01  # Should be 0.5
 
     def test_interpolate_entity_produces_smooth_position(self):
-        state1 = EntitySnapshot(
-            type="player", id=1, pos=[0.0, 0.0], velocity=[10.0, 0.0],
-            flip=False, action="run"
-        )
-        state2 = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 0.0], velocity=[10.0, 0.0],
-            flip=False, action="run"
-        )
+        state1 = EntitySnapshot(type="player", id=1, pos=[0.0, 0.0], velocity=[10.0, 0.0], flip=False, action="run")
+        state2 = EntitySnapshot(type="player", id=1, pos=[100.0, 0.0], velocity=[10.0, 0.0], flip=False, action="run")
 
         # Interpolate at t=0.5
         result = interpolate_entity(state1, state2, 0.5)
@@ -84,14 +69,8 @@ class TestSnapshotBuffer:
 
     def test_out_of_order_snapshot_ignored(self):
         buffer = SnapshotBuffer(max_size=10)
-        state1 = EntitySnapshot(
-            type="player", id=1, pos=[100.0, 200.0], velocity=[0.0, 0.0],
-            flip=False, action="idle"
-        )
-        state2 = EntitySnapshot(
-            type="player", id=1, pos=[90.0, 200.0], velocity=[0.0, 0.0],
-            flip=False, action="idle"
-        )
+        state1 = EntitySnapshot(type="player", id=1, pos=[100.0, 200.0], velocity=[0.0, 0.0], flip=False, action="idle")
+        state2 = EntitySnapshot(type="player", id=1, pos=[90.0, 200.0], velocity=[0.0, 0.0], flip=False, action="idle")
         buffer.push(20, state1)
         buffer.push(10, state2)  # Out of order - should be ignored
 
@@ -169,8 +148,7 @@ class TestReconciliation:
 
     def _server_snap(self):
         return EntitySnapshot(
-            type="player", id=1, pos=[100.0, 100.0], velocity=[0.0, 0.0],
-            flip=False, action="idle", lives=3
+            type="player", id=1, pos=[100.0, 100.0], velocity=[0.0, 0.0], flip=False, action="idle", lives=3
         )
 
     def test_reconcile_rewinds_to_server_state(self):
@@ -270,5 +248,6 @@ class TestInterpDelayConstant:
 
     def test_interp_delay_exists_and_positive(self):
         from scripts.multiplayer_state import INTERP_DELAY
+
         assert INTERP_DELAY > 0
         assert INTERP_DELAY <= 10  # Reasonable upper bound

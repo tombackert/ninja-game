@@ -47,7 +47,7 @@ def compute_delta(prev: SimulationSnapshot, curr: SimulationSnapshot) -> Dict[st
 
 def compute_entity_list_delta(prev_list: List[EntitySnapshot], curr_list: List[EntitySnapshot]) -> Dict[str, Any]:
     """Compute delta for entity list using ID-based matching."""
-    result = {}
+    result: Dict[str, Any] = {}
 
     # Build ID -> entity maps
     prev_by_id = {e.id: e for e in prev_list}
@@ -85,7 +85,7 @@ def compute_projectile_list_delta(
     prev_list: List[ProjectileSnapshot], curr_list: List[ProjectileSnapshot]
 ) -> Dict[str, Any]:
     """Compute delta for projectile list using ID-based matching."""
-    result = {}
+    result: Dict[str, Any] = {}
 
     # Build ID -> projectile maps
     prev_by_id = {p.id: p for p in prev_list}

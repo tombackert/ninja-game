@@ -9,7 +9,6 @@ import unittest
 
 from scripts.network.messages import Message
 from scripts.network.udp_transport import (
-    MAX_PACKET_SIZE,
     Packet,
     PacketHeader,
     UDPClient,

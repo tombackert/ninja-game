@@ -1,0 +1,18 @@
+# Auto-fix mechanical lint issues on commit so they never reach CI.
+# Mirrors the ruff + black steps in .github/workflows/ci.yml (line-length 120,
+# configured in pyproject.toml). Mypy is intentionally left to CI since it is
+# not auto-fixable and needs the full dependency set to resolve imports.
+#
+# Setup:  pre-commit install
+# Manual: pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black

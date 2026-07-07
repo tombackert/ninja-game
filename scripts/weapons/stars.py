@@ -17,11 +17,7 @@ class NinjaStarWeapon(Weapon):
             stars_index = cm.WEAPONS.index("Ninja Stars")
         except ValueError:  # pragma: no cover
             stars_index = 3
-        return (
-            player.game.cm.ninja_stars > 0
-            and player.shoot_cooldown == 0
-            and settings.selected_weapon == stars_index
-        )
+        return player.game.cm.ninja_stars > 0 and player.shoot_cooldown == 0 and settings.selected_weapon == stars_index
 
     def fire(self, player):
         if not self.can_fire(player):
