@@ -336,9 +336,11 @@ class UI:
         # Collectables update & render
         game.cm.render(game.display, offset=render_scroll)
 
-        # Display sillhouette
-        display_mask = pygame.mask.from_surface(game.display)
-        display_sillhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
+        # Display sillhouette: pixels with alpha > 127 become (0, 0, 0, 180).
+        # Same result as a mask threshold without building a mask every frame.
+        display_sillhouette = game.display.copy()
+        display_sillhouette.fill((0, 0, 0, 127), special_flags=pygame.BLEND_RGBA_SUB)
+        display_sillhouette = pygame.transform.solid_overlay(display_sillhouette, (0, 0, 0, 180))
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             game.display_2.blit(display_sillhouette, offset_o)
 

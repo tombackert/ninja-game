@@ -21,7 +21,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "pygame-ce",
+    "pygame-ce>=2.5.2",
 ]
 
 [project.optional-dependencies]

@@ -1,4 +1,4 @@
-pygame-ce
+pygame-ce>=2.5.2
 pytest
 # Lint/format tooling is pinned so CI, local, and pre-commit all agree.
 # Unpinned versions let CI pull a newer black/ruff that reformats differently
