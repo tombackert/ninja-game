@@ -27,7 +27,7 @@ class _StubGame:
         self.display = pygame.Surface((160, 120), pygame.SRCALPHA)
         self.dead = 0
         self.transition = 0
-        self.tilemap = type("StubTM", (), {"physics_rects_around": lambda x: []})()
+        self.tilemap = type("StubTM", (), {"physics_rects_around": lambda self, pos: []})()
         self.players = []
         self.enemies = []
         # self.projectiles = [] # Optional, checking hasattr
@@ -171,3 +171,20 @@ def test_ghost_falls_back_to_the_other_replay(tmp_path, monkeypatch):
 
     assert manager.best_data is None
     assert manager.ghost is not None and manager.ghost.data is manager.last_data
+
+
+def test_ghost_advances_once_per_game_tick(tmp_path):
+    game, player = _committed_run(tmp_path, level=6, new_best=True)
+    game.tick = 0
+    manager = ReplayManager(game, storage_dir=tmp_path)
+    manager.on_level_load(level=6, player=player)
+
+    game.tick += 1
+    manager.render_ghost(game.display, (0, 0))
+    for _ in range(5):  # paused: frames are drawn, the game does not tick
+        manager.render_ghost(game.display, (0, 0))
+    assert manager.ghost.tick == 1
+
+    game.tick += 1
+    manager.render_ghost(game.display, (0, 0))
+    assert manager.ghost.tick == 2

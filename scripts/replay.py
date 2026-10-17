@@ -187,6 +187,11 @@ class ReplayGhost:
         self._tint_cache: Dict[tuple, pygame.Surface] = {}
 
     def step_and_render(self, surface: pygame.Surface, offset: tuple[int, int]):
+        self.step()
+        self.render(surface, offset)
+
+    def step(self):
+        """Advance the ghost by one simulation tick."""
         if self.tick >= self.data.duration_frames:
             # Issue 51: Ghost Polish - Idle at Finish
             if self.entity.action != "idle":
@@ -195,8 +200,6 @@ class ReplayGhost:
             # Animate in place
             if self.entity.animation:
                 self.entity.animation.update()
-
-            self._render_tinted(surface, offset)
             return
 
         # print(f"[DEBUG] Ghost Tick {self.tick} Pos {self.entity.pos}")
@@ -252,10 +255,10 @@ class ReplayGhost:
         rng.set_state(rng_state)
         self.game.dead = dead
 
-        # 4. Render
-        self._render_tinted(surface, offset)
-
         self.tick += 1
+
+    def render(self, surface: pygame.Surface, offset: tuple[int, int]):
+        self._render_tinted(surface, offset)
 
     def _render_tinted(self, surface: pygame.Surface, offset: tuple[int, int]):
         if not self.entity.animation:
@@ -308,6 +311,7 @@ class ReplayManager:
         # known, so a respawn reuses them instead of reading the files again
         self._data_level: Optional[str] = None
         self._data_known: set[str] = set()
+        self._ghost_tick: Optional[int] = None  # game tick the ghost last advanced on
         self.tick_counter = 0
 
     def on_level_load(self, level: int | str, player: Any):
@@ -367,7 +371,13 @@ class ReplayManager:
 
     def render_ghost(self, surface, offset):
         if self.ghost and self._ghosts_enabled():
-            self.ghost.step_and_render(surface, offset)
+            # Advance once per simulation tick: a frame drawn without one (the
+            # pause screen) must not run the ghost ahead of the player
+            tick = getattr(self.game, "tick", None)
+            if tick is None or tick != self._ghost_tick:
+                self._ghost_tick = tick
+                self.ghost.step()
+            self.ghost.render(surface, offset)
 
     def _save(self, data: ReplayData, kind: str):
         path = self._path(data.level, kind)
