@@ -12,6 +12,7 @@ import os
 
 import pygame
 
+from scripts.frame_pacer import FramePacer
 from scripts.input_router import InputRouter
 from scripts.state_manager import (
     AccessoriesState,
@@ -36,7 +37,7 @@ def main():
     os.environ.setdefault("NINJA_GAME_TESTING", "0")
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))  # windowed for development
-    clock = pygame.time.Clock()
+    pacer = FramePacer(60)
 
     sm = StateManager()
     router = InputRouter()
@@ -154,7 +155,7 @@ def main():
                 sm.set(MenuState())
 
         # --- Update & Render cycle ---
-        dt = clock.tick(60) / 1000.0  # 60 FPS cap; dt in seconds
+        dt = pacer.tick()  # exactly 60 FPS; dt in seconds
         sm.update(dt)
         # Mark end of work segment just after state update & render prep but before present
         sm.render(screen)
