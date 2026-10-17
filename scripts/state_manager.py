@@ -1,10 +1,8 @@
 """State management foundation (Issue 10).
 
 This module introduces a minimal stack based state manager used to drive
-high-level application states (Menu, Game, Pause, Store, etc.).  It is an
-incremental, non-breaking addition: existing code paths (direct calls to
-`Menu()` or `Game().run()`) continue to function. A future iteration will
-finish migration of event loops into state `handle/update/render` methods.
+high-level application states (Menu, Game, Pause, Store, etc.). Each state
+handles events and updates and renders itself; `app.py` runs the loop.
 
 Usage Example (see `app.py` for a runnable harness):
 
@@ -237,7 +235,7 @@ class GameState(State):
     def __init__(self) -> None:
         from game import Game
 
-        # Underlying legacy Game object (entities, systems, assets)
+        # Underlying Game object (entities, systems, assets)
         self._game = Game(fullscreen=False)
         # Allow renderer to query state flags (performance HUD toggle) without tight coupling
         try:
@@ -323,8 +321,7 @@ class GameState(State):
     def update(self, dt: float) -> None:
         """Full simulation step (logic-only; rendering handled in render()).
 
-        This migrates the legacy `Game.run` loop responsibilities into
-        a per-frame update suitable for the state-driven architecture.
+        Level flow, camera and death/respawn, then one `Game.step()`.
         Visual layering & HUD composition live in `Renderer`.
         """
         g = self._game
@@ -334,8 +331,6 @@ class GameState(State):
         # Update Audio Service (Ducking)
         g.audio.update()
 
-        if not g.running:
-            return  # Game externally marked finished (future: transition to Menu)
         # If a PauseState render is freezing this frame, skip simulation changes.
         if getattr(g, "_paused_freeze", False):
             return
@@ -440,7 +435,7 @@ class GameState(State):
             # drawing of the transition effect occurs in Renderer.render.
             pass
 
-        # --- World simulation (shared with TrainingEnv and the legacy loop) ---
+        # --- World simulation (shared with TrainingEnv and prediction) ---
         g.step()
 
     def render(self, surface: pygame.Surface) -> None:

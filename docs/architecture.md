@@ -208,7 +208,7 @@ The `Renderer` (`scripts/renderer.py`) ensures consistent draw order:
 ```
 ninja-game/
 ├── app.py                    # Main entry point (StateManager-based)
-├── game.py                   # Legacy Game class (backward compatible)
+├── game.py                   # Game class: world state and simulation step
 ├── editor.py                 # Level editor tool
 ├── scripts/                  # Core game logic (~52 files)
 │   ├── entities.py           # Player, Enemy, PhysicsEntity

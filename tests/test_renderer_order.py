@@ -17,7 +17,7 @@ def test_renderer_layer_order(pygame_init):
     r = Renderer(show_perf=False)
     surface = pygame.Surface((g.BASE_W, g.BASE_H))
     seq = []
-    # Minimal preparation consistent with Game.run partial logic
+    # Minimal preparation (collectables, timer) before rendering
     g.cm.load_collectables()
     g.timer.update(g.level)
     # Execute render

@@ -1,6 +1,3 @@
-# Deprecated legacy game loop for backward compatibility.!!!!
-
-
 import pygame
 
 from scripts.asset_manager import AssetManager
@@ -13,18 +10,13 @@ from scripts.constants import (
     CALM_CAMERA_EASE_FRAMES,
     CALM_CAMERA_SNAP,
     CAMERA_EASE_FRAMES,
-    DEAD_ANIM_FADE_START,
     LEAF_SPAWNER_CLOUD_COUNT,
-    RESPAWN_DEAD_THRESHOLD,
-    TRANSITION_MAX,
     TRANSITION_START,
 )
 from scripts.displayManager import DisplayManager
-from scripts.effects import Effects
 from scripts.entities import Enemy, Player
 from scripts.entity_id import EntityIDGenerator
 from scripts.keyboardManager import KeyboardManager
-from scripts.level_cache import list_levels
 from scripts.particle import Particle
 from scripts.particle_system import ParticleSystem
 from scripts.projectile_system import ProjectileSystem
@@ -33,26 +25,15 @@ from scripts.rng_service import RNGService
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.timer import Timer
-from scripts.ui import UI
-
-"""Legacy monolithic Game loop.
-
-Note:
-    The refactored application now uses `StateManager` (see `app.py`) and
-    `GameState` for per-frame update & render. The legacy in-method pause
-    handling (nested `while not self.paused` and the blocking
-    `Menu.pause_menu(self)` call) has been removed as part of Issue 13
-    (PauseState integration). Pressing ESC in the modern flow is routed
-    to an action (`pause_toggle`) which pushes a `PauseState` overlay.
-
-    This `run()` method remains for backward compatibility with older
-    entry points but no longer provides an in-loop pause menu. It should
-    be considered deprecated and will be deleted once all callers migrate
-    to the state-driven architecture.
-"""
 
 
 class Game:
+    """World state and simulation: level, entities and systems.
+
+    `GameState` (see app.py) drives it each frame: `step()` advances the
+    world one tick and `scripts.renderer.Renderer` draws it.
+    """
+
     def __init__(self, fullscreen=True):
         pygame.init()
 
@@ -152,19 +133,9 @@ class Game:
         # print(f"id: {self.players[self.playerID].id}")
         # print(f"size: {self.players[self.playerID].size}")
 
-        # Game state (legacy loop compatibility)
-        self.running = True
-        # Legacy pause flag retained only for backward compatibility; the
-        # new architecture uses PauseState overlays.
-        self.paused = False
-
         # Global simulation tick counter for multiplayer synchronization
-        # Incremented once per simulation frame in GameState.update()
+        # Incremented once per simulation tick in step()
         self.tick = 0
-        # Performance HUD (shared abstraction with modern renderer)
-        from scripts.perf_hud import PerformanceHUD  # local import to avoid early cost if unused
-
-        self.perf_hud = PerformanceHUD(enabled=True)
 
     # Backward compatibility shim for old calls (will be removed):
     def update_sound_volumes(self):  # pragma: no cover - compatibility
@@ -372,92 +343,3 @@ class Game:
                         frame=rng.randint(0, 20),
                     )
                 )
-
-    def run(self):
-        self.audio.play_music("data/music.wav", loops=-1)
-        self.audio.play("ambience", loops=-1)
-
-        # Simplified legacy loop (no in-loop pause handling). For full
-        # gameplay use the state-driven `app.main()` harness.
-        while self.running:
-            self.perf_hud.begin_frame()
-
-            self.timer.update(self.level)
-            self.display.fill((0, 0, 0, 0))
-            self.display_2.blit(self.assets["background"], (0, 0))
-
-            # Level completion (endpoint is set by step's flag check)
-            if self.endpoint:
-                self.transition += 1
-                if self.transition > TRANSITION_MAX:
-                    self.timer.update_best_time()
-                    levels = list_levels()
-                    current_level_index = levels.index(self.level)
-                    if current_level_index == len(levels) - 1:
-                        self.load_level(self.level)
-                    else:
-                        next_level = levels[current_level_index + 1]
-                        self.level = next_level
-                    settings.set_level_to_playable(self.level)
-                    settings.selected_level = self.level
-                    self.load_level(self.level)
-            if self.transition < 0:
-                self.transition += 1
-
-            if self.player.lives < 1:
-                self.dead += 1
-            if self.dead:
-                self.dead += 1
-                if self.dead >= DEAD_ANIM_FADE_START:
-                    self.transition = min(TRANSITION_MAX, self.transition + 1)
-                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lives >= 1:
-                    self.load_level(self.level, self.player.lives, respawn=True)
-                if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lives < 1:
-                    self.load_level(self.level)
-
-            self.update_camera()
-            render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
-
-            self.step()
-
-            UI.render_game_elements(self, render_scroll)
-            self.km.handle_keyboard_input()  # Legacy direct polling
-            self.km.handle_mouse_input()
-
-            if self.transition:
-                Effects.transition(self)
-            self.display_2.blit(self.display, (0, 0))
-
-            # HUD
-            from scripts.localization import LocalizationService
-
-            loc = LocalizationService.get()
-            UI.render_game_ui_element(self.display_2, f"{self.timer.text}", self.BASE_W - 70, 5)
-            UI.render_game_ui_element(self.display_2, f"{self.timer.best_time_text}", self.BASE_W - 70, 15)
-            UI.render_game_ui_element(self.display_2, loc.translate("hud.level", self.level), self.BASE_W // 2 - 40, 5)
-            UI.render_game_ui_element(self.display_2, loc.translate("hud.lives", self.player.lives), 5, 5)
-            UI.render_game_ui_element(self.display_2, loc.translate("hud.coins", self.cm.coins), 5, 15)
-            UI.render_game_ui_element(self.display_2, loc.translate("hud.ammo", self.cm.ammo), 5, 25)
-
-            # Mark end of work segment for HUD
-            self.perf_hud.end_work_segment()
-            # Render overlay using prior full frame data
-            self.perf_hud.render(self.display_2, x=5, y=self.BASE_H - 90)
-            # Present (screenshake applied after overlay so it can shake as well)
-            Effects.screenshake(self)
-            pygame.display.update()
-            # Cap / sleep & finalize full frame timing (available next frame)
-            self.clock.tick(60)
-            self.perf_hud.end_frame(clock=self.clock)
-
-            # If ESC pressed (legacy flag),
-            # exit loop (pause handled externally in new system)
-            if self.paused:
-                self.running = False
-
-        self.cm.save_collectables()
-        print("Game Over (legacy run loop exited)")
-
-
-if __name__ == "__main__":
-    Game().run()

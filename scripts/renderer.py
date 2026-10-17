@@ -1,8 +1,8 @@
 """Unified rendering pipeline (Issue 14).
 
-This module centralizes frame composition order so that *all* entry
-points (legacy `Game.run` and new `GameState.render`) follow the same
-deterministic layering. This is a transitional orchestrator; future
+This module centralizes frame composition order so that all game states
+(`GameState`, `MultiplayerGameState`) follow the same deterministic
+layering. This is a transitional orchestrator; future
 iterations (Issues 15–18) will replace direct asset / effect access
 with dedicated systems (AssetManager, ParticleSystem, etc.).
 
@@ -76,7 +76,7 @@ class Renderer:
 
     def render(
         self,
-        game,  # legacy Game object
+        game,  # Game object
         target_surface: pygame.Surface,
         capture_sequence: Optional[List[str]] = None,
     ) -> None:
