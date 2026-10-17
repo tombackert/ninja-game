@@ -371,8 +371,10 @@ class ReplayManager:
 
     def _save(self, data: ReplayData, kind: str):
         path = self._path(data.level, kind)
+        # dumps() runs the C encoder; dump() streams through the pure-Python
+        # one, ~5x slower (up to ~30 ms per file on the level-end frame)
         with path.open("w") as f:
-            json.dump(data.to_json(), f)
+            f.write(json.dumps(data.to_json()))
 
     def _replay(self, level: str, kind: str) -> Optional[ReplayData]:
         """The level's best or last replay, read from disk at most once per level."""
