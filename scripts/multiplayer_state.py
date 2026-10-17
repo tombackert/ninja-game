@@ -379,8 +379,7 @@ class MultiplayerGameState(State):
 
         # 8. Camera follows local player
         if getattr(g, "player", None) and g.players:
-            g.scroll[0] += (g.player.rect().centerx - g.display.get_width() / 2 - g.scroll[0]) / 30
-            g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
+            g.update_camera()
 
         g.clock.tick()
         self._write_metrics()

@@ -64,8 +64,11 @@ class Game:
             self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
         self.WIN_W, self.WIN_H = self.screen.get_size()
 
-        self.display = pygame.Surface((self.BASE_W, self.BASE_H), pygame.SRCALPHA)
-        self.display_2 = pygame.Surface((self.BASE_W, self.BASE_H))
+        # World buffers have one spare column/row: the renderer draws at
+        # floor(scroll) and shifts the upscaled image by the remainder.
+        # display_2 has alpha so the background can stay unshifted beneath it.
+        self.display = pygame.Surface((self.BASE_W + 1, self.BASE_H + 1), pygame.SRCALPHA)
+        self.display_2 = pygame.Surface((self.BASE_W + 1, self.BASE_H + 1), pygame.SRCALPHA)
         self.display_3 = pygame.Surface((self.BASE_W, self.BASE_H))
 
         # Clock
@@ -322,6 +325,11 @@ class Game:
             if self.player.rect().colliderect(flag_rect):
                 self.endpoint = True
 
+    def update_camera(self):
+        """Ease the camera toward the player (once per tick)."""
+        self.scroll[0] += (self.player.rect().centerx - self.BASE_W / 2 - self.scroll[0]) / 30
+        self.scroll[1] += (self.player.rect().centery - self.BASE_H / 2 - self.scroll[1]) / 30
+
     def spawn_leaves(self):
         rng = RNGService.get()
         for rect in self.leaf_spawners:
@@ -382,9 +390,7 @@ class Game:
                 if self.dead > RESPAWN_DEAD_THRESHOLD and self.player.lives < 1:
                     self.load_level(self.level)
 
-            # Camera smoothing
-            self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
-            self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
+            self.update_camera()
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
             self.step()

@@ -13,8 +13,10 @@ class Effects:
             random.random() * game.screenshake - game.screenshake / 2,
             random.random() * game.screenshake - game.screenshake / 2,
         )
+        # Without the spare sub-pixel column/row (the legacy loop does not shift)
+        view = game.display_2.subsurface((0, 0, game.BASE_W, game.BASE_H))
         game.screen.blit(
-            pygame.transform.scale(game.display_2, game.screen.get_size()),
+            pygame.transform.scale(view, game.screen.get_size()),
             screenshake_offset,
         )
 

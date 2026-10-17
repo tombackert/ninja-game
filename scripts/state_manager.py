@@ -399,8 +399,7 @@ class GameState(State):
         # --- Camera Update ---
         # Moved from Renderer.render to ensure it pauses (Issue 47)
         if hasattr(g, "player") and g.player:
-            g.scroll[0] += (g.player.rect().centerx - g.display.get_width() / 2 - g.scroll[0]) / 30
-            g.scroll[1] += (g.player.rect().centery - g.display.get_height() / 2 - g.scroll[1]) / 30
+            g.update_camera()
 
         # --- Death / respawn handling ---
         # (Note: legacy attribute 'lifes' renamed to 'lives' internally; we access both defensively.)

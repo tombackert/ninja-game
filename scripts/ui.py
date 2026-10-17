@@ -93,8 +93,7 @@ class UI:
                 h = UI._perf_overlay_cache.get_height()
                 if dest_y + h > surface.get_height():
                     dest_y = surface.get_height() - h - 5
-                surface.blit(UI._perf_overlay_cache, (x, dest_y))
-                return
+                return surface.blit(UI._perf_overlay_cache, (x, dest_y))
         font = UI.get_font(8)
         # We'll size width dynamically based on measured text so large values fit.
         # Fallback height remains fixed (120) for layout stability.
@@ -196,7 +195,7 @@ class UI:
         dest_y = y
         if dest_y + overlay_h > surface.get_height():
             dest_y = surface.get_height() - overlay_h - 5
-        surface.blit(overlay, (x, dest_y))
+        return surface.blit(overlay, (x, dest_y))
 
     @staticmethod
     def load_image_cached(path, scale=1):
@@ -304,7 +303,7 @@ class UI:
         if center:
             rect = text_surf.get_rect(center=(x, y))
             draw_x, draw_y = rect.topleft
-        surface.blit(text_surf, (draw_x, draw_y))
+        return surface.blit(text_surf, (draw_x, draw_y))
 
     @staticmethod
     def render_game_elements(game, render_scroll):
@@ -468,7 +467,7 @@ class UI:
         if align == "right":
             text_surface = font.render(text, True, UI.GAME_UI_COLOR)
             x = x - text_surface.get_width()
-        UI.draw_text_with_outline(
+        return UI.draw_text_with_outline(
             surface=display,
             font=font,
             text=text,

@@ -227,19 +227,21 @@ class PerformanceHUD:
     def last_full_frame_ms(self) -> float:
         return self._last_full_ms
 
-    def render(self, surface, *, x: int = 5, y: int = 5) -> None:
+    def render(self, surface, *, x: int = 5, y: int = 5):
         """Delegate drawing to UI layer if enabled and a sample exists.
+
+        Returns the drawn area (pygame.Rect), or None when nothing was drawn.
 
         Import is local to avoid creating a hard dependency for pure logic tests.
         """
         # Use visible_sample (from previous frame) so we have full metrics
         if not (self.enabled and self._visible_sample):
-            return
+            return None
         try:
             from scripts.ui import UI
 
             game_counts = getattr(self, "_game_counts", None)
-            UI.render_perf_overlay(
+            return UI.render_perf_overlay(
                 surface,
                 work_ms=self._visible_sample.work_ms,
                 frame_full_ms=self._visible_sample.full_ms,
@@ -253,7 +255,7 @@ class PerformanceHUD:
                 game_counts=game_counts,
             )
         except Exception:  # pragma: no cover - overlay optional in headless tests
-            pass
+            return None
 
 
 __all__ = ["PerformanceHUD", "PerformanceSample"]
