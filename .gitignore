@@ -23,3 +23,5 @@ data/settings.json
 
 # Test specifiv ignores
 performance_data.csv
+frame_pacing*.csv
+frame_pacing*.png
