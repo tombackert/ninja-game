@@ -29,8 +29,14 @@ how much time is spent in simulation / composition versus present / vsync.
 from __future__ import annotations
 
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional, Any
+
+# A frame-to-frame interval above this missed at least one 60 Hz frame
+HITCH_MS = 25.0
+# Window for the worst interval (frames, ~1 s at 60 FPS)
+WORST_WINDOW = 60
 
 
 @dataclass
@@ -40,8 +46,9 @@ class PerformanceSample:
     Attributes:
         work_ms (float): Time in milliseconds spent on CPU work (logic + render commands).
             Excludes VSync/SwapBuffers time. High values indicate CPU bound.
-        full_ms (float | None): Total frame duration in milliseconds including VSync wait.
-            Should ideally match target frame time (e.g. 16.6ms for 60FPS).
+        full_ms (float | None): Milliseconds from the start of rendering to the final blit.
+            Excludes the simulation update, present and the frame wait, so it is not
+            the frame time; see interval_ms for that.
         avg_work_ms (float | None): Exponential Moving Average of work_ms for smoothing jitter.
         fps (float | None): Instantaneous Frames Per Second as reported by the game clock.
         theor_fps (float | None): Theoretical maximum FPS possible based solely on work_ms
@@ -50,6 +57,10 @@ class PerformanceSample:
             Indicates physical RAM currently used by the process.
         asset_count (int | None): Total count of loaded AssetManager resources (Images + Sounds).
             Useful for tracking asset leaks or loading spikes.
+        interval_ms (float | None): Real time since the previous frame started (what the
+            player sees; 16.67 ms at 60 FPS).
+        worst_interval_ms (float | None): Longest interval over the last WORST_WINDOW frames.
+        hitches (int | None): Intervals longer than HITCH_MS since the HUD started.
     """
 
     work_ms: float
@@ -59,6 +70,9 @@ class PerformanceSample:
     theor_fps: float | None
     memory_rss: float | None = None
     asset_count: int | None = None
+    interval_ms: float | None = None
+    worst_interval_ms: float | None = None
+    hitches: int | None = None
 
 
 @dataclass
@@ -87,11 +101,20 @@ class PerformanceHUD:
     _visible_sample: Optional[PerformanceSample] = field(default=None, init=False)
     _csv_file: Optional[Any] = field(default=None, init=False, repr=False)
     _csv_writer: Optional[Any] = field(default=None, init=False, repr=False)
+    _t_prev_start: Optional[float] = field(default=None, init=False, repr=False)
+    _intervals: deque = field(default_factory=lambda: deque(maxlen=WORST_WINDOW), init=False, repr=False)
+    hitches: int = field(default=0, init=False)
 
     def begin_frame(self) -> None:
         if not self.enabled:
             return
         now = time.perf_counter()
+        if self._t_prev_start is not None:
+            interval = (now - self._t_prev_start) * 1000.0
+            self._intervals.append(interval)
+            if interval > HITCH_MS:
+                self.hitches += 1
+        self._t_prev_start = now
         self._t_full_start = now
         self._t_work_start = now
 
@@ -119,6 +142,9 @@ class PerformanceHUD:
             avg_work_ms=self._avg_work_ms,
             fps=None,
             theor_fps=(1000.0 / work_ms) if work_ms > 0 else None,
+            interval_ms=self._intervals[-1] if self._intervals else None,
+            worst_interval_ms=max(self._intervals) if self._intervals else None,
+            hitches=self.hitches,
         )
 
     def end_frame(self, clock=None) -> None:  # clock optional to avoid circular imports in tests
@@ -250,6 +276,9 @@ class PerformanceHUD:
                 theor_fps=self._visible_sample.theor_fps,
                 memory_rss=self._visible_sample.memory_rss,
                 asset_count=self._visible_sample.asset_count,
+                interval_ms=self._visible_sample.interval_ms,
+                worst_interval_ms=self._visible_sample.worst_interval_ms,
+                hitches=self._visible_sample.hitches,
                 x=x,
                 y=y,
                 game_counts=game_counts,

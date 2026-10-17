@@ -62,6 +62,9 @@ class UI:
         theor_fps: float | None = None,
         memory_rss: float | None = None,
         asset_count: int | None = None,
+        interval_ms: float | None = None,
+        worst_interval_ms: float | None = None,
+        hitches: int | None = None,
         x: int = 5,
         y: int = 5,
         update_every: int = 10,
@@ -114,6 +117,12 @@ class UI:
             rows.append((loc.translate("perf.avg_work"), f"{avg_work_ms:.2f}ms"))
         if fps is not None:
             rows.append((loc.translate("perf.fps"), f"{fps:.1f}"))
+        if interval_ms is not None:
+            rows.append((loc.translate("perf.interval"), f"{interval_ms:.2f}ms"))
+        if worst_interval_ms is not None:
+            rows.append((loc.translate("perf.worst_interval"), f"{worst_interval_ms:.1f}ms"))
+        if hitches is not None:
+            rows.append((loc.translate("perf.hitches"), f"{hitches}"))
         if theor_fps is not None:
             rows.append((loc.translate("perf.theor_fps"), f"{theor_fps:.0f}"))
         if memory_rss is not None:

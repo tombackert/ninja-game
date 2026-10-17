@@ -32,3 +32,21 @@ def test_performance_hud_metrics_collection():
     # Check fields exist (may be None if dependencies missing in test env)
     assert hasattr(sample, "memory_rss")
     assert hasattr(sample, "asset_count")
+
+
+def test_performance_hud_tracks_frame_intervals_and_hitches(monkeypatch):
+    import scripts.perf_hud as perf_hud
+
+    now = [100.0]
+    monkeypatch.setattr(perf_hud.time, "perf_counter", lambda: now[0])
+    hud = PerformanceHUD(enabled=True)
+    for step in (0.0, 0.0167, 0.0167, 0.040, 0.0167):  # one 40 ms hitch
+        now[0] += step
+        hud.begin_frame()
+        hud.end_work_segment()
+        hud.end_frame()
+    sample = hud.last_sample
+    assert sample is not None
+    assert abs((sample.interval_ms or 0) - 16.7) < 0.01
+    assert abs((sample.worst_interval_ms or 0) - 40.0) < 0.01
+    assert sample.hitches == 1
