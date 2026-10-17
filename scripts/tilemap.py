@@ -53,6 +53,10 @@ class Tilemap:
         self.version = 2
         # Cache for tile type counts (recomputed on perf overlay rebuild cycles)
         self._cached_type_counts = None  # type: ignore[assignment]
+        # Map file in memory and the tiles extract() removed from it since,
+        # so a respawn can restore the level without reading the file again
+        self.loaded_path = None
+        self._extracted = []
         self.save_dir = "data/saves"
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
@@ -64,6 +68,7 @@ class Tilemap:
                 matches.append(tile.copy())
                 if not keep:
                     self.offgrid_tiles.remove(tile)
+                    self._extracted.append((None, tile))
 
         for loc in self.tilemap.copy():
             tile = self.tilemap[loc]
@@ -74,8 +79,19 @@ class Tilemap:
                 matches[-1]["pos"][1] *= self.tile_size
                 if not keep:
                     del self.tilemap[loc]
+                    self._extracted.append((loc, tile))
 
         return matches
+
+    def restore_extracted(self):
+        """Put back every tile extract() removed since load(), as a reload would."""
+        # In removal order, so extracting again yields the same order (entity IDs)
+        for loc, tile in self._extracted:
+            if loc is None:
+                self.offgrid_tiles.append(tile)
+            else:
+                self.tilemap[loc] = tile
+        self._extracted = []
 
     def tiles_around(self, pos):
         tiles = []
@@ -182,6 +198,8 @@ class Tilemap:
             self.tilemap = map_data["tilemap"]
             self.tile_size = map_data["tile_size"]
             self.offgrid_tiles = map_data["offgrid"]
+            self._extracted = []
+            self.loaded_path = path
 
             self.players = []
             self.enemies = []

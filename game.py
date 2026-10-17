@@ -147,12 +147,18 @@ class Game:
 
     def load_level(self, map_id, lives=3, respawn=False):
         self.timer.reset()
-        self.tilemap.load("data/maps/" + str(map_id) + ".json")
-        # Precompute immutable tile type counts for performance HUD (tiles static during gameplay)
-        try:
-            self.tilemap._cached_type_counts = self.tilemap._recompute_type_counts()  # type: ignore[attr-defined]
-        except Exception:
-            pass
+        path = "data/maps/" + str(map_id) + ".json"
+        if respawn and self.tilemap.loaded_path == path:
+            # Tiles only change by extraction (spawners, pickups): put those
+            # back instead of parsing the map file again (up to ~45 ms)
+            self.tilemap.restore_extracted()
+        else:
+            self.tilemap.load(path)
+            # Precompute immutable tile type counts for performance HUD (tiles static during gameplay)
+            try:
+                self.tilemap._cached_type_counts = self.tilemap._recompute_type_counts()  # type: ignore[attr-defined]
+            except Exception:
+                pass
 
         # Extract flags
         self.flags = []
