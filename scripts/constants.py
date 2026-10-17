@@ -72,6 +72,13 @@ TRANSITION_MAX = 30  # max positive transition value
 TRANSITION_START = -30  # starting negative transition value
 AIR_TIME_FATAL = 420  # frames in air before considered 'dead'
 
+# Camera
+CAMERA_EASE_FRAMES = 30  # each frame covers 1/N of the remaining distance ("classic")
+CALM_CAMERA_EASE_FRAMES = 15  # same for the "calm" style
+CALM_CAMERA_DEADZONE_X = 32  # px the player can move off center before the camera follows
+CALM_CAMERA_BAND_Y = 48  # mid-air, the camera follows vertically only beyond this many px
+CALM_CAMERA_SNAP = 0.1  # px; closer than this, the camera stops on its target
+
 # Misc
 LEAF_SPAWNER_CLOUD_COUNT = 16  # number of clouds (also used for initial cloud count)
 SAVE_DEFAULT_LIVES = 3

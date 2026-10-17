@@ -6,6 +6,9 @@ from scripts.logger import get_logger
 
 log = get_logger("settings")
 
+# "classic": always eases back to the player. "calm": see Game.update_camera.
+CAMERA_STYLES = ("classic", "calm")
+
 
 class Settings:
     SETTINGS_FILE = "data/settings.json"
@@ -22,6 +25,7 @@ class Settings:
         self.show_perf_overlay = True
         self._ghost_enabled = True
         self._ghost_mode = "best"  # "best" or "last"
+        self._camera_style = "classic"  # one of CAMERA_STYLES
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -128,6 +132,17 @@ class Settings:
             self._dirty = True
             self.flush()
 
+    @property
+    def camera_style(self) -> str:
+        return self._camera_style
+
+    @camera_style.setter
+    def camera_style(self, value: str) -> None:
+        if value in CAMERA_STYLES and value != self._camera_style:
+            self._camera_style = value
+            self._dirty = True
+            self.flush()
+
     def set_editor_level(self, value):
         self.selected_editor_level = max(0, value)
 
@@ -211,6 +226,9 @@ class Settings:
                     self.show_perf_overlay = data.get("show_perf_overlay", self.show_perf_overlay)
                     self._ghost_enabled = bool(data.get("ghost_enabled", self._ghost_enabled))
                     self._ghost_mode = str(data.get("ghost_mode", self._ghost_mode))
+                    camera_style = data.get("camera_style", self._camera_style)
+                    if camera_style in CAMERA_STYLES:
+                        self._camera_style = camera_style
                     playable_levels = data.get("playable_levels", {})
                     for level in self.playable_levels:
                         self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
@@ -250,6 +268,7 @@ class Settings:
             "show_perf_overlay": self.show_perf_overlay,
             "ghost_enabled": self._ghost_enabled,
             "ghost_mode": self._ghost_mode,
+            "camera_style": self._camera_style,
             "key_bindings": self.key_bindings,
         }
         try:

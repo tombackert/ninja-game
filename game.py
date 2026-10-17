@@ -8,6 +8,11 @@ from scripts.audio_service import AudioService
 from scripts.clouds import Clouds
 from scripts.collectableManager import CollectableManager
 from scripts.constants import (
+    CALM_CAMERA_BAND_Y,
+    CALM_CAMERA_DEADZONE_X,
+    CALM_CAMERA_EASE_FRAMES,
+    CALM_CAMERA_SNAP,
+    CAMERA_EASE_FRAMES,
     DEAD_ANIM_FADE_START,
     LEAF_SPAWNER_CLOUD_COUNT,
     RESPAWN_DEAD_THRESHOLD,
@@ -326,9 +331,29 @@ class Game:
                 self.endpoint = True
 
     def update_camera(self):
-        """Ease the camera toward the player (once per tick)."""
-        self.scroll[0] += (self.player.rect().centerx - self.BASE_W / 2 - self.scroll[0]) / 30
-        self.scroll[1] += (self.player.rect().centery - self.BASE_H / 2 - self.scroll[1]) / 30
+        """Ease the camera toward the player (once per tick).
+
+        "classic" always eases back to center the player. "calm" lets the
+        player move within a box around the center, follows vertically only
+        on the ground (or when the player leaves a band mid-air, e.g. falling)
+        and stops once it arrives, so the picture stands still more often.
+        """
+        cx = self.player.rect().centerx - self.BASE_W / 2
+        cy = self.player.rect().centery - self.BASE_H / 2
+        if settings.camera_style != "calm":
+            self.scroll[0] += (cx - self.scroll[0]) / CAMERA_EASE_FRAMES
+            self.scroll[1] += (cy - self.scroll[1]) / CAMERA_EASE_FRAMES
+            return
+        tx = min(max(self.scroll[0], cx - CALM_CAMERA_DEADZONE_X), cx + CALM_CAMERA_DEADZONE_X)
+        ty = cy
+        if not self.player.collisions["down"]:
+            ty = min(max(self.scroll[1], cy - CALM_CAMERA_BAND_Y), cy + CALM_CAMERA_BAND_Y)
+        for axis, target in ((0, tx), (1, ty)):
+            gap = target - self.scroll[axis]
+            if abs(gap) < CALM_CAMERA_SNAP:
+                self.scroll[axis] = target
+            else:
+                self.scroll[axis] += gap / CALM_CAMERA_EASE_FRAMES
 
     def spawn_leaves(self):
         rng = RNGService.get()
