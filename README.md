@@ -12,7 +12,7 @@ Dash through enemies, race your own ghost, play with friends, build levels, or t
 
 <img src="docs/media/trailer.gif" width="100%" alt="Ninja Game trailer: dashing through enemies, wall-jumping, racing a ghost, skins and multiplayer">
 
-**[▶ Watch the trailer with sound](docs/media/trailer.mp4)** · [Quick start](#quick-start) · [Controls](#controls) · [Train an AI agent](#train-an-ai-agent)
+[Quick start](#quick-start) · [Controls](#controls) · [Train an AI agent](#train-an-ai-agent)
 
 </div>
 
