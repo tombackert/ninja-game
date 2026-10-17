@@ -47,7 +47,11 @@ class Game:
         if fullscreen:
             self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         else:
-            self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
+            # Every level start builds a new Game: keep a window that is
+            # already open at this size (recreating it stalls 5-12 ms)
+            self.screen = pygame.display.get_surface()
+            if self.screen is None or self.screen.get_size() != (self.WIN_W, self.WIN_H):
+                self.screen = pygame.display.set_mode((self.WIN_W, self.WIN_H))
         self.WIN_W, self.WIN_H = self.screen.get_size()
 
         # World buffers have one spare column/row: the renderer draws at
