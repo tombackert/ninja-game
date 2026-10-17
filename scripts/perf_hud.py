@@ -109,14 +109,22 @@ class PerformanceHUD:
         if not self.enabled:
             return
         now = time.perf_counter()
+        self._note_interval(now)
+        self._t_full_start = now
+        self._t_work_start = now
+
+    def note_frame(self) -> None:
+        """Count a frame shown without rendering the game (the pause screen)."""
+        if self.enabled:
+            self._note_interval(time.perf_counter())
+
+    def _note_interval(self, now: float) -> None:
         if self._t_prev_start is not None:
             interval = (now - self._t_prev_start) * 1000.0
             self._intervals.append(interval)
             if interval > HITCH_MS:
                 self.hitches += 1
         self._t_prev_start = now
-        self._t_full_start = now
-        self._t_work_start = now
 
     def end_work_segment(self) -> None:
         """Mark the logical end of the *work* portion of the frame.

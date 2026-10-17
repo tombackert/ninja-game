@@ -478,6 +478,11 @@ class PauseState(State):
             self.bg = pygame.image.load("data/images/background-big.png")
         except Exception:  # pragma: no cover - asset optional in tests
             pass
+        # Darkening overlay and faded menu background, built once per size
+        self._veil: tuple[pygame.Surface, pygame.Surface | None] | None = None
+        # The darkened game frame. A paused single-player game does not
+        # change, so it is composed once instead of re-rendered every frame.
+        self._backdrop: pygame.Surface | None = None
 
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
@@ -520,29 +525,23 @@ class PauseState(State):
             self._underlying.network_idle_update()
 
     def render(self, surface: pygame.Surface) -> None:
-        # Render underlying (frozen) game frame if available before overlay.
-        if self._underlying and hasattr(self._underlying, "render"):
-            # Freeze underlying simulation-driven updates inside render path.
-            underlying = self._underlying
-            game_obj = getattr(underlying, "game", None)
-            if game_obj is not None:
-                setattr(game_obj, "_paused_freeze", True)
-            # Render one frozen frame
-            underlying.render(surface)
-            if game_obj is not None:
-                setattr(game_obj, "_paused_freeze", False)
-        # Semi-transparent overlay
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 140))  # semi-transparent darkening
-        surface.blit(overlay, (0, 0))
-        # Optional faint menu background blended in
-        if self.bg:
-            try:
-                bg_scaled = pygame.transform.scale(self.bg, surface.get_size())
-                bg_scaled.set_alpha(60)
-                surface.blit(bg_scaled, (0, 0))
-            except Exception:  # pragma: no cover
-                pass
+        # Multiplayer keeps its world running underneath: redraw it every frame
+        live = hasattr(self._underlying, "network_idle_update")
+        if self._backdrop is None or self._backdrop.get_size() != surface.get_size():
+            # Composed in an opaque buffer: on the window surface (per-pixel
+            # alpha 0 on macOS) the overlay would replace the game picture
+            # instead of darkening it
+            self._backdrop = pygame.Surface(surface.get_size())
+            self._render_backdrop(self._backdrop)
+        elif live:
+            self._render_backdrop(self._backdrop)
+        else:
+            # The game is not drawn, but a frame is shown: keep the perf HUD's
+            # frame intervals continuous (resuming is measured from here)
+            renderer = getattr(self._underlying, "_renderer", None)
+            if renderer is not None:
+                renderer.perf_hud.note_frame()
+        surface.blit(self._backdrop, (0, 0))
         # Title
         from scripts.ui import UI
 
@@ -571,6 +570,38 @@ class PauseState(State):
             surface.get_width() // 2 - 110,
             surface.get_height() - 40,
         )
+
+    def _render_backdrop(self, surface: pygame.Surface) -> None:
+        """The underlying game frame, darkened, with the menu background faintly on top."""
+        # Render underlying (frozen) game frame if available before overlay.
+        if self._underlying and hasattr(self._underlying, "render"):
+            # Freeze underlying simulation-driven updates inside render path.
+            underlying = self._underlying
+            game_obj = getattr(underlying, "game", None)
+            if game_obj is not None:
+                setattr(game_obj, "_paused_freeze", True)
+            # Render one frozen frame
+            underlying.render(surface)
+            if game_obj is not None:
+                setattr(game_obj, "_paused_freeze", False)
+        size = surface.get_size()
+        if self._veil is None or self._veil[0].get_size() != size:
+            # Semi-transparent overlay
+            overlay = pygame.Surface(size, pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 140))  # semi-transparent darkening
+            # Optional faint menu background blended in
+            bg_scaled = None
+            if self.bg:
+                try:
+                    bg_scaled = pygame.transform.scale(self.bg, size)
+                    bg_scaled.set_alpha(60)
+                except Exception:  # pragma: no cover
+                    bg_scaled = None
+            self._veil = (overlay, bg_scaled)
+        overlay, bg_scaled = self._veil
+        surface.blit(overlay, (0, 0))
+        if bg_scaled:
+            surface.blit(bg_scaled, (0, 0))
 
 
 # ---------------- Additional Menu Sub-States (Issue 12) -----------------
