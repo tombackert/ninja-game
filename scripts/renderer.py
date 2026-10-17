@@ -187,8 +187,12 @@ class Renderer:
         src = game.assets["background"]
         if self._bg is None or self._bg_src is not src or self._bg.get_size() != size:
             view = src.subsurface((0, 0, min(src.get_width(), game.BASE_W), min(src.get_height(), game.BASE_H)))
+            scaled = pygame.transform.scale(view, size)
+            # The asset's black colorkey would only skip pixels that end up
+            # black anyway, but checking each one makes this blit ~6 ms
+            scaled.set_colorkey(None)
             self._bg = pygame.Surface(size)  # opaque, so blitting it is a plain copy
-            self._bg.blit(pygame.transform.scale(view, size), (0, 0))
+            self._bg.blit(scaled, (0, 0))
             self._bg_src = src
         return self._bg
 
