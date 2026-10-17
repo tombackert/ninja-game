@@ -133,3 +133,41 @@ def test_replay_disabled_skips_capture(tmp_path):
 
     assert not (tmp_path / "5.json").exists()
     assert not (tmp_path / "last_runs" / "5.json").exists()
+
+
+def _committed_run(tmp_path, level, new_best):
+    game = _StubGame()
+    manager = ReplayManager(game, storage_dir=tmp_path)
+    player = _StubPlayer()
+    game.players.append(player)
+    manager.on_level_load(level=level, player=player)
+    for idx in range(15):
+        player.pos = [float(idx), float(idx)]
+        manager.update(player, [])
+    manager.commit_run(new_best=new_best)
+    return game, player
+
+
+def test_ghost_replay_is_read_once_per_level(tmp_path, monkeypatch):
+    game, player = _committed_run(tmp_path, level=3, new_best=True)  # writes best and last run
+    manager = ReplayManager(game, storage_dir=tmp_path)
+    reads = []
+    real_load = manager._load
+    monkeypatch.setattr(manager, "_load", lambda level, kind: reads.append(kind) or real_load(level, kind))
+
+    manager.on_level_load(level=3, player=player)
+    manager.on_level_load(level=3, player=player)  # respawn
+
+    assert reads == ["best"]  # the last run is not needed while a best run exists
+    assert manager.ghost is not None and manager.ghost.data is manager.best_data
+
+
+def test_ghost_falls_back_to_the_other_replay(tmp_path, monkeypatch):
+    game, player = _committed_run(tmp_path, level=4, new_best=False)  # writes only the last run
+    monkeypatch.setattr(global_settings, "_ghost_mode", "best")  # the setter would save settings
+    manager = ReplayManager(game, storage_dir=tmp_path)
+
+    manager.on_level_load(level=4, player=player)
+
+    assert manager.best_data is None
+    assert manager.ghost is not None and manager.ghost.data is manager.last_data

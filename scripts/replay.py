@@ -304,6 +304,10 @@ class ReplayManager:
         self.ghost: Optional[ReplayGhost] = None
         self.best_data: Optional[ReplayData] = None
         self.last_data: Optional[ReplayData] = None
+        # Level that best_data / last_data belong to and which of the two are
+        # known, so a respawn reuses them instead of reading the files again
+        self._data_level: Optional[str] = None
+        self._data_known: set[str] = set()
         self.tick_counter = 0
 
     def on_level_load(self, level: int | str, player: Any):
@@ -322,23 +326,10 @@ class ReplayManager:
             self.recording = ReplayRecording(level_str, skin, seed)
             self.tick_counter = 0
 
-            self.best_data = self._load(level_str, "best")
-            self.last_data = self._load(level_str, "last")
-
-            source = None
+            # Prioritize based on mode; the other replay is only read as a fallback
             mode = getattr(global_settings, "ghost_mode", "best")
-
-            # Prioritize based on mode
-            if mode == "best":
-                if self.best_data and self.best_data.level == level_str:
-                    source = self.best_data
-                elif self.last_data and self.last_data.level == level_str:
-                    source = self.last_data
-            else:  # mode == "last"
-                if self.last_data and self.last_data.level == level_str:
-                    source = self.last_data
-                elif self.best_data and self.best_data.level == level_str:
-                    source = self.best_data
+            first, second = ("best", "last") if mode == "best" else ("last", "best")
+            source = self._replay(level_str, first) or self._replay(level_str, second)
 
             if source:
                 self.ghost = ReplayGhost(self.game, source)
@@ -368,10 +359,10 @@ class ReplayManager:
         if not self.recording or self.recording.data.duration_frames < 10:
             return
         data = self.recording.data
-        self.last_data = data
+        self._remember(data.level, "last", data)
         self._save(data, "last")
         if new_best:
-            self.best_data = data
+            self._remember(data.level, "best", data)
             self._save(data, "best")
 
     def render_ghost(self, surface, offset):
@@ -382,6 +373,23 @@ class ReplayManager:
         path = self._path(data.level, kind)
         with path.open("w") as f:
             json.dump(data.to_json(), f)
+
+    def _replay(self, level: str, kind: str) -> Optional[ReplayData]:
+        """The level's best or last replay, read from disk at most once per level."""
+        if self._data_level != level or kind not in self._data_known:
+            self._remember(level, kind, self._load(level, kind))
+        data = self.best_data if kind == "best" else self.last_data
+        return data if data and data.level == level else None
+
+    def _remember(self, level: str, kind: str, data: Optional[ReplayData]):
+        if self._data_level != level:
+            self._data_level, self._data_known = level, set()
+            self.best_data = self.last_data = None
+        self._data_known.add(kind)
+        if kind == "best":
+            self.best_data = data
+        else:
+            self.last_data = data
 
     def _load(self, level: str, kind: str) -> Optional[ReplayData]:
         path = self._path(level, kind)
