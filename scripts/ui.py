@@ -18,6 +18,8 @@ class UI:
     )
     _text_cache_capacity: int = 256
     _text_cache_stats = {"hits": 0, "misses": 0, "evictions": 0}
+    # Loaded fonts by size (avoids re-reading the TTF on every call)
+    _font_cache: "dict[int, pygame.font.Font]" = {}
 
     # Performance overlay caching
     _perf_overlay_cache: pygame.Surface | None = None
@@ -231,7 +233,15 @@ class UI:
 
     @staticmethod
     def get_font(size):
-        return pygame.font.Font("data/font.ttf", size)
+        font = UI._font_cache.get(size)
+        if font is None:
+            if not UI._font_cache:
+                # Fonts are invalid after pygame.quit(); quit hooks run once,
+                # so re-register whenever the cache starts filling again.
+                pygame.register_quit(UI._font_cache.clear)
+            font = pygame.font.Font("data/font.ttf", size)
+            UI._font_cache[size] = font
+        return font
 
     @staticmethod
     def draw_text_with_outline(
