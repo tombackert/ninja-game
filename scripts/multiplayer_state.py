@@ -361,6 +361,7 @@ class MultiplayerGameState(State):
             g.clouds.update()
         if hasattr(g, "particle_system"):
             g.particle_system.update()
+        g.spawn_leaves()
         g.screenshake = max(0, g.screenshake - 1)
         g.dead = 0  # global death fade is meaningless in multiplayer
         for _, _, obj in self._collectable_registry:

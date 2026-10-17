@@ -20,9 +20,11 @@ from scripts.entities import Enemy, Player
 from scripts.entity_id import EntityIDGenerator
 from scripts.keyboardManager import KeyboardManager
 from scripts.level_cache import list_levels
+from scripts.particle import Particle
 from scripts.particle_system import ParticleSystem
 from scripts.projectile_system import ProjectileSystem
 from scripts.replay import ReplayManager
+from scripts.rng_service import RNGService
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.timer import Timer
@@ -270,6 +272,74 @@ class Game:
             except Exception:
                 pass
 
+    def apply_inputs(self, inputs):
+        """Map input names (left/right/jump/dash/shoot) onto the player."""
+        self.movement = [False, False]
+        for key in inputs:
+            if key == "left":
+                self.movement[0] = True
+            elif key == "right":
+                self.movement[1] = True
+            elif key == "jump":
+                self.player.jump()
+            elif key == "dash":
+                self.player.dash()
+            elif key == "shoot":
+                self.player.shoot()
+
+    def step(self):
+        """Advance the world by one simulation tick.
+
+        The single source of truth for update order. Every single-player
+        loop (GameState, legacy run, TrainingEnv, prediction re-simulation)
+        calls this, so all of them consume the shared RNG identically.
+        Rendering must never touch simulation state.
+        """
+        self.tick += 1
+        self.screenshake = max(0, self.screenshake - 1)
+
+        self.projectiles.update(self.tilemap, self.players, self.enemies)
+        self.clouds.update()
+
+        for enemy in self.enemies.copy():
+            kill = enemy.update(self.tilemap, (0, 0))
+            if kill:
+                self.enemies.remove(enemy)
+
+        if not self.dead:
+            for idx, player in enumerate(self.players):
+                # Use list index (not entity ID) to match playerID selection
+                if idx == self.playerID:
+                    player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+                else:
+                    player.update(self.tilemap, (0, 0))
+
+        self.particle_system.update()
+        self.spawn_leaves()
+        self.cm.update(self.player.rect())
+
+        for flag_rect in self.flags:
+            if self.player.rect().colliderect(flag_rect):
+                self.endpoint = True
+
+    def spawn_leaves(self):
+        rng = RNGService.get()
+        for rect in self.leaf_spawners:
+            if rng.random() * 49999 < rect.width * rect.height:
+                pos = (
+                    rect.x + rng.random() * rect.width,
+                    rect.y + rng.random() * rect.height,
+                )
+                self.particles.append(
+                    Particle(
+                        self,
+                        "leaf",
+                        pos,
+                        velocity=[-0.1, 0.3],
+                        frame=rng.randint(0, 20),
+                    )
+                )
+
     def run(self):
         self.audio.play_music("data/music.wav", loops=-1)
         self.audio.play("ambience", loops=-1)
@@ -282,12 +352,8 @@ class Game:
             self.timer.update(self.level)
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets["background"], (0, 0))
-            self.screenshake = max(0, self.screenshake - 1)
 
-            # Flag & level completion logic (unchanged)
-            for flag_rect in self.flags:
-                if self.player.rect().colliderect(flag_rect):
-                    self.endpoint = True
+            # Level completion (endpoint is set by step's flag check)
             if self.endpoint:
                 self.transition += 1
                 if self.transition > TRANSITION_MAX:
@@ -321,42 +387,9 @@ class Game:
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
-            # Entity Updates (Moved from UI.render_game_elements)
-            self.clouds.update()
-
-            for enemy in self.enemies.copy():
-                kill = enemy.update(self.tilemap, (0, 0))
-                if kill:
-                    self.enemies.remove(enemy)
-
-            if not self.dead:
-                for idx, player in enumerate(self.players):
-                    # Use list index (not entity ID) to match playerID selection
-                    if idx == self.playerID:
-                        player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
-                        if self.replay:
-                            try:
-                                self.replay.capture_player(player)
-                            except Exception:
-                                pass
-                    else:
-                        player.update(self.tilemap, (0, 0))
-
-            if hasattr(self, "particle_system"):
-                self.particle_system.update()
-            else:
-                for spark in self.sparks.copy():
-                    kill = spark.update()
-                    if kill:
-                        self.sparks.remove(spark)
-
-            self.cm.update(self.player.rect())
+            self.step()
 
             UI.render_game_elements(self, render_scroll)
-            # Update projectiles after entities so newly spawned
-            # this frame move immediately
-            if hasattr(self.projectiles, "update"):
-                self.projectiles.update(self.tilemap, self.players, self.enemies)
             self.km.handle_keyboard_input()  # Legacy direct polling
             self.km.handle_mouse_input()
 

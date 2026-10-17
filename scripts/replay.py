@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any
 
 import pygame
 
+from scripts.rng_service import RNGService
 from scripts.settings import settings as global_settings
 from scripts.snapshot import SnapshotService
 from scripts.entities import Player
@@ -232,6 +233,13 @@ class ReplayGhost:
             if inp == "dash":
                 dash = True
 
+        # The ghost shares the live game object, so its physics would draw
+        # from the gameplay RNG (dash particles) and could bump the death
+        # counter. Restore both so the ghost never changes the live run.
+        rng = RNGService.get()
+        rng_state = rng.get_state()
+        dead = self.game.dead
+
         if jump:
             self.entity.jump()
         if dash:
@@ -240,6 +248,9 @@ class ReplayGhost:
         # 3. Run Physics Update
         frame_movement = (movement[1] - movement[0], 0)
         self.entity.update(self.game.tilemap, frame_movement)
+
+        rng.set_state(rng_state)
+        self.game.dead = dead
 
         # 4. Render
         self._render_tinted(surface, offset)

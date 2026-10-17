@@ -340,20 +340,12 @@ class GameState(State):
         if getattr(g, "_paused_freeze", False):
             return
 
-        # Increment global simulation tick (for multiplayer sync, replay, etc.)
-        g.tick += 1
-
         replay_mgr = getattr(g, "replay", None)
 
         # --- Core time & housekeeping ---
         g.timer.update(g.level)
-        g.screenshake = max(0, g.screenshake - 1)
 
-        # --- Level completion / flag collision ---
-        for flag_rect in getattr(g, "flags", []):
-            if g.player.rect().colliderect(flag_rect):
-                g.endpoint = True
-
+        # --- Level completion (endpoint is set by Game.step's flag check) ---
         from scripts.constants import (
             DEAD_ANIM_FADE_START,
             RESPAWN_DEAD_THRESHOLD,
@@ -449,52 +441,8 @@ class GameState(State):
             # drawing of the transition effect occurs in Renderer.render.
             pass
 
-        # --- Systems ---
-        if hasattr(g, "projectiles") and hasattr(g.projectiles, "update"):
-            g.projectiles.update(g.tilemap, g.players, g.enemies)
-
-        # --- Entities & World Update (Moved from UI.render_game_elements) ---
-        # Clouds
-        if hasattr(g, "clouds"):
-            g.clouds.update()
-
-        # Enemies
-        for enemy in g.enemies.copy():
-            kill = enemy.update(g.tilemap, (0, 0))
-            if kill:
-                g.enemies.remove(enemy)
-
-        # Players
-        if not g.dead:
-            for idx, player in enumerate(g.players):
-                # Use list index (not entity ID) to match playerID selection
-                if idx == g.playerID:
-                    # Movement driven by legacy input flags
-                    player.update(g.tilemap, (g.movement[1] - g.movement[0], 0))
-                    replay_mgr = getattr(g, "replay", None)
-                    if replay_mgr is not None:
-                        try:
-                            replay_mgr.capture_player(player)
-                        except Exception:
-                            pass
-                else:
-                    player.update(g.tilemap, (0, 0))
-
-        # Particles / Sparks
-        if hasattr(g, "particle_system"):
-            g.particle_system.update()
-        else:
-            # Legacy path
-            for spark in g.sparks.copy():
-                kill = spark.update()
-                if kill:
-                    g.sparks.remove(spark)
-
-        # Collectables
-        if hasattr(g, "cm") and hasattr(g, "player"):
-            g.cm.update(g.player.rect())
-
-        # Particle system update remains in renderer (coupled to render order)
+        # --- World simulation (shared with TrainingEnv and the legacy loop) ---
+        g.step()
 
     def render(self, surface: pygame.Surface) -> None:
         # Delegate full frame composition to unified Renderer (Issue 14).

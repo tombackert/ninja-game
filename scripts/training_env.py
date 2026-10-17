@@ -70,74 +70,10 @@ class TrainingEnv:
         else:
             inputs = []
 
-        # Apply inputs (Direct injection for now, later InputRouter injection)
-        # We simulate keyboard state by overriding the game's input flags directly
-        # or injecting into InputRouter if it were fully decoupled.
-        # For legacy compatibility, we manipulate the `movement` list and `km` if needed.
-
-        # Reset flags
-        self.game.movement = [False, False]  # [left, right]
-        # self.game.player.dashing is internal logic
-
-        jump_pressed = False
-        dash_pressed = False
-        shoot_pressed = False
-
-        for key in inputs:
-            if key == "left":
-                self.game.movement[0] = True
-            elif key == "right":
-                self.game.movement[1] = True
-            elif key == "jump":
-                jump_pressed = True
-            elif key == "dash":
-                dash_pressed = True
-            elif key == "shoot":
-                shoot_pressed = True
-
-        # Apply discrete triggers (Jump/Dash/Shoot)
-        # We need to invoke methods on player directly if keys are "pressed" this frame
+        # Same simulation step as live play (GameState.update)
         p = self.game.player
-        if jump_pressed:
-            p.jump()
-        if dash_pressed:
-            p.dash()
-        if shoot_pressed:
-            p.shoot()
-
-        # Run simulation step
-        # Currently Game.run() is a loop. We need a single step function.
-        # GameState.update() has logic, but Game object itself doesn't have a public `tick()`.
-        # We'll extract the update logic from GameState.update or Game.run into a Game.update()
-        # For now, let's replicate the critical update calls from `GameState.update` logic
-        # or refactor Game to have a `tick(dt)` method.
-
-        # Since we are in a "Feature" branch, let's add a `tick()` method to Game
-        # to support this cleanly without duplicating logic.
-        # But first, I'll implement the step logic here assuming `tick` exists or inline it.
-
-        # Inline update logic (Mirroring GameState.update somewhat)
-        self.game.tilemap.extract_entities()  # Spawners? No, already loaded.
-
-        # Update entities
-        # Update player
-        movement_vec = (self.game.movement[1] - self.game.movement[0], 0)
-        p.update(self.game.tilemap, movement_vec)
-
-        # Update enemies
-        for enemy in self.game.enemies.copy():
-            kill = enemy.update(self.game.tilemap, (0, 0))
-            if kill:
-                self.game.enemies.remove(enemy)
-
-        # Update projectiles
-        if hasattr(self.game, "projectiles"):
-            self.game.projectiles.update(self.game.tilemap, self.game.players, self.game.enemies)
-
-        # Update particles (visual but maybe logic tied? leaf spawners use RNG)
-        # We should run particle updates for determinism if RNG is used
-        if hasattr(self.game, "particle_system"):
-            self.game.particle_system.update()
+        self.game.apply_inputs(inputs)
+        self.game.step()
 
         # Check termination
         done = False

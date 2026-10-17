@@ -93,28 +93,5 @@ class PredictionReconciliationService:
                 re_sim_tick += 1
 
     def _apply_inputs_and_step(self, inputs):
-        # Re-use TrainingEnv's logic or Game's internal input mapping
-        # Ideally Game has a method `apply_inputs(list)` and `update()`.
-
-        g = self.game
-        g.movement = [False, False]
-        for key in inputs:
-            if key == "left":
-                g.movement[0] = True
-            elif key == "right":
-                g.movement[1] = True
-            elif key == "jump":
-                g.player.jump()
-            elif key == "dash":
-                g.player.dash()
-            elif key == "shoot":
-                g.player.shoot()
-
-        # Tick physics
-        # We can extract the step logic from TrainingEnv or duplicate it temporarily.
-        # For this feature, I will rely on `game.player.update` etc.
-
-        movement_vec = (g.movement[1] - g.movement[0], 0)
-        g.player.update(g.tilemap, movement_vec)
-        # (Skipping full entity loop for brevity in this snippet, focusing on player correction)
-        # In full implementation, this would call game.update()
+        self.game.apply_inputs(inputs)
+        self.game.step()

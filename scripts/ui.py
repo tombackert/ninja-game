@@ -2,9 +2,6 @@ from collections import OrderedDict
 
 import pygame
 
-from scripts.particle import Particle
-from scripts.rng_service import RNGService
-
 
 class UI:
     COLOR = "#137547"
@@ -301,24 +298,6 @@ class UI:
 
     @staticmethod
     def render_game_elements(game, render_scroll):
-        # Leaf particles
-        rng = RNGService.get()
-        for rect in game.leaf_spawners:
-            if rng.random() * 49999 < rect.width * rect.height:
-                pos = (
-                    rect.x + rng.random() * rect.width,
-                    rect.y + rng.random() * rect.height,
-                )
-                game.particles.append(
-                    Particle(
-                        game,
-                        "leaf",
-                        pos,
-                        velocity=[-0.1, 0.3],
-                        frame=rng.randint(0, 20),
-                    )
-                )
-
         # Clouds
         game.clouds.render(game.display_2, offset=render_scroll)
         game.tilemap.render(game.display, offset=render_scroll)
