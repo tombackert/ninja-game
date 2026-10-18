@@ -1,4 +1,4 @@
-"""Level 22 - Olympus Mons (mars rock, Mars sky). The second finale.
+"""Level 20 - Olympus Mons (mars rock, Mars sky). The finale.
 
 A vertical climb inside the volcano, switching back and forth: a holed
 chimney, a chain of floating rocks, a wall-bounce ladder against the
@@ -13,7 +13,7 @@ LEFT, RIGHT, GROUND = 1, 69, 141
 
 
 def build() -> Level:
-    lv = Level(22, "mars", background="background-mars.png")
+    lv = Level(20, "mars", background="background-mars.png")
     lv.rect(LEFT - 1, 16, LEFT, GROUND + 3)  # crater walls
     lv.rect(RIGHT, 16, RIGHT + 1, GROUND + 3)
     lv.rect(LEFT - 1, GROUND, RIGHT + 1, GROUND + 3)

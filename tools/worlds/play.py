@@ -17,7 +17,7 @@ Each run writes report.json, screenshots and (with --video) an mp4 of the
 playthrough to the output directory.
 
 Usage:
-    python -m tools.worlds.play 11 [12 13 14 16] [--out DIR] [--attempts 3] [--video]
+    python -m tools.worlds.play 11 [12 ... 20] [--out DIR] [--attempts 3] [--video]
 """
 
 from __future__ import annotations

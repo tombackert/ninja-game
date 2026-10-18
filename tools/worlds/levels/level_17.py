@@ -1,121 +1,101 @@
-"""Level 17 - Sandstone Canyons (sand, desert sky).
+"""Level 17 - Sky Fortress (stone castle on a grass island, sky).
 
-A pillar run down into a canyon, a holed chimney back out, a wall-bounce
-staircase (wall jump off a free-standing wall back on to a ledge too high
-to reach otherwise, twice), a cave labyrinth inside the plateau, a pillar
-run across the next canyon, a dash to the last mesa and a holed chimney
-up to the flag.
+A crate bridge over the moat into the gate, a low gatehouse gallery over
+bottomless murder holes (dash them), a holed chimney up the outer wall,
+the battlement walk with pits and merlons, a zigzag shaft inside the west
+tower and a long sky bridge of single crates to the floating keep with
+the flag.
 """
 
-from tools.worlds.builder import Level, Maze, crate_chain, holed_chimney, pillar_run
+from tools.worlds.builder import Level, crate_chain, holed_chimney, zigzag
 
-BOTTOM = 80
+BOTTOM = 92
 
 
 def build() -> Level:
-    lv = Level(17, "sand", background="background-desert.png")
+    lv = Level(17, "stone")
 
-    # --- Start mesa and a pillar run down into the canyon ----------------------
-    lv.rect(0, 40, 18, BOTTOM)
-    lv.spawn(3, 39)
-    lv.decor(7, 39, 4)
-    lv.big_decor(12, 39, 3)
-    for x in (10, 15):
-        lv.enemy(x, 39)
-    lv.coins(4, 37, 8, 2)
-    lv.wp(15, 39, 18, 39, ground=True, label="mesa edge")
-    pillar_run(lv, [(22, 42), (26, 44), (31, 45), (35, 47), (39, 49), (44, 50), (48, 52)], BOTTOM, label="down pillar")
+    # --- Start island and the crate bridge to the gate -------------------------
+    for i in range(6):
+        lv.rect(0 + i, 70 + i, 14 - i, 70 + i, "grass")
+    lv.spawn(3, 69)
+    lv.decor(6, 69, 0)
+    lv.big_decor(10, 69, 2)
+    for x in (7, 11):
+        lv.enemy(x, 69)
+    lv.coins(4, 67, 10, 2)
+    lv.wp(12, 69, 14, 69, ground=True, label="island edge")
+    crate_chain(lv, [(18, 70, 2), (23, 69, 1), (27, 69, 1), (32, 68, 1), (36, 67, 2)], label="moat crate")
 
-    # --- Canyon ledge and a holed chimney back up --------------------------------
-    lv.rect(52, 54, 72, BOTTOM)
-    lv.wp(52, 53, 54, 53, ground=True, label="canyon ledge")
-    for x in (56, 60, 63):
-        lv.enemy(x, 53)
-    lv.decor(58, 53, 5)
-    lv.coins(55, 51, 63, 2)
-    holed_chimney(lv, 66, 4, 24, 54, rests=[(1, 44), (-1, 34)], label="canyon chimney")
+    # --- Castle body: floor slab, outer wall with gate, inner block ----------
+    lv.rect(40, 67, 115, 70)
+    for i in range(1, 7):
+        lv.rect(40 + 3 * i, 70 + i, 115 - 3 * i, 70 + i, "grass")
+    lv.rect(40, 31, 43, 66)  # west wall
+    lv.carve(40, 64, 43, 66)  # gate
+    lv.rect(44, 30, 103, 63)  # inner block; its top is the battlement walk
+    lv.wp(40, 64, 43, 66, ground=True, label="gate")
 
-    # --- Plateau B and the wall-bounce staircase -------------------------------
-    lv.rect(74, 24, 100, BOTTOM)  # two tiles off the chimney's right wall
-    lv.wp(74, 23, 76, 23, ground=True, label="plateau B")
-    for x in (80, 85, 90, 95):
-        lv.enemy(x, 23)
-    lv.big_decor(83, 23, 4)
-    lv.decor(93, 23, 4)
-    lv.coins(78, 21, 98, 2)
-    # Plateau C's west face is the bounce wall; neither ledge can be reached
-    # by a plain jump (4 rows up), only by a wall jump off the opposite wall
-    lv.rect(104, 15, 150, BOTTOM)  # plateau C
-    lv.rect(99, 20, 101, 20)  # ledge L1 over the plateau B edge
-    lv.rect(96, 6, 96, 17)  # free-standing wall W2
-    lv.rect(100, 17, 103, 17)  # ledge L2 on plateau C's face (48 px over L1: > a jump)
-    lv.wp(97, 23, 100, 23, ground=True, label="plateau B edge")
-    lv.wp(99, 19, 101, 19, ground=True, label="bounce ledge 1")
-    lv.wp(100, 16, 103, 16, ground=True, label="bounce ledge 2")
-    lv.wp(104, 14, 107, 14, ground=True, label="plateau C")
-    lv.coins(102, 21, 103)
-    lv.coins(97, 17, 98)
-    lv.coins(101, 14, 103)
-    for x in (110, 118, 126, 134):
-        lv.enemy(x, 14)
-    lv.decor(122, 14, 5)
-    lv.big_decor(130, 14, 3)
-    lv.coins(116, 12, 140, 3)
-    mz = Maze(lv, 112, 17, 7, 4, seed=1707, dx=5, dy=5, cw=3, ch=3, border=0, extra_edges=3, start=(0, 0))
-    lv.carve(112, 15, 114, 16)  # shaft down into cell (0,0)
-    lv.wp(112, 15, 114, 16, label="cave shaft")
-    mz.route((0, 0), (6, 3))
-    for c, r in mz.dead_ends():
-        if (c, r) not in ((0, 0), (6, 3)):
-            x, y = mz.cell_xy(c, r)
-            lv.coins(x, y + 2, x + 2)
-    placed = 0
-    for c in range(1, 7):
-        for r in range(4):
-            x, y = mz.cell_xy(c, r)
-            if (c + r) % 2 == 1 and lv.is_solid(x + 1, y + 3) and placed < 12:
-                lv.enemy(x + 1, y + 2)
-                placed += 1
-    ex, ey = mz.cell_xy(6, 3)
-    lv.carve(ex + 3, ey, 150, ey + 2)  # door in the cliff
-    lv.wp(147, ey, 150, ey + 2, ground=True, label="cliff door")
+    # --- Gatehouse gallery (3 tall) over bottomless murder holes ---------------
+    for px in (52, 62, 72, 82, 92):
+        lv.carve(px, 67, px + 3, BOTTOM + 4)
+        lv.coin(px + 1, 65)
+        lv.wp(px - 4, 64, px - 1, 66, ground=True, label=f"murder hole {px}")
+    for x in (46, 49, 57, 60, 67, 77, 80, 87, 97, 101):
+        lv.enemy(x, 66)
+    lv.wp(99, 64, 103, 66, ground=True, label="gallery end")
 
-    # --- Canyon D: pillars, then a dash to the last mesa --------------------------
-    floor = ey + 3
-    pillar_run(
-        lv,
-        [(154, floor + 1), (158, floor), (163, floor + 2), (167, floor + 1), (172, floor + 3), (176, floor + 2)],
-        BOTTOM,
-        label="canyon pillar",
-    )
-    crate_chain(lv, [(180, floor + 4, 1)], label="last rock")
+    # --- East balcony and a holed chimney up the outer wall ---------------------
+    lv.enemy(105, 66)
+    lv.coins(104, 64, 106)
+    holed_chimney(lv, 107, 3, 30, 67, rests=[(1, 56), (-1, 45)], label="outer wall chimney")
 
-    # --- Wall-bounce ladder up cliff F (dash under the wall on to the first ledge) ---
-    cliff = 192
-    wall = cliff - 7
-    first = floor + 3
-    ledges = [first - 3 * i for i in range(6)]
-    lv.rect(wall, ledges[-1] - 6, wall, first - 2)
-    for i, row in enumerate(ledges):
-        lv.rect(wall + 3, row, cliff - 1, row)
-        lv.wp(wall + 3, row - 1, cliff - 1, row - 1, ground=True, label=f"bounce ledge {i}")
-        if i:
-            lv.coin(wall + 1, row - 1)
-    top = ledges[-1] - 2
-    lv.rect(cliff, top, 230, BOTTOM)
-    lv.wp(cliff, top - 1, cliff + 2, top - 1, ground=True, label="cliff F")
-    for x in (199, 203, 206):  # not where the bounce ladder ends
-        lv.enemy(x, top - 1)
-    lv.decor(198, top - 1, 5)
-    lv.big_decor(202, top - 1, 3)
-    lv.coins(194, top - 3, 204, 2)
+    # --- Battlement walk (row 30) heading west: pits and merlons ---------------
+    lv.wp(100, 29, 103, 29, ground=True, label="battlements east")
+    for px in (92, 80, 68, 56):
+        lv.carve(px, 30, px + 2, 35)  # 6 deep pits, climb out if you fall in
+        lv.rect(px + 5, 28, px + 6, 29)  # merlon right after each pit
+        lv.coin(px + 1, 28)
+        lv.wp(px - 3, 29, px - 1, 29, ground=True, label=f"battlement pit {px}")
+    for x in (100, 89, 84, 77, 65, 64, 53, 49):
+        lv.enemy(x, 29)
+    lv.coins(46, 27, 100, 4)
 
-    # --- Holed chimney up to the flag -----------------------------------------------
-    holed_chimney(lv, 208, 3, top - 16, top, rests=[(1, top - 8)], label="flag chimney")
-    slab = top - 16
-    lv.rect(215, slab, 222, slab + 1)  # flag slab, two tiles off the chimney
-    lv.wp(215, slab - 1, 217, slab - 1, ground=True, label="flag slab")
-    lv.coins(216, slab - 3, 220, 2)
-    lv.flag(221, slab - 1)
-    lv.wp(221, slab - 1, label="flag")
+    # --- West tower: zigzag shaft to the top --------------------------------------
+    lv.rect(34, 2, 47, 29)
+    lv.carve(44, 27, 47, 29)  # door from the battlements
+    zigzag(lv, 41, 29, sections=5, height=5, inner=3, offset=2, label="tower zigzag")
+    lv.carve(41, 2, 43, 4)  # out on to the roof
+    for i in range(5):
+        lv.coin(42 + (2 if i % 2 else 0), 27 - 5 * i)
+    lv.wp(44, 1, 47, 1, ground=True, label="tower roof")
+    lv.enemy(36, 1)
+
+    # --- Sky bridge of single crates to the floating keep -------------------------
+    bridge = [
+        (51, 3, 1),
+        (55, 4, 1),
+        (60, 4, 1),
+        (64, 5, 2),
+        (70, 5, 1),
+        (75, 6, 1),
+        (79, 5, 1),
+        (84, 7, 2),
+        (90, 6, 1),
+        (95, 7, 1),
+        (100, 8, 1),
+        (104, 7, 1),
+    ]
+    crate_chain(lv, bridge, label="sky crate")
+    keep_x = 113
+    lv.rect(keep_x, 10, keep_x + 13, 12)
+    for i in range(1, 5):
+        lv.rect(keep_x + i * 2, 12 + i, keep_x + 13 - i * 2, 12 + i)
+    lv.wp(keep_x, 9, keep_x + 2, 9, ground=True, label="keep")
+    for x in (keep_x + 6, keep_x + 9):  # not where the sky bridge lands
+        lv.enemy(x, 9)
+    lv.coins(keep_x + 1, 7, keep_x + 11, 2)
+    lv.big_decor(keep_x + 6, 9, 2)
+    lv.flag(keep_x + 12, 9)
+    lv.wp(keep_x + 12, 9, label="flag")
     return lv

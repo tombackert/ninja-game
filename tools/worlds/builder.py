@@ -1,4 +1,4 @@
-"""Small level-building toolkit for the hand-designed worlds (levels 11-16).
+"""Small level-building toolkit for the hand-designed worlds (levels 11-20).
 
 A `Level` is a tile grid plus spawners, enemies, coins, decor and the
 intended route (waypoints for tools/worlds/route.py). The element helpers

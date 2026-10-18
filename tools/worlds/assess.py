@@ -1,6 +1,6 @@
 """Difficulty profile of a level, comparable across levels.
 
-The route of levels 11+ is the designed one (tools/worlds/plans). For the
+The route of levels 11-20 is the designed one (tools/worlds/plans). For the
 reference levels (e.g. 8-10) the planner follows the best-time replay in
 data/replays, i.e. the way a human actually went.
 
@@ -18,7 +18,7 @@ number of pieces failing more than 25 % / 50 % of the time and the
 hardest route sections.
 
 Usage:
-    python -m tools.worlds.assess 8 9 10 11 12 13 14 16 [--sigma 2] [--json out.json]
+    python -m tools.worlds.assess 8 9 10 11 12 13 14 15 [--sigma 2] [--json out.json]
 """
 
 from __future__ import annotations

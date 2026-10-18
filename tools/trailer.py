@@ -84,7 +84,7 @@ TIMELINE: list[Shot | Card] = [
     Shot(level=4, start=2330, frames=140, caption="WALL-SLIDE. WALL-JUMP."),
     Shot(level=2, start=30, frames=180, caption="RACE YOUR BEST RUN", run="last", ghost="best"),
     Shot(level=3, start=400, frames=120, caption="6 SKINS TO UNLOCK", skins=(1, 2, 3, 4, 5, 6)),
-    Shot(level=15, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
+    Shot(level=21, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
     Shot(level=4, start=1570, frames=45, caption="12 HAND-BUILT LEVELS"),
     Shot(level=6, start=825, frames=45, caption="12 HAND-BUILT LEVELS"),
     Shot(level=5, start=2070, frames=45, caption="12 HAND-BUILT LEVELS"),
