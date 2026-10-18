@@ -10,7 +10,7 @@ Dash through enemies, race your own ghost, play with friends, build levels, or t
 [![CI](https://github.com/tombackert/ninja-game/actions/workflows/ci.yml/badge.svg)](https://github.com/tombackert/ninja-game/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-<img src="docs/media/trailer.gif" width="100%" alt="Ninja Game trailer: dashing through enemies, wall-jumping, racing a ghost, skins and multiplayer">
+<img src="docs/media/trailer.gif" width="100%" alt="Ninja Game trailer: dashing through enemies, wall-jumping, racing a ghost, skins, weapons, multiplayer and the desert and Mars worlds">
 
 [Quick start](#quick-start) · [Controls](#controls) · [Train an AI agent](#train-an-ai-agent)
 
@@ -206,7 +206,7 @@ python tools/gen_world_tiles.py                  # redraw the sand and mars tile
 
 ### Rendering the trailer
 
-The trailer above is rendered from real best runs, re-simulated headless by the game itself:
+The trailer above is rendered from real runs (best runs, and the route bot's runs for the desert and Mars worlds), re-simulated headless by the game itself:
 
 ```bash
 python tools/trailer.py            # docs/media/trailer.mp4, trailer.gif, social-preview.png (needs ffmpeg)

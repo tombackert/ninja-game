@@ -9,11 +9,14 @@ Usage (from the repo root):
 Needs ffmpeg on PATH. Nothing in data/ is written: settings changes stay
 in memory and the runs are never recorded or saved.
 
-Every gameplay shot is a real best run from tools/trailer_replays/ (copies
-of data/replays/), re-simulated headless through GameState.update() like
-live play. The camera frames 480x270 instead of the game's 640x360, a bit
-closer on the action, scaled 4x to 1920x1080 with the renderer's sub-pixel
-glide. Captions use the game's pixel font on the same pixel grid.
+Every gameplay shot is a real run from tools/trailer_replays/, re-simulated
+headless through GameState.update() like live play: best runs copied from
+data/replays/, and for the desert and Mars worlds (levels 14, 18, 20) the
+runs of the route bot in the real game (tools/worlds/play.py). No run uses
+a weapon, so the weapon shots add the presses (Shot.fire). The camera
+frames 480x270 instead of the game's 640x360, a bit closer on the action,
+scaled 4x to 1920x1080 with the renderer's sub-pixel glide. Captions use
+the game's pixel font on the same pixel grid.
 
 Replays store the input router's actions, not what KeyboardManager did:
 Space is recorded as "jump" but dashes, and mouse dashes are not recorded
@@ -66,6 +69,7 @@ class Shot:
     skin: int = 0
     skins: tuple[int, ...] = ()  # cycle through these skins
     weapon: str = "Default"
+    fire: tuple[int, ...] = ()  # replay ticks at which the ninja uses the weapon
     seed: int = 0  # gameplay RNG, i.e. what the enemies do
 
 
@@ -84,11 +88,20 @@ TIMELINE: list[Shot | Card] = [
     Shot(level=4, start=2330, frames=140, caption="WALL-SLIDE. WALL-JUMP."),
     Shot(level=2, start=30, frames=180, caption="RACE YOUR BEST RUN", run="last", ghost="best"),
     Shot(level=3, start=400, frames=120, caption="6 SKINS TO UNLOCK", skins=(1, 2, 3, 4, 5, 6)),
+    Shot(level=5, start=3516, frames=45, caption="5 WEAPONS TO UNLOCK", weapon="Gun", fire=(3531,)),
+    Shot(level=7, start=1636, frames=45, caption="5 WEAPONS TO UNLOCK", weapon="Rifle", fire=(1651,)),
+    Shot(level=5, start=2368, frames=52, caption="5 WEAPONS TO UNLOCK", weapon="Ninja Stars", fire=(2376,)),
+    Shot(level=3, start=80, frames=40, caption="5 WEAPONS TO UNLOCK", weapon="Sword", fire=(94,)),
+    Shot(level=4, start=3120, frames=50, caption="5 WEAPONS TO UNLOCK", weapon="Grapple Hook", fire=(3132,)),
     Shot(level=21, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
-    Shot(level=4, start=1570, frames=45, caption="12 HAND-BUILT LEVELS"),
-    Shot(level=6, start=825, frames=45, caption="12 HAND-BUILT LEVELS"),
-    Shot(level=5, start=2070, frames=45, caption="12 HAND-BUILT LEVELS"),
-    Shot(level=3, start=500, frames=45, caption="12 HAND-BUILT LEVELS"),
+    Shot(level=4, start=1570, frames=45, caption="21 HAND-BUILT LEVELS"),
+    Shot(level=6, start=825, frames=45, caption="21 HAND-BUILT LEVELS"),
+    Shot(level=5, start=2070, frames=45, caption="21 HAND-BUILT LEVELS"),
+    Shot(level=3, start=500, frames=45, caption="21 HAND-BUILT LEVELS"),
+    Shot(level=14, start=140, frames=45, caption="DIFFERENT WORLDS", seed=1),
+    Shot(level=18, start=440, frames=45, caption="DIFFERENT WORLDS"),
+    Shot(level=14, start=1640, frames=45, caption="DIFFERENT WORLDS", seed=1),
+    Shot(level=20, start=150, frames=45, caption="DIFFERENT WORLDS"),
     Card("end", 200),
 ]
 
@@ -284,7 +297,11 @@ class Studio:
         g = gs.game
         g.players = [g.player]  # one ninja; levels with a second spawn would show it idle
         g.replay = Extras()
-        g.cm.gun = max(g.cm.gun, 1)  # the multiplayer shot shows everyone with a gun
+        # The weapon on show is owned and loaded; the multiplayer shot shows everyone with a gun
+        for name in {"Gun", weapon} - {"Default"}:
+            item = CollectableManager._ITEM_DEFS[name]
+            setattr(g.cm, item.attr, max(getattr(g.cm, item.attr), item.increment))
+        g.cm.ammo = max(g.cm.ammo, 50)
         g.BASE_W, g.BASE_H = view
         g.display = pygame.Surface((view[0] + 1, view[1] + 1), pygame.SRCALPHA)
         g.display_2 = pygame.Surface((view[0] + 1, view[1] + 1), pygame.SRCALPHA)
@@ -300,6 +317,8 @@ class Studio:
         gs = self.stage(shot.level, shot.seed, shot.weapon)
         g = gs.game
         run = Run(shot.level, shot.run)
+        for t in shot.fire:
+            run.events.setdefault(t, []).append("shoot")
         run.place(g.player)
         g.movement = list(run.held)
         set_skin(g.player, shot.skins[0] if shot.skins else shot.skin)
