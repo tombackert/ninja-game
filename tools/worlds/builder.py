@@ -104,8 +104,10 @@ class Level:
         self._obj(x, y, "coin", 0)
 
     def coins(self, x0, y, x1, step=1):
+        """A row of coins; tiles that are already solid are left out."""
         for x in range(x0, x1 + 1, step):
-            self.coin(x, y)
+            if (x, y) not in self.solid:
+                self.coin(x, y)
 
     def flag(self, x, y):
         self._obj(x, y, "flag", 0)
@@ -126,6 +128,9 @@ class Level:
 
     # --- export ----------------------------------------------------------
     def to_json(self) -> dict:
+        clash = sorted(set(self.objects) & set(self.solid))
+        if clash:  # an object placed first, a solid stamped over it later
+            raise ValueError(f"level {self.map_id}: objects inside solid tiles at {clash}")
         tilemap = {}
         for (x, y), t in self.solid.items():
             nb = {o for o in ((1, 0), (-1, 0), (0, -1), (0, 1)) if self.solid.get((x + o[0], y + o[1])) == t}
