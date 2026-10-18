@@ -230,8 +230,10 @@ class Settings:
                     if camera_style in CAMERA_STYLES:
                         self._camera_style = camera_style
                     playable_levels = data.get("playable_levels", {})
-                    for level in self.playable_levels:
-                        self.playable_levels[level] = playable_levels.get(str(level), self.playable_levels[level])
+                    # Every saved level, not only the defaults (levels 11+ were dropped on restart)
+                    for level, playable in playable_levels.items():
+                        if str(level).isdigit():
+                            self.playable_levels[int(level)] = playable
 
                     # Merge loaded bindings with defaults (deep merge to preserve defaults for missing keys)
                     loaded_bindings = data.get("key_bindings", {})
