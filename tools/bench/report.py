@@ -505,7 +505,7 @@ def write() -> None:
         " level 2 is replayed once against the ghost of the run just finished, level 3 is paused for 1.5 s. The"
         " frame loop is app.py's without the frame pacer, so a frame's time is its cost (update + render + flip),"
         " headless at 1280x720. Every frame is labelled (play, level start, level finish, pause, menu ...).",
-        "- **Isolated scenarios**: start and respawn of all 13 levels, level 1 with and without the F1 HUD, saving and"
+        "- **Isolated scenarios**: start and respawn of every level, level 1 with and without the F1 HUD, saving and"
         " loading a replay, `TrainingEnv` steps per second.",
         "- **Sandbox**: each session runs in a fresh process on links to the working tree, without data/'s player"
         " files (best times, coins, replays, settings), so it starts like a fresh install and never changes yours.",

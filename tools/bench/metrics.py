@@ -120,7 +120,7 @@ METRICS = [
         score=True,
         floor=3,
         group="stalls",
-        help="Slowest start of any level (all 13, the 4 MB maps of levels 9 and 10 included)",
+        help="Slowest start of any level (all of them, the 4 MB maps of levels 9 and 10 included)",
     ),
     Metric(
         "levels.respawn_max_ms",
