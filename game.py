@@ -79,6 +79,8 @@ class Game:
             "grass": am.get_image_frames("tiles/grass"),
             "large_decor": am.get_image_frames("tiles/large_decor"),
             "stone": am.get_image_frames("tiles/stone"),
+            "sand": am.get_image_frames("tiles/sand"),
+            "mars": am.get_image_frames("tiles/mars"),
             "player": am.get_image("entities/player.png"),
             "background": am.get_image("background-big.png"),
             "clouds": am.get_image_frames("clouds"),

@@ -34,6 +34,8 @@ class Editor:
         self.assets = {
             "grass": load_images("tiles/grass"),
             "stone": load_images("tiles/stone"),
+            "sand": load_images("tiles/sand"),
+            "mars": load_images("tiles/mars"),
             "spawners": load_images("tiles/spawners"),
             "large_decor": load_images("tiles/large_decor"),
             "decor": load_images("tiles/decor"),

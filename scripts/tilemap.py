@@ -35,8 +35,8 @@ NEIGHBOR_OFFSET = [
     (0, 1),
     (1, 1),
 ]
-PHYSICS_TILES = {"grass", "stone"}  # things an entity can colid with
-AUTOTILE_TILES = {"grass", "stone"}
+PHYSICS_TILES = {"grass", "stone", "sand", "mars"}  # things an entity can colid with
+AUTOTILE_TILES = {"grass", "stone", "sand", "mars"}
 
 
 class Tilemap:
