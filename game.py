@@ -161,6 +161,9 @@ class Game:
                 self.tilemap._cached_type_counts = self.tilemap._recompute_type_counts()  # type: ignore[attr-defined]
             except Exception:
                 pass
+            # Worlds can bring their own sky (e.g. desert, Mars) via meta_data
+            background = self.tilemap.meta_data.get("background", "background-big.png")
+            self.assets["background"] = AssetManager.get().get_image(background)
 
         # Extract flags
         self.flags = []
