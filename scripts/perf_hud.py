@@ -28,6 +28,8 @@ how much time is spent in simulation / composition versus present / vsync.
 
 from __future__ import annotations
 
+import os
+import sys
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -37,6 +39,53 @@ from typing import Optional, Any
 HITCH_MS = 25.0
 # Window for the worst interval (frames, ~1 s at 60 FPS)
 WORST_WINDOW = 60
+
+_task_info = None  # macOS: (task_info, own task port, mach_task_basic_info struct type)
+
+
+def current_rss_mb() -> float | None:
+    """Resident set size of this process right now, in MB (None where unknown).
+
+    getrusage() only has the peak (ru_maxrss), which never goes down.
+    """
+    try:
+        if sys.platform == "darwin":
+            return _mach_resident_bytes() / (1024 * 1024)
+        if sys.platform.startswith("linux"):
+            with open("/proc/self/statm") as f:
+                return int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
+    except Exception:
+        pass
+    return None
+
+
+def _mach_resident_bytes() -> int:
+    global _task_info
+    import ctypes
+
+    if _task_info is None:
+
+        class MachTaskBasicInfo(ctypes.Structure):
+            _pack_ = 4
+            _fields_ = [
+                ("virtual_size", ctypes.c_uint64),
+                ("resident_size", ctypes.c_uint64),
+                ("resident_size_max", ctypes.c_uint64),
+                ("user_time", ctypes.c_int32 * 2),
+                ("system_time", ctypes.c_int32 * 2),
+                ("policy", ctypes.c_int32),
+                ("suspend_count", ctypes.c_int32),
+            ]
+
+        libc = ctypes.CDLL(None)  # libSystem is loaded into every process
+        task = ctypes.c_uint32.in_dll(libc, "mach_task_self_").value
+        _task_info = (libc.task_info, task, MachTaskBasicInfo)
+    task_info, task, info_type = _task_info
+    info = info_type()
+    count = ctypes.c_uint32(ctypes.sizeof(info_type) // 4)
+    if task_info(task, 20, ctypes.byref(info), ctypes.byref(count)) != 0:  # 20: MACH_TASK_BASIC_INFO
+        raise OSError("task_info failed")
+    return info.resident_size
 
 
 @dataclass
@@ -185,19 +234,8 @@ class PerformanceHUD:
             self._visible_sample = self._staging_sample
 
     def _collect_sys_stats(self) -> tuple[float | None, int | None]:
-        mem = None
+        mem = current_rss_mb()
         assets = None
-        try:
-            import resource
-            import sys
-
-            usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            if sys.platform == "darwin":
-                mem = usage / (1024 * 1024)  # MB
-            else:
-                mem = usage / 1024  # MB
-        except ImportError:
-            pass
 
         try:
             from scripts.asset_manager import AssetManager

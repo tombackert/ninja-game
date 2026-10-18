@@ -25,7 +25,6 @@
 - F1 perf HUD costs ~1 ms per frame since 68c2a6d: its area of the HUD layer is upscaled and alpha-blitted every frame although the overlay is rebuilt only every 10th frame -> keep it pre-scaled
 - `ReplayManager.abort_current_run()` does not exist: GameState calls it on death/respawn inside try/except, the AttributeError is swallowed and the recording is never aborted
 - Level timer runs on wall-clock time (pygame.time.get_ticks): a simulation faster than real time (headless runs, tests, training) saves impossible best times (987 ms for level 0), and dropped frames count as play time
-- Perf HUD "Mem RSS" shows the peak (ru_maxrss), never the current memory
 - Perf HUD "Render"/"Work" never show stalls in the update (level start, respawn, level finish), only Interval/Hitches do -> add an update row
 - First level start of a session takes ~110 ms (~7 dropped frames) while the machine is busy (33 ms when idle): every image and sound loads on Play -> preload during the menu
 - Levels 9 and 10 (4 MB maps): start ~39 ms (map JSON parse ~20 ms), respawn ~11 ms (extract() scans 20k tiles)

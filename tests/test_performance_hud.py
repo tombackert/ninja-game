@@ -50,3 +50,23 @@ def test_performance_hud_tracks_frame_intervals_and_hitches(monkeypatch):
     assert abs((sample.interval_ms or 0) - 16.7) < 0.01
     assert abs((sample.worst_interval_ms or 0) - 40.0) < 0.01
     assert sample.hitches == 1
+
+
+def test_memory_is_the_current_rss_not_the_peak():
+    import mmap
+
+    import pytest
+
+    from scripts.perf_hud import current_rss_mb
+
+    before = current_rss_mb()
+    if before is None:
+        pytest.skip("no current RSS on this platform")
+    block = mmap.mmap(-1, 64 << 20)
+    for i in range(0, len(block), mmap.PAGESIZE):
+        block[i] = 1  # touch every page so it becomes resident
+    during = current_rss_mb()
+    block.close()
+    after = current_rss_mb()
+    assert during - before > 48
+    assert during - after > 48  # the peak (ru_maxrss) would not go down
