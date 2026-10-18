@@ -1,0 +1,395 @@
+{
+ "commit": "89764d0",
+ "subject": "perf: compose the pause screen once instead of every frame",
+ "measured": "2026-10-18T09:51:19",
+ "machine": {
+  "cpu": "Apple M1",
+  "cores": 8,
+  "os": "macOS-27.0.1"
+ },
+ "sessions": 3,
+ "quick": false,
+ "metrics": {
+  "startup.to_menu_ms": 165.95662498730235,
+  "startup.import_init_ms": 105.25287501513958,
+  "cache.text_hit_pct": 94.9786150099395,
+  "cache.text_evictions": 5588,
+  "cache.fonts": 4,
+  "assets.images": 324,
+  "memory.campaign_peak_mb": 144.40625,
+  "frame.p50_ms": 3.2140420225914568,
+  "frame.p95_ms": 3.7297089875210077,
+  "frame.p99_ms": 4.103749990463257,
+  "frame.max_ms": 32.77312498539686,
+  "update.p50_ms": 0.174457993125543,
+  "update.p99_ms": 0.3650840080808848,
+  "render.p50_ms": 3.0361250101123005,
+  "render.p99_ms": 3.8642080035060644,
+  "frame.budget_pct": 19.28425213554874,
+  "frames.played": 18548,
+  "frames.over_budget": 4,
+  "frames.hitches": 3,
+  "level_start.first_ms": 110.84204199141823,
+  "level_start.p50_ms": 6.712291011353955,
+  "level_start.max_ms": 8.537417015759274,
+  "first_frame.render_p50_ms": 4.3786250171251595,
+  "level_finish.p50_ms": 10.075833997689188,
+  "level_finish.max_ms": 13.111250009387732,
+  "menu.frame_p50_ms": 1.049333979608491,
+  "complete_screen.frame_p50_ms": 1.1159999994561076,
+  "pause.frame_p50_ms": 0.1461670035496354,
+  "pause.first_ms": 13.021749997278675,
+  "pause.resume_ms": 3.2739169837441295,
+  "campaign.wall_s": 61.40289404109353,
+  "gc.max_pause_ms": 7.068416016409174,
+  "gc.collections": 160,
+  "levels.start_max_ms": 38.39212498860434,
+  "levels.respawn_max_ms": 10.728291003033519,
+  "levels.respawn_p50_ms": 0.5561250145547092,
+  "hud.frame_p50_ms": 4.02249998296611,
+  "hud.overhead_ms": 1.0067499824799597,
+  "hud.text_cache_hit_pct": 91.5587967183227,
+  "replay.save_ms": 2.9690419905819,
+  "replay.load_ms": 3.732959012268111,
+  "sim.steps_per_s": 13535.729150222302
+ },
+ "spread": {
+  "startup.to_menu_ms": 0.10080344786882503,
+  "startup.import_init_ms": 0.302503214324502,
+  "cache.text_hit_pct": 0.0005436358364743161,
+  "cache.text_evictions": 0.010737294201861132,
+  "cache.fonts": 0.0,
+  "assets.images": 0.0,
+  "memory.campaign_peak_mb": 0.012767799177667172,
+  "frame.p50_ms": 0.007091063725933591,
+  "frame.p95_ms": 0.014925288812703214,
+  "frame.p99_ms": 0.03867414160596664,
+  "frame.max_ms": 0.7983408659806265,
+  "update.p50_ms": 0.015522332683997596,
+  "update.p99_ms": 0.02853312740534643,
+  "render.p50_ms": 0.006381164285690801,
+  "render.p99_ms": 0.03291955598019287,
+  "frame.budget_pct": 0.007091063725933591,
+  "frames.played": 0.0,
+  "frames.over_budget": 1.75,
+  "frames.hitches": 1.3333333333333333,
+  "level_start.first_ms": 0.03828157558165845,
+  "level_start.p50_ms": 0.23343981569506297,
+  "level_start.max_ms": 0.3371676708679484,
+  "first_frame.render_p50_ms": 0.016814414987835365,
+  "level_finish.p50_ms": 0.04473575360492234,
+  "level_finish.max_ms": 0.016490267505960943,
+  "menu.frame_p50_ms": 0.008695975111913543,
+  "complete_screen.frame_p50_ms": 0.00787811482702467,
+  "pause.frame_p50_ms": 0.0017105844779043697,
+  "pause.first_ms": 0.010364045732977046,
+  "pause.resume_ms": 0.027197081336272345,
+  "campaign.wall_s": 0.010737038546656056,
+  "gc.max_pause_ms": 0.040001894025758954,
+  "gc.collections": 0.0,
+  "levels.start_max_ms": 0.03618690059443652,
+  "levels.respawn_max_ms": 0.025295268364219633,
+  "levels.respawn_p50_ms": 0.035513554050567525,
+  "hud.frame_p50_ms": 0.011912246694385476,
+  "hud.overhead_ms": 0.10533097769850114,
+  "hud.text_cache_hit_pct": 0.00219036240541622,
+  "replay.save_ms": 0.10944877340509393,
+  "replay.load_ms": 0.0024556948179214983,
+  "sim.steps_per_s": 0.015546600095326527
+ },
+ "detail": {
+  "campaign_frame_ms": {
+   "L0": {
+    "p50": 3.0603329942096025,
+    "p99": 3.3528330095577985,
+    "max": 3.5616249951999635,
+    "frames": 315
+   },
+   "L1": {
+    "p50": 2.9912910249549896,
+    "p99": 3.718124993611127,
+    "max": 4.142042016610503,
+    "frames": 489
+   },
+   "L2": {
+    "p50": 3.161792003083974,
+    "p99": 3.739832987776026,
+    "max": 4.248000012012199,
+    "frames": 496
+   },
+   "L2-ghost": {
+    "p50": 3.2603330037090927,
+    "p99": 3.626082994742319,
+    "max": 3.7977089814376086,
+    "frames": 1179
+   },
+   "L3": {
+    "p50": 3.33108298946172,
+    "p99": 4.411583999171853,
+    "max": 8.012917009182274,
+    "frames": 2927
+   },
+   "L4": {
+    "p50": 2.982584002893418,
+    "p99": 3.6676670133601874,
+    "max": 28.821000014431775,
+    "frames": 3691
+   },
+   "L5": {
+    "p50": 3.138583997497335,
+    "p99": 3.758250008104369,
+    "max": 10.084583016578108,
+    "frames": 4868
+   },
+   "L6": {
+    "p50": 3.481416992144659,
+    "p99": 4.015332990093157,
+    "max": 9.532624972052872,
+    "frames": 4583
+   }
+  },
+  "campaign_start_ms": {
+   "0": 110.84204199141823,
+   "1": 6.5594159823376685,
+   "2": 6.3958340033423156,
+   "3": 8.519584021996707,
+   "4": 6.712291011353955,
+   "5": 7.323375000851229,
+   "6": 8.436542004346848
+  },
+  "campaign_finish_ms": {
+   "L0": 7.660374976694584,
+   "L1": 4.918291000649333,
+   "L2": 4.7440420021303,
+   "L2-ghost": 5.913125001825392,
+   "L3": 10.075833997689188,
+   "L4": 10.611459001665935,
+   "L5": 13.072832982288674,
+   "L6": 12.766750005539507
+  },
+  "level_start_ms": {
+   "0": 5.717791005736217,
+   "1": 6.047167000360787,
+   "2": 6.234625005163252,
+   "3": 8.254874992417172,
+   "4": 5.729875003453344,
+   "5": 6.752666988177225,
+   "6": 8.64654197357595,
+   "7": 8.347458991920575,
+   "8": 8.91945799230598,
+   "9": 38.39212498860434,
+   "10": 37.8195829980541,
+   "15": 4.568792006466538,
+   "20": 5.482999986270443
+  },
+  "respawn_ms": {
+   "0": 0.16770799993537366,
+   "1": 0.20829201093874872,
+   "2": 0.2456250076647848,
+   "3": 1.1507920280564576,
+   "4": 0.43133299914188683,
+   "5": 0.5561250145547092,
+   "6": 1.0295420070178807,
+   "7": 1.1233749974053353,
+   "8": 1.3517080224119127,
+   "9": 10.728291003033519,
+   "10": 10.631540993927047,
+   "15": 0.06633298471570015,
+   "20": 0.1688330085016787
+  }
+ },
+ "fingerprint": {
+  "L0": {
+   "finished": true,
+   "ticks": 316,
+   "pos": [
+    22.0,
+    65.1
+   ],
+   "coins": 2,
+   "enemies": 5,
+   "world": "cd8d5149dece"
+  },
+  "L1": {
+   "finished": true,
+   "ticks": 490,
+   "pos": [
+    -75.9,
+    49.3
+   ],
+   "coins": 5,
+   "enemies": 7,
+   "world": "c984b6d5a81a"
+  },
+  "L2": {
+   "finished": true,
+   "ticks": 497,
+   "pos": [
+    601.0,
+    -223
+   ],
+   "coins": 7,
+   "enemies": 8,
+   "world": "f3aacfbd231d"
+  },
+  "L2-ghost": {
+   "finished": true,
+   "ticks": 1180,
+   "pos": [
+    585.0,
+    -223
+   ],
+   "coins": 7,
+   "enemies": 9,
+   "world": "d3a475ab9ab7"
+  },
+  "L3": {
+   "finished": true,
+   "ticks": 2929,
+   "pos": [
+    264.3,
+    -1135
+   ],
+   "coins": 9,
+   "enemies": 14,
+   "world": "5a39616e4eee"
+  },
+  "L4": {
+   "finished": true,
+   "ticks": 3692,
+   "pos": [
+    -112.7,
+    -687
+   ],
+   "coins": 19,
+   "enemies": 12,
+   "world": "1ffa55802809"
+  },
+  "L5": {
+   "finished": true,
+   "ticks": 4869,
+   "pos": [
+    -642.0,
+    -79
+   ],
+   "coins": 26,
+   "enemies": 21,
+   "world": "30a83a170d33"
+  },
+  "L6": {
+   "finished": true,
+   "ticks": 4584,
+   "pos": [
+    796.0,
+    -767
+   ],
+   "coins": 35,
+   "enemies": 25,
+   "world": "0d9b84b299e1"
+  },
+  "nohud": {
+   "finished": true,
+   "ticks": 490,
+   "pos": [
+    -75.9,
+    49.3
+   ],
+   "coins": 5,
+   "enemies": 7,
+   "world": "c984b6d5a81a"
+  },
+  "hud": {
+   "finished": true,
+   "ticks": 490,
+   "pos": [
+    -75.9,
+    49.3
+   ],
+   "coins": 5,
+   "enemies": 7,
+   "world": "c984b6d5a81a"
+  }
+ },
+ "nondeterministic": [],
+ "errors": {},
+ "env": {
+  "python": "3.12.8",
+  "pygame": "2.5.6",
+  "sdl": "2.32.10",
+  "platform": "macOS-27.0.1",
+  "machine": "arm64"
+ },
+ "wakes": 0,
+ "probe": {
+  "entry": "app.py",
+  "ended": "stopped",
+  "map": "data/maps/0.json",
+  "window": [
+   1280,
+   720
+  ],
+  "slept": false,
+  "frames": 631,
+  "startup_ms": 116.50270799873397,
+  "level_start_ms": 30.62920898082666,
+  "frame_p50_ms": 3.1476249860133976,
+  "frame_p95_ms": 3.5917079949285835,
+  "frame_p99_ms": 5.600667005637661,
+  "frame_max_ms": 8.295665989862755,
+  "over_budget": 0,
+  "hitches": 0,
+  "fps_uncapped": 307.04979155136635,
+  "frames_played": 599,
+  "map_load_ms": 0.338415993610397,
+  "text_cache_hit_pct": 94.50889404485692,
+  "peak_rss_mb": 74.96875,
+  "runs": 3
+ },
+ "reference": {
+  "commit": "89764d0",
+  "metrics": {
+   "startup.to_menu_ms": 165.95662498730235,
+   "startup.import_init_ms": 105.25287501513958,
+   "cache.text_hit_pct": 94.9786150099395,
+   "cache.text_evictions": 5588,
+   "cache.fonts": 4,
+   "assets.images": 324,
+   "memory.campaign_peak_mb": 144.40625,
+   "frame.p50_ms": 3.2140420225914568,
+   "frame.p95_ms": 3.7297089875210077,
+   "frame.p99_ms": 4.103749990463257,
+   "frame.max_ms": 32.77312498539686,
+   "update.p50_ms": 0.174457993125543,
+   "update.p99_ms": 0.3650840080808848,
+   "render.p50_ms": 3.0361250101123005,
+   "render.p99_ms": 3.8642080035060644,
+   "frame.budget_pct": 19.28425213554874,
+   "frames.played": 18548,
+   "frames.over_budget": 4,
+   "frames.hitches": 3,
+   "level_start.first_ms": 110.84204199141823,
+   "level_start.p50_ms": 6.712291011353955,
+   "level_start.max_ms": 8.537417015759274,
+   "first_frame.render_p50_ms": 4.3786250171251595,
+   "level_finish.p50_ms": 10.075833997689188,
+   "level_finish.max_ms": 13.111250009387732,
+   "menu.frame_p50_ms": 1.049333979608491,
+   "complete_screen.frame_p50_ms": 1.1159999994561076,
+   "pause.frame_p50_ms": 0.1461670035496354,
+   "pause.first_ms": 13.021749997278675,
+   "pause.resume_ms": 3.2739169837441295,
+   "campaign.wall_s": 61.40289404109353,
+   "gc.max_pause_ms": 7.068416016409174,
+   "gc.collections": 160,
+   "levels.start_max_ms": 38.39212498860434,
+   "levels.respawn_max_ms": 10.728291003033519,
+   "levels.respawn_p50_ms": 0.5561250145547092,
+   "hud.frame_p50_ms": 4.02249998296611,
+   "hud.overhead_ms": 1.0067499824799597,
+   "hud.text_cache_hit_pct": 91.5587967183227,
+   "replay.save_ms": 2.9690419905819,
+   "replay.load_ms": 3.732959012268111,
+   "sim.steps_per_s": 13535.729150222302
+  }
+ }
+}

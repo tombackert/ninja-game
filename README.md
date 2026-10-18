@@ -182,6 +182,17 @@ Run all hooks manually:
 pre-commit run --all-files
 ```
 
+### Benchmarks
+
+A headless benchmark plays levels 0-6 the way a player does (start-up, menu, every level to the finish, a pause, a ghost race) and times every frame, load and stall. Current reference numbers and their history back to the first commit: **[BENCHMARKS.md](BENCHMARKS.md)**.
+
+```bash
+python -m tools.bench            # compare your working tree with the reference (~4 min)
+python -m tools.bench --quick    # one short session (~15 s)
+python -m tools.bench --check    # exit 1 on a regression beyond noise
+python -m tools.bench --save     # record this run as the new baseline (BENCHMARKS.md)
+```
+
 ### Rendering the trailer
 
 The trailer above is rendered from real best runs, re-simulated headless by the game itself:
