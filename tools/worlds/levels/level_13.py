@@ -49,7 +49,7 @@ def build() -> Level:
     lv.rect(5, 105, 5, 105)
     lv.wp(1, 113, 4, 117, ground=True, label="s2 chimney base")
     lv.wp(1, 93, 4, 95, label="s2 hole")
-    for x in (8, 30, 38, 46, 54):
+    for x in (8, 26, 44, 50, 56):  # clear of the hole at x 33..36
         lv.enemy(x, 117)
     lv.coins(13, 114, 19)
     lv.coins(2, 108, 3)
@@ -69,7 +69,7 @@ def build() -> Level:
     lv.wp(56, 71, 60, 73, label="s3 hole")
     for x in (47, 50, 53):
         lv.enemy(x, 95)
-    for x in (3, 6):
+    for x in (10, 12):  # clear of the hole at x 1..4
         lv.enemy(x, 95)
     lv.coins(46, 93, 53)
     lv.coins(57, 86, 59)
@@ -95,7 +95,7 @@ def build() -> Level:
     # --- Storey 5: dash pits under fire (a fall drops into the labyrinth) -------
     for px in (14, 26, 38):  # each pit opens above a labyrinth cell
         lv.carve(px, 52, px + 5, 58)
-    for x in (11, 23, 35, 47):
+    for x in (23, 35, 47):  # clear of the exit at x 8..10
         lv.enemy(x, 51)
     lv.coins(15, 48, 18)
     lv.coins(27, 48, 30)
