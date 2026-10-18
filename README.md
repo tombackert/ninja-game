@@ -33,7 +33,7 @@ That's it: Python 3.10+ is the only requirement (pygame-ce is installed automati
 - **Ghost replays**: every run is recorded, so you can race a ghost of your best (or last) run
 - **Multiplayer**: host from the menu and friends join by IP, with server-authoritative UDP netcode, client-side prediction and interpolation ([details](docs/multiplayer.md))
 - **Store & accessories**: spend coins on 5 weapons (gun, rifle, ninja stars, sword, grapple hook), 4 gear items (shield, moon boots, coin magnet, lucky charm) and 6 skins
-- **22 hand-built levels** across sky, cave, desert and Mars worlds, with best times per level, plus a **level editor** to build your own
+- **21 hand-built levels** across sky, cave, desert and Mars worlds, with best times per level, plus a **level editor** to build your own
 - **Deterministic simulation**: a seeded RNG and a single `step()` drive live play, replays, netcode prediction and training alike
 - **Gym-style RL environment**: `reset()` / `step()`, feature observations and shaped rewards, headless
 - **Performance HUD** (F1): frame times, hitches and entity counts in real time
@@ -195,7 +195,7 @@ python -m tools.bench --save     # record this run as the new baseline (BENCHMAR
 
 ### Building the worlds
 
-Levels 11-22 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
+Levels 11-20 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
 
 ```bash
 python -m tools.worlds.build 14 --preview out/   # write the map, plan its route, render an overview
