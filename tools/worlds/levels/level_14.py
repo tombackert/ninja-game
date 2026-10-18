@@ -106,7 +106,9 @@ def build() -> Level:
         lv.wp(face, foot - sh - 1, face + 1, foot - sh - 1, ground=True, label=f"pyramid step {k} ({kind})")
         if k in (1, 2, 3, 4, 6):
             lv.enemy(face + 4, foot - sh - 1)
-        lv.coins(face + 1, foot - sh - 3, face + 3)
+
+    for k in range(steps):  # coins over the steps, once every block stands
+        lv.coins(px0 + sw * k + 1, plateau - sh * (k + 1) - 3, px0 + sw * k + 3)
 
     # --- Tomb labyrinth inside the pyramid --------------------------------------
     mz = Maze(lv, 121, 25, 10, 3, seed=1402, dx=5, dy=5, cw=3, ch=3, border=0, extra_edges=2, start=(4, 2))
@@ -169,7 +171,7 @@ def build() -> Level:
     lv.coins(249, 23, 250)
     lv.rect(255, mesa, 266, BOTTOM)  # flag mesa, two tiles off the right obelisk
     lv.wp(255, mesa - 1, 257, mesa - 1, ground=True, label="flag mesa")
-    for x in (258, 261):
+    for x in (261, 263):  # not where the obelisk jump lands
         lv.enemy(x, mesa - 1)
     lv.decor(256, mesa - 1, 4)
     lv.big_decor(260, mesa - 1, 3)
