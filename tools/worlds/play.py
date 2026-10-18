@@ -76,7 +76,6 @@ def build_sandbox(root: str, level: int) -> None:
 
 
 def run_level(level: int, out_dir: str, attempts: int, video: bool) -> dict:
-    plan = os.path.join(REPO, "tools", "worlds", "plans", f"{level}.json")
     env = dict(os.environ)
     env["PYTHONPATH"] = REPO
     report: dict = {}
@@ -86,7 +85,7 @@ def run_level(level: int, out_dir: str, attempts: int, video: bool) -> dict:
         run_out = os.path.join(out_dir, f"level_{level}", f"attempt_{attempt}")
         os.makedirs(run_out, exist_ok=True)
         print(f"[play] level {level} attempt {attempt}: real game window, sandbox {sandbox}")
-        cmd = [sys.executable, os.path.abspath(__file__), "--bot", str(level), "--plan", plan, "--out", run_out]
+        cmd = [sys.executable, os.path.abspath(__file__), "--bot", str(level), "--out", run_out]
         if video:
             cmd.append("--video")
         proc = subprocess.run(cmd, cwd=sandbox, env=env, timeout=FRAME_BUDGET / 60 + 300)
@@ -110,10 +109,9 @@ def main() -> int:
     ap.add_argument("--attempts", type=int, default=3)
     ap.add_argument("--video", action="store_true")
     ap.add_argument("--bot", type=int, default=None, help=argparse.SUPPRESS)
-    ap.add_argument("--plan", default=None, help=argparse.SUPPRESS)
     args = ap.parse_args()
     if args.bot is not None:
-        return bot_main(args.bot, args.plan, args.out, args.video)
+        return bot_main(args.bot, args.out, args.video)
 
     out = os.path.abspath(args.out or tempfile.mkdtemp(prefix="ninja_play_out_"))
     summary = {}
@@ -167,11 +165,9 @@ class Bot:
         self.cooldown = 0
         self.dodge_cooldown = 0
         self.failures = 0
-        self.expected = None
         self.last_lives = None
         self.game_frames = 0
         self.t_start = None
-        self.done_frames = 0
         self.video_index = 0
         self.select_presses = 0
 
@@ -541,7 +537,7 @@ class Bot:
         self.phase = "done"
 
 
-def bot_main(level: int, plan_path: str, out: str, video: bool) -> int:
+def bot_main(level: int, out: str, video: bool) -> int:
     sys.path.insert(0, REPO)
     import pygame
 

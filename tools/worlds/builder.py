@@ -311,7 +311,7 @@ class Maze:
         return self.y0 + r * self.dy + self.ch
 
     def open_to(self, c, r, side: str):
-        """Open the maze wall next to cell (c, r) on `side` ('left'/'right'/'up'/'down') by `length` tiles."""
+        """Open the maze wall next to cell (c, r) on `side` ('left'/'right'/'up'/'down')."""
         cx, cy = self.cell_xy(c, r)
         x0, y0, x1, y1 = self.bounds
         if side == "left":

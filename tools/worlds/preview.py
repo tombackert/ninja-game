@@ -1,7 +1,7 @@
 """Render a whole map to a PNG, optionally with the route and planned path.
 
 Usage:
-    python -m tools.worlds.preview <map_id> <out.png> [--scale 0.5] [--plan]
+    python -m tools.worlds.preview <map_id> <out.png> [--scale 0.5]
 """
 
 from __future__ import annotations

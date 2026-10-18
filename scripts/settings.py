@@ -39,7 +39,6 @@ class Settings:
             8: False,
             9: False,
             10: False,
-            15: False,
         }
         # Default key bindings (using pygame key integers for backend simplicity)
 
