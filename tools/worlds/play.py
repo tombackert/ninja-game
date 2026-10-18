@@ -91,8 +91,11 @@ def run_level(level: int, out_dir: str, attempts: int, video: bool) -> dict:
             cmd.append("--video")
         proc = subprocess.run(cmd, cwd=sandbox, env=env, timeout=FRAME_BUDGET / 60 + 300)
         shutil.rmtree(sandbox, ignore_errors=True)
-        with open(os.path.join(run_out, "report.json")) as f:
-            report = json.load(f)
+        try:
+            with open(os.path.join(run_out, "report.json")) as f:
+                report = json.load(f)
+        except FileNotFoundError:
+            report = {"level": level, "completed": False, "reason": f"bot exited ({proc.returncode}) without a report"}
         report["attempt"] = attempt
         print(f"[play] level {level}: {'COMPLETED' if report.get('completed') else 'FAILED'} {json.dumps(report)}")
         if proc.returncode == 0 and report.get("completed"):
@@ -154,6 +157,7 @@ class Bot:
             "replans": 0,
             "checkpoint_restarts": 0,
             "recoveries": 0,
+            "hard_thinks": 0,
         }
         self.queue: list = []
         self.predicted = None
@@ -363,13 +367,16 @@ class Bot:
                 self.seg += 1
             if self.seg < len(self.route):
                 wp = self.route[self.seg]
-                res = plan_segment(
-                    s, wp, self.solids, weight=5.0, max_expand=12000, kill_y=self.kill_y, start_down=down
-                )
+                res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, kill_y=self.kill_y, start_down=down)
                 if not res.ok:
                     res = plan_segment(
-                        s, wp, self.solids, weight=2.0, max_expand=30000, kill_y=self.kill_y, start_down=down
+                        s, wp, self.solids, weight=2.0, max_expand=20000, kill_y=self.kill_y, start_down=down
                     )
+                if not res.ok:  # a precise move: think as hard as the route builder did
+                    res = plan_segment(
+                        s, wp, self.solids, weight=2.0, max_expand=120000, kill_y=self.kill_y, start_down=down
+                    )
+                    self.report["hard_thinks"] += 1
                 self.report["replans"] += 1
                 self.queue = res.frames if res.ok else []
                 self.queue_reaches = res.ok
@@ -454,12 +461,12 @@ class Bot:
         self.report.setdefault("stuck_at", []).append(
             [self.route[self.seg].label, round(s[ph.X] / 16, 1), round(s[ph.Y] / 16, 1)]
         )
-        for back in range(1, 9):
+        for back in range(1, 6):
             k = self.seg - back
             if k < 0:
                 break
             res = plan_segment(
-                s, self.route[k], self.solids, weight=5.0, max_expand=6000, kill_y=self.kill_y, start_down=down
+                s, self.route[k], self.solids, weight=5.0, max_expand=3000, kill_y=self.kill_y, start_down=down
             )
             if res.ok:
                 self.seg = k
