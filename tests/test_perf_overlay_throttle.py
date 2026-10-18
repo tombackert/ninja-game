@@ -8,17 +8,15 @@ def test_perf_overlay_throttling(monkeypatch):
     pygame.font.init()
     # Monkeypatch get_font to avoid relying on external font file in test env
     UI.get_font = staticmethod(lambda size: pygame.font.SysFont(None, size))  # type: ignore
-    surf = pygame.Surface((200, 150))
     # Ensure clean cache state
     UI._perf_overlay_frame = 0
     UI._perf_overlay_cache = None
 
-    # Draw several times with update_every=5
+    # Build several times with update_every=5
     prev_id = None
     rebuilds = 0
     for i in range(1, 16):
-        UI.render_perf_overlay(
-            surf,
+        overlay = UI.perf_overlay(
             work_ms=4.2,
             frame_full_ms=8.4,
             avg_work_ms=4.0,
@@ -26,8 +24,8 @@ def test_perf_overlay_throttling(monkeypatch):
             theor_fps=238.0,
             update_every=5,
         )
-        cache = getattr(UI, "_perf_overlay_cache")
-        cid = id(cache)
+        assert overlay is UI._perf_overlay_cache
+        cid = id(overlay)
         if cid != prev_id:
             rebuilds += 1
             prev_id = cid

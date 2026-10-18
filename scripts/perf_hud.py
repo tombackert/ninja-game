@@ -2,7 +2,7 @@
 
 This module isolates *timing* concerns (work segment, full frame, smoothed
 average) from the visual rendering of the overlay. Rendering of the text/UI
-remains delegated to `UI.render_perf_overlay` so we do not further bloat the
+remains delegated to `UI.perf_overlay` so we do not further bloat the
 already large `ui.py` with stateful timing logic.  The split improves testability:
 
 * The numeric smoothing behaviour (EMA) can be unit tested without initializing
@@ -18,7 +18,7 @@ Typical usage (inside the main renderer):
     hud.end_work_segment()
     # ... post effects / present ...
     hud.end_frame()
-    hud.render(surface, y=game.BASE_H - 120)
+    overlay = hud.overlay()  # surface to place on screen, or None
 
 `begin_frame` sets both the *full* frame and *work* start markers.  The caller
 must explicitly signal the end of the work portion (everything up to but NOT
@@ -299,10 +299,11 @@ class PerformanceHUD:
     def last_full_frame_ms(self) -> float:
         return self._last_full_ms
 
-    def render(self, surface, *, x: int = 5, y: int = 5):
-        """Delegate drawing to UI layer if enabled and a sample exists.
+    def overlay(self):
+        """The overlay surface (built by the UI layer) if enabled and a sample exists, else None.
 
-        Returns the drawn area (pygame.Rect), or None when nothing was drawn.
+        It is rebuilt only every 10th call and is the same surface in between,
+        so a caller can keep a scaled copy until it changes.
 
         Import is local to avoid creating a hard dependency for pure logic tests.
         """
@@ -313,8 +314,7 @@ class PerformanceHUD:
             from scripts.ui import UI
 
             game_counts = getattr(self, "_game_counts", None)
-            return UI.render_perf_overlay(
-                surface,
+            return UI.perf_overlay(
                 work_ms=self._visible_sample.work_ms,
                 frame_full_ms=self._visible_sample.full_ms,
                 avg_work_ms=self._visible_sample.avg_work_ms,
@@ -325,8 +325,6 @@ class PerformanceHUD:
                 interval_ms=self._visible_sample.interval_ms,
                 worst_interval_ms=self._visible_sample.worst_interval_ms,
                 hitches=self._visible_sample.hitches,
-                x=x,
-                y=y,
                 game_counts=game_counts,
             )
         except Exception:  # pragma: no cover - overlay optional in headless tests

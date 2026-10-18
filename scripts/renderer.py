@@ -12,10 +12,11 @@ Layer Order (bottom -> top):
 3. World & entities (tiles, player, enemies, projectiles, particles) via UI helper
 4. Transition / full-screen visual effects pre-compose (optional)
 5. Compose game.display onto display_2
-6. HUD / UI overlay (timer, level info, lives, coins, ammo, perf metrics),
-   on its own layer so it does not move with the camera
+6. HUD / UI overlay (timer, level info, lives, coins, ammo), on its own
+   layer so it does not move with the camera
 7. Screen shake / post effects applied just before blitting to window
-8. Upscale to the window, shifted by the camera's sub-pixel remainder
+8. Upscale to the window, shifted by the camera's sub-pixel remainder;
+   the perf overlay goes on top, kept scaled between its rebuilds
 
 Design Notes:
 - Keeps all mutation of game surfaces in one place.
@@ -69,6 +70,8 @@ class Renderer:
         self._bg_src: Optional[pygame.Surface] = None
         # Window-sized opaque buffer the final frame is composed in
         self._frame: Optional[pygame.Surface] = None
+        # Perf overlay scaled to the window: (source overlay, window size, scaled, position)
+        self._perf: Optional[tuple] = None
 
     @property
     def last_frame_ms(self) -> float:
@@ -138,6 +141,7 @@ class Renderer:
         # Mark end of work segment (work portion excludes optional perf overlay drawing)
         self.perf_hud.end_work_segment()
         state_ref = getattr(game, "state_ref", None)
+        perf = None
         if getattr(state_ref, "perf_enabled", False):
             # Add tile type counts (throttled via overlay rebuild) without heavy per-frame cost
             try:
@@ -153,8 +157,8 @@ class Renderer:
                     }
             except Exception:
                 pass
-            # Render performance overlay (timings + counts incl. tiles)
-            hud_area = _union(hud_area, self.perf_hud.render(hud, x=5, y=game.BASE_H - 170))
+            # Performance overlay (timings + counts incl. tiles), composed in step 8
+            perf = self.perf_hud.overlay()
             if seq is not None and self.perf_hud.last_sample:
                 seq.append("perf")
         if hud_area:
@@ -174,7 +178,7 @@ class Renderer:
             seq.append("effects_post")
 
         # 8. Scale + blit to target surface with screenshake
-        self._present(game, target_surface, render_scroll, hud, hud_area, screenshake_offset)
+        self._present(game, target_surface, render_scroll, hud, hud_area, perf, screenshake_offset)
         if seq is not None:
             seq.append("blit")
         # Finalize full frame timing (sample available next frame)
@@ -204,7 +208,25 @@ class Renderer:
             self._hud.fill((0, 0, 0, 0), self._hud_dirty)
         return self._hud
 
-    def _present(self, game, target_surface, render_scroll, hud, hud_area, shake) -> None:
+    def _scaled_perf(self, game, overlay, size):
+        """The perf overlay scaled to window `size`, and its position there.
+
+        The overlay is rebuilt only every 10th frame, so it is scaled once per
+        rebuild. Scaled with the HUD layer every frame it cost ~1 ms per frame.
+        """
+        if self._perf is None or self._perf[0] is not overlay or self._perf[1] != size:
+            sx, sy = size[0] / game.BASE_W, size[1] / game.BASE_H
+            w, h = overlay.get_size()
+            y = game.BASE_H - 170
+            if y + h > game.BASE_H:  # keep it on screen
+                y = game.BASE_H - h - 5
+            scaled = pygame.transform.scale(overlay, (round(w * sx), round(h * sy)))
+            # Mostly transparent: RLE skips the empty runs (0.09 -> 0.02 ms per blit)
+            scaled.set_alpha(255, pygame.RLEACCEL)
+            self._perf = (overlay, size, scaled, (round(5 * sx), round(y * sy)))
+        return self._perf[2], self._perf[3]
+
+    def _present(self, game, target_surface, render_scroll, hud, hud_area, perf, shake) -> None:
         size = target_surface.get_size()
         sx, sy = size[0] / game.BASE_W, size[1] / game.BASE_H
         # Compose background (static), world (camera-shifted) and HUD (static)
@@ -231,6 +253,8 @@ class Renderer:
             if (sx, sy) != (1, 1):
                 part = pygame.transform.scale(part, (round(hud_area.w * sx), round(hud_area.h * sy)))
             frame.blit(part, (round(hud_area.x * sx), round(hud_area.y * sy)))
+        if perf is not None:
+            frame.blit(*self._scaled_perf(game, perf, size))
         target_surface.blit(frame, shake)
 
     def _render_hud(self, game, surface, game_counts=None) -> Optional[pygame.Rect]:
@@ -264,10 +288,10 @@ class Renderer:
                 y += 10
         except Exception:  # pragma: no cover - HUD is best-effort
             pass
-        # Pass counts to performance HUD via perf_hud.render call later
+        # Pass counts to performance HUD via perf_hud.overlay call later
         if game_counts is not None:
             try:
-                # Attach for perf overlay rendering (perf_hud.render uses UI.render_perf_overlay)
+                # Attach for perf overlay rendering (perf_hud.overlay uses UI.perf_overlay)
                 self.perf_hud._game_counts = game_counts  # type: ignore[attr-defined]
             except Exception:
                 pass

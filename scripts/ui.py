@@ -52,8 +52,7 @@ class UI:
         return dict(UI._text_cache_stats | {"size": len(UI._text_cache), "capacity": UI._text_cache_capacity})
 
     @staticmethod
-    def render_perf_overlay(
-        surface,
+    def perf_overlay(
         *,
         work_ms: float,
         frame_full_ms: float | None = None,
@@ -65,21 +64,15 @@ class UI:
         interval_ms: float | None = None,
         worst_interval_ms: float | None = None,
         hitches: int | None = None,
-        x: int = 5,
-        y: int = 5,
         update_every: int = 10,
         min_width: int = 190,
         game_counts: dict | None = None,
-    ):
-        """Render (throttled) performance HUD.
+    ) -> pygame.Surface:
+        """Performance HUD overlay (throttled): rebuilt every `update_every`
+        calls, the same cached surface in between.
 
-        Note:
-            Earlier refactor misinterpreted `y` as an internal first-line offset
-            while always blitting the overlay at (0,0). Passing a large `y`
-            (e.g. bottom anchoring with BASE_H - 120) then caused all text to be
-            drawn outside the 120px-tall overlay, yielding an effectively empty
-            transparent surface (HUD appeared missing). We now treat (x,y) as the
-            on-screen anchor; internal text always starts at a small fixed inset.
+        The caller places it on screen (see Renderer); text starts at a small
+        fixed inset inside the overlay.
         """
         UI._perf_overlay_frame += 1
         rebuild = UI._perf_overlay_cache is None or (UI._perf_overlay_frame % update_every) == 1
@@ -91,12 +84,7 @@ class UI:
             except Exception:
                 rebuild = True
             if not rebuild:
-                # Adjust position if off-screen
-                dest_y = y
-                h = UI._perf_overlay_cache.get_height()
-                if dest_y + h > surface.get_height():
-                    dest_y = surface.get_height() - h - 5
-                return surface.blit(UI._perf_overlay_cache, (x, dest_y))
+                return UI._perf_overlay_cache
         font = UI.get_font(8)
         # We'll size width dynamically based on measured text so large values fit.
         # Fallback height remains fixed (120) for layout stability.
@@ -200,11 +188,7 @@ class UI:
             pass
         # Cache composed overlay for fast reuse.
         UI._perf_overlay_cache = overlay
-
-        dest_y = y
-        if dest_y + overlay_h > surface.get_height():
-            dest_y = surface.get_height() - overlay_h - 5
-        return surface.blit(overlay, (x, dest_y))
+        return overlay
 
     @staticmethod
     def load_image_cached(path, scale=1):

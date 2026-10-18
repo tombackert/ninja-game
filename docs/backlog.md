@@ -22,7 +22,6 @@
 
 ## Benchmark Findings (tools/bench, 2026-10-18; numbers in BENCHMARKS.md)
 - Camera glide (68c2a6d) costs +1.3 ms per gameplay frame (2.14 -> 3.44 ms, +61%; first frame of a level +115%), not the ~0.4 ms its commit states: profile Renderer._present (full-window alpha upscale and blit every frame)
-- F1 perf HUD costs ~1 ms per frame since 68c2a6d: its area of the HUD layer is upscaled and alpha-blitted every frame although the overlay is rebuilt only every 10th frame -> keep it pre-scaled
 - `ReplayManager.abort_current_run()` does not exist: GameState calls it on death/respawn inside try/except, the AttributeError is swallowed and the recording is never aborted
 - Level timer runs on wall-clock time (pygame.time.get_ticks): a simulation faster than real time (headless runs, tests, training) saves impossible best times (987 ms for level 0), and dropped frames count as play time
 - Perf HUD "Render"/"Work" never show stalls in the update (level start, respawn, level finish), only Interval/Hitches do -> add an update row
