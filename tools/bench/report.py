@@ -1,11 +1,14 @@
-"""BENCHMARKS.md and its charts, built from docs/benchmarks/{baseline,history}.json.
+"""BENCHMARKS.md, its charts and the dashboard, built from docs/benchmarks/{baseline,history}.json.
 
-Rebuilt by `--save`, `history` and `report`; edit this file, not the output.
-The charts are plain SVG (no plotting library), light and dark.
+Rebuilt by `--save`, `history` and `report`; edit this file (and the
+dashboard's template next to it), not the output. The charts are plain SVG
+(no plotting library), light and dark; the dashboard is one HTML file with
+its data inline, so it opens from disk and works offline.
 """
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import replace
 from html import escape
@@ -14,6 +17,8 @@ from .metrics import BY_KEY, GROUPS, METRICS, change, fmt, score
 from .runner import BASELINE, DATA_DIR, HISTORY, ROOT, load
 
 MD = os.path.join(ROOT, "BENCHMARKS.md")
+HTML = os.path.join(DATA_DIR, "dashboard.html")
+TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_template.html")
 FONT = 'system-ui,-apple-system,"Segoe UI",sans-serif'
 # Light and dark charts are separate files with an opaque background: a
 # media query inside one SVG follows the OS, not GitHub's theme setting
@@ -58,6 +63,20 @@ def style(t: dict) -> str:
 
 
 ENTRY_LABEL = {"game.py": "game.py", "menu.py": "menu.py", "app.py": "app.py, state machine"}
+
+# The numbers at the top of BENCHMARKS.md and the dashboard, with a note each
+HEADLINE = [
+    ("frame.p50_ms", "of the 16.7 ms a 60 FPS frame may take"),
+    ("frame.p99_ms", ""),
+    ("startup.to_menu_ms", ""),
+    ("level_start.first_ms", "menu -> Play, every asset loaded"),
+    ("level_start.p50_ms", "next level, levels 1-6"),
+    ("levels.start_max_ms", "slowest of all levels"),
+    ("levels.respawn_max_ms", "slowest of all levels"),
+    ("pause.frame_p50_ms", ""),
+    ("hud.overhead_ms", "per frame with F1 on"),
+    ("sim.steps_per_s", "headless, for training"),
+]
 
 
 # --- svg helpers -------------------------------------------------------------
@@ -276,10 +295,10 @@ WATCH = [
 ]
 
 
-def changes(suite: list[dict]) -> list[str]:
+def steps(suite: list[dict]) -> list[tuple]:
     """Steps from one measured commit to the next, beyond twice the noise
-    tolerance (history points are a single session each)."""
-    rows = []
+    tolerance (history points are a single session each): (entry after, metric, before, after, verdict)."""
+    out = []
     for before, after in zip(suite, suite[1:]):
         for key in WATCH:
             m = BY_KEY[key]
@@ -289,10 +308,16 @@ def changes(suite: list[dict]) -> list[str]:
             wide = replace(m, tolerance=2 * m.tolerance, floor=2 * m.floor)
             verdict = change(wide, b, a)
             if verdict != "same":
-                rows.append(
-                    f"| `{after['commit']}` {escape(after['subject'][:60])} | {m.label} | {fmt(m, b)} → {fmt(m, a)} | "
-                    f"{(a - b) / b * 100:+.0f}% {'better' if verdict == 'better' else '**worse**'} |"
-                )
+                out.append((after, m, b, a, verdict))
+    return out
+
+
+def changes(suite: list[dict]) -> list[str]:
+    rows = [
+        f"| `{after['commit']}` {escape(after['subject'][:60])} | {m.label} | {fmt(m, b)} → {fmt(m, a)} | "
+        f"{(a - b) / b * 100:+.0f}% {'better' if verdict == 'better' else '**worse**'} |"
+        for after, m, b, a, verdict in steps(suite)
+    ]
     if not rows:
         return []
     return [
@@ -320,6 +345,147 @@ def level_sort(d: dict) -> dict:
     return dict(sorted(d.items(), key=lambda kv: int("".join(c for c in kv[0] if c.isdigit()) or 0)))
 
 
+def stalls(base: dict) -> list[tuple[str, float]]:
+    """Every stall the player waits for, slowest first (where to look next)."""
+    m, d = base["metrics"], base.get("detail", {})
+    out = [(f"Start of level {lvl}", v) for lvl, v in d.get("level_start_ms", {}).items()]
+    out += [(f"Respawn in level {lvl}", v) for lvl, v in d.get("respawn_ms", {}).items()]
+    out += [(f"Finish of {lvl}", v) for lvl, v in d.get("campaign_finish_ms", {}).items()]
+    for key, label in (
+        ("level_start.first_ms", "First level start of a session"),
+        ("pause.first_ms", "Opening the pause screen"),
+        ("startup.to_menu_ms", "Start-up to menu"),
+        ("gc.max_pause_ms", "Longest GC pause"),
+    ):
+        if key in m:
+            out.append((label, m[key]))
+    return sorted(out, key=lambda s: -s[1])
+
+
+# --- the dashboard -----------------------------------------------------------
+def rounded(v):
+    """3 decimals: more than the page shows, and the file stays small and its diffs short."""
+    if isinstance(v, float):
+        return round(v, 3)
+    if isinstance(v, dict):
+        return {k: rounded(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [rounded(x) for x in v]
+    return v
+
+
+def theme_css() -> str:
+    """THEMES as CSS custom properties: the dashboard follows the OS theme in the SVGs' colors."""
+
+    def props(t: dict) -> str:
+        return "".join(f"--{k.replace('_', '-')}:{v};" for k, v in t.items())
+
+    return f":root{{{props(THEMES['light'])}}}\n@media (prefers-color-scheme: dark){{:root{{{props(THEMES['dark'])}}}}}"
+
+
+def dashboard(base: dict | None, history: dict) -> None:
+    """docs/benchmarks/dashboard.html: the template with the results inline."""
+    entries = [e for e in history["entries"] if "frame_p50_ms" in e.get("probe", {})]
+    suite = [e for e in history["entries"] if e.get("suite", {}).get("frame.p50_ms")]
+    ref = (base or {}).get("reference")
+
+    def known(metrics: dict) -> dict:
+        return {k: v for k, v in metrics.items() if k in BY_KEY}
+
+    def run_score(metrics: dict) -> float | None:
+        # Only over every score metric, so the points compare with each other
+        if not ref or not all(metrics.get(m.key) for m in METRICS if m.score):
+            return None
+        return score(metrics, ref["metrics"])
+
+    data: dict = {
+        "metrics": [
+            {
+                "key": m.key,
+                "label": m.label,
+                "unit": m.unit,
+                "lower": m.lower_is_better,
+                "tolerance": m.tolerance,
+                "floor": m.floor,
+                "score": m.score,
+                "group": m.group,
+                "help": m.help,
+            }
+            for m in METRICS
+        ],
+        "groups": GROUPS,
+        "headline": HEADLINE,
+        "eras": ENTRY_LABEL,
+        "windows": windows(entries),
+        "history": [
+            {
+                "commit": e["commit"],
+                "date": e["date"][:10],
+                "subject": e["subject"],
+                "entry": e["probe"].get("entry"),
+                "window": e["probe"].get("window"),
+                **{k: e["probe"].get(k) for k in ("frame_p50_ms", "frame_p99_ms", "startup_ms", "level_start_ms")},
+            }
+            for e in entries
+        ],
+        "campaign": [
+            {
+                "commit": e["commit"],
+                "date": e["date"][:10],
+                "subject": e["subject"],
+                "score": run_score(e["suite"]),
+                "metrics": known(e["suite"]),
+            }
+            for e in suite
+        ],
+        "steps": [
+            {
+                "commit": after["commit"],
+                "key": m.key,
+                "before": b,
+                "after": a,
+                "change": (a - b) / b * 100,
+                "verdict": verdict,
+            }
+            for after, m, b, a, verdict in steps(suite)
+        ],
+        "base": None,
+    }
+    if base:
+        d = base.get("detail", {})
+        frames = d.get("campaign_frame_ms", {})
+        data["base"] = {
+            "commit": base["commit"],
+            "subject": base["subject"],
+            "measured": base["measured"][:10],
+            "machine": base["machine"]["cpu"],
+            "env": base["env"],
+            "sessions": base["sessions"],
+            "wakes": base.get("wakes", 0),
+            "nondeterministic": base.get("nondeterministic", []),
+            "metrics": known(base["metrics"]),
+            "spread": known(base.get("spread", {})),
+            "reference": ref and {"commit": ref["commit"], "metrics": known(ref["metrics"])},
+            "score": score(base["metrics"], ref["metrics"]) if ref else None,
+            "levels": [
+                {
+                    "level": lvl,
+                    "start": v,
+                    "respawn": d.get("respawn_ms", {}).get(lvl),
+                    "frame": frames.get(f"L{lvl}", {}).get("p50"),
+                }
+                for lvl, v in level_sort(d.get("level_start_ms", {})).items()
+            ],
+            "stalls": stalls(base)[:8],
+        }
+    # "<" escaped: no subject can end the <script> the data sits in
+    payload = json.dumps(rounded(data), ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    with open(TEMPLATE, encoding="utf-8") as f:
+        page = f.read()
+    with open(HTML, "w", encoding="utf-8") as f:
+        f.write(page.replace("/*THEME*/", theme_css()).replace("/*DATA*/", payload))
+
+
 def write() -> None:
     base = load(BASELINE, None)
     history = load(HISTORY, {"entries": []})
@@ -329,6 +495,10 @@ def write() -> None:
         "# Benchmarks",
         "",
         "<!-- Generated by `python -m tools.bench --save` (tools/bench/report.py); do not edit. -->",
+        "",
+        "Interactive: [`docs/benchmarks/dashboard.html`](docs/benchmarks/dashboard.html) - every chart below with the"
+        " commit under the pointer, every campaign metric over time and every step between commits, in one file"
+        " with its data inline. Open it in a browser (GitHub only shows its source).",
         "",
     ]
 
@@ -348,24 +518,11 @@ def write() -> None:
             "| | Now | |",
             "|---|---:|---|",
         ]
-        headline = [
-            ("frame.p50_ms", "of the 16.7 ms a 60 FPS frame may take" if "frame.budget_pct" in m else ""),
-            ("frame.p99_ms", ""),
-            ("startup.to_menu_ms", ""),
-            ("level_start.first_ms", "menu -> Play, every asset loaded"),
-            ("level_start.p50_ms", "next level, levels 1-6"),
-            ("levels.start_max_ms", "slowest of all levels"),
-            ("levels.respawn_max_ms", "slowest of all levels"),
-            ("pause.frame_p50_ms", ""),
-            ("hud.overhead_ms", "per frame with F1 on"),
-            ("sim.steps_per_s", "headless, for training"),
-        ]
-        by_key = {mm.key: mm for mm in METRICS}
-        for key, note in headline:
+        for key, note in HEADLINE:
             if key in m:
-                if key == "frame.p50_ms" and "frame.budget_pct" in m:
-                    note = f"{m['frame.budget_pct']:.0f}% {note}"
-                md.append(f"| {by_key[key].label} | **{fmt(by_key[key], m[key])}** | {note} |")
+                if key == "frame.p50_ms":
+                    note = f"{m['frame.budget_pct']:.0f}% {note}" if "frame.budget_pct" in m else ""
+                md.append(f"| {BY_KEY[key].label} | **{fmt(BY_KEY[key], m[key])}** | {note} |")
         if base.get("nondeterministic"):
             md += ["", f"> Simulation differed between sessions in {', '.join(base['nondeterministic'])}."]
         if base.get("wakes"):
@@ -477,23 +634,7 @@ def write() -> None:
             "| Stall | ms |",
             "|---|---:|",
         ]
-        stalls = []
-        d = base.get("detail", {})
-        for lvl, v in d.get("level_start_ms", {}).items():
-            stalls.append((f"Start of level {lvl}", v))
-        for lvl, v in d.get("respawn_ms", {}).items():
-            stalls.append((f"Respawn in level {lvl}", v))
-        for lvl, v in d.get("campaign_finish_ms", {}).items():
-            stalls.append((f"Finish of {lvl}", v))
-        for key, label in (
-            ("level_start.first_ms", "First level start of a session"),
-            ("pause.first_ms", "Opening the pause screen"),
-            ("startup.to_menu_ms", "Start-up to menu"),
-            ("gc.max_pause_ms", "Longest GC pause"),
-        ):
-            if key in m:
-                stalls.append((label, m[key]))
-        for label, v in sorted(stalls, key=lambda s: -s[1])[:8]:
+        for label, v in stalls(base)[:8]:
             md.append(f"| {label} | {v:.1f} |")
         md.append("")
 
@@ -527,3 +668,4 @@ def write() -> None:
     ]
     with open(MD, "w") as f:
         f.write("\n".join(md))
+    dashboard(base, history)

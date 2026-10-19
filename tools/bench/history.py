@@ -142,4 +142,4 @@ def main(argv: list[str]) -> None:
     from . import report
 
     report.write()
-    print("BENCHMARKS.md and docs/benchmarks/*.svg rebuilt")
+    print("BENCHMARKS.md, docs/benchmarks/*.svg and docs/benchmarks/dashboard.html rebuilt")

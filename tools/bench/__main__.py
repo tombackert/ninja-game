@@ -5,11 +5,11 @@ Usage (from the repo root):
     python -m tools.bench --quick          # one short session, for a quick look
     python -m tools.bench --check          # exit 1 if a metric got worse beyond noise
     python -m tools.bench --save           # record as the new baseline + history point,
-                                           # rebuild BENCHMARKS.md and its charts
+                                           # rebuild BENCHMARKS.md, its charts and the dashboard
     python -m tools.bench --save --reference   # ... and make it the score's 1000
     python -m tools.bench --profile        # cProfile one session, top functions
     python -m tools.bench history          # backfill the history from git (see history.py)
-    python -m tools.bench report           # rebuild BENCHMARKS.md from the stored results
+    python -m tools.bench report           # rebuild BENCHMARKS.md and the dashboard from the stored results
 
 A session (session.py) plays a campaign through levels 0-6 the way a player
 does, from start-up to the last level-complete screen, and times every
@@ -152,7 +152,10 @@ def save(result: dict, probe: dict, new_reference: bool = False) -> None:
     from . import report
 
     report.write()
-    print(f"\nSaved: {os.path.relpath(BASELINE, ROOT)}, {os.path.relpath(HISTORY, ROOT)}, BENCHMARKS.md")
+    print(
+        f"\nSaved: {os.path.relpath(BASELINE, ROOT)}, {os.path.relpath(HISTORY, ROOT)}, BENCHMARKS.md,"
+        f" {os.path.relpath(report.HTML, ROOT)}"
+    )
 
 
 def profile(quick: bool) -> None:
@@ -198,7 +201,7 @@ def main() -> None:
         from . import report
 
         report.write()
-        print("BENCHMARKS.md and docs/benchmarks/*.svg rebuilt")
+        print("BENCHMARKS.md, docs/benchmarks/*.svg and docs/benchmarks/dashboard.html rebuilt")
         return
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
