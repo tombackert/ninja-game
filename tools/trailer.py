@@ -118,8 +118,10 @@ def boot():
     pygame.display.set_mode((VIEW_W * SCALE, VIEW_H * SCALE))
 
     from scripts.settings import settings
+    from scripts.timer import Timer
 
     settings.flush = lambda: None  # keep data/settings.json untouched
+    Timer.save_best_times = lambda self: None  # and data/best_times.json, should a run reach the flag
     settings.camera_style = "classic"
     settings.selected_gear = 0
     return pygame
