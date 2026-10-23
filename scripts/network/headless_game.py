@@ -15,6 +15,10 @@ Multiplayer rules implemented here (server-authoritative):
   tilemap extraction order — identical on client and server because both
   load the same level JSON. Picked-up IDs accumulate in ``collected_ids``.
 - Enemy AI targets the nearest player.
+- Players of network clients move one physics step per client input
+  (``_pending_steps``, filled by GameServer each tick): 0 steps while no
+  input has arrived, several to catch up after a burst. Each step runs
+  its input's actions first (jump/dash/shoot), as the client predicts.
 
 Usage:
     game = HeadlessGame(level=0)
@@ -108,7 +112,10 @@ class HeadlessGame:
         self.running: bool = True
         self.level: int = level
 
-        # Pending inputs from clients: {player_id: (dx, dy)}
+        # Input steps of network players this tick:
+        # {player_id: [((dx, dy), [actions]), ...]}
+        self._pending_steps: Dict[int, List[Tuple[Tuple[float, float], List[str]]]] = {}
+        # Movement of players without steps (tests, tools): {player_id: (dx, dy)}
         self._pending_inputs: Dict[int, Tuple[float, float]] = {}
 
         # Initialize tilemap and load level
@@ -207,6 +214,14 @@ class HeadlessGame:
         player.shoot_cooldown = 10
         return True
 
+    def _apply_action(self, player: Player, action: str) -> None:
+        if action == "jump":
+            player.jump()
+        elif action == "dash":
+            player.dash()
+        elif action == "shoot":
+            self.player_shoot(player)
+
     def award_coin(self, player_id: Optional[int], amount: int = 1) -> None:
         """Credit coins to a specific player (kill rewards)."""
         if player_id is None:
@@ -244,12 +259,18 @@ class HeadlessGame:
         projectiles, collectables, deaths/respawns)."""
         self.tick += 1
 
-        # --- Players: physics + fatal fall handling ---
+        # --- Players: one physics step per input + fatal fall handling ---
         for player in self.players:
-            movement = self._pending_inputs.get(player.id, (0, 0))
-            player.update(self.tilemap, movement)
-            if player.air_time > AIR_TIME_FATAL:
-                self._respawn(player, lose_life=True)
+            steps = self._pending_steps.get(player.id)
+            if steps is None:
+                steps = [(self._pending_inputs.get(player.id, (0, 0)), [])]
+            for movement, actions in steps:
+                for action in actions:
+                    self._apply_action(player, action)
+                player.update(self.tilemap, movement)
+                if player.air_time > AIR_TIME_FATAL:
+                    self._respawn(player, lose_life=True)
+        self._pending_steps.clear()
         self._pending_inputs.clear()
         # The global death counter is meaningless with per-player respawn.
         self.dead = 0

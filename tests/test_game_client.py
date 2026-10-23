@@ -76,6 +76,7 @@ class MockGame:
     enemies: List[Any] = field(default_factory=list)
     cm: MockCollectableManager = field(default_factory=MockCollectableManager)
     _pending_inputs: Dict[int, tuple] = field(default_factory=dict)
+    _pending_steps: Dict[int, list] = field(default_factory=dict)
 
 
 # --- Helper ---
@@ -296,7 +297,7 @@ class TestInputSending(unittest.TestCase):
     """Tests for the state+event input protocol (client side)."""
 
     def test_send_input_state_transmits_to_server(self):
-        """send_input_state should reach the server and apply actions."""
+        """send_input_state should reach the server as one step with its actions."""
         server = GameServer(port=19010)
         player = MockPlayer(id=1)
         game = MockGame(tick=10, players=[player])
@@ -317,7 +318,7 @@ class TestInputSending(unittest.TestCase):
 
             client_state = server.clients.get_all_clients()[0]
             self.assertEqual(client_state.movement, [True, False])
-            self.assertTrue(player._jumped)
+            self.assertEqual(game._pending_steps[1], [((-1, 0), ["jump"])])
         finally:
             server.shutdown()
             client.close()

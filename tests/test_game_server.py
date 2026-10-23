@@ -63,6 +63,7 @@ class MockGame:
     enemies: List[Any] = field(default_factory=list)
     cm: MockCollectableManager = field(default_factory=MockCollectableManager)
     _pending_inputs: Dict[int, tuple] = field(default_factory=dict)
+    _pending_steps: Dict[int, list] = field(default_factory=dict)
 
 
 class TestGameServerInit(unittest.TestCase):
@@ -187,7 +188,7 @@ class TestInputHandling(unittest.TestCase):
     """Tests for the state+event input protocol."""
 
     def test_server_applies_movement_state_and_actions(self):
-        """Server should store movement state and apply queued actions."""
+        """Server should turn an input into one step with its movement and actions."""
         server = GameServer(port=18007)
         player = MockPlayer(id=1)
         game = MockGame(tick=10, players=[player])
@@ -213,11 +214,9 @@ class TestInputHandling(unittest.TestCase):
             client_state = server.clients.get_all_clients()[0]
             self.assertEqual(client_state.movement, [True, False])
             self.assertEqual(client_state.last_input_tick, 15)
-            # Action was applied to the player and drained
-            self.assertTrue(player._jumped)
-            self.assertEqual(client_state.pending_actions, [])
-            # Movement translated into a pending input vector
-            self.assertEqual(game._pending_inputs[1], (-1, 0))
+            # One step for the game: leftward movement with the jump; tick 15 has run
+            self.assertEqual(game._pending_steps[1], [((-1, 0), ["jump"])])
+            self.assertEqual(client_state.ack_tick, 15)
 
         finally:
             server.shutdown()
@@ -250,9 +249,9 @@ class TestInputHandling(unittest.TestCase):
 
             client_state = server.clients.get_all_clients()[0]
             self.assertEqual(client_state.last_action_seq, 1)
-            self.assertTrue(player._dashed)
-            # Reset and re-send the same seq: must not fire again
-            player._dashed = False
+            # Ticks 50 and 51 run as two steps; the dash only in the first
+            self.assertEqual(game._pending_steps[1], [((0, 0), ["dash"]), ((0, 0), [])])
+            # Re-send the same seq: must not fire again
             input_msg = Message(
                 type="input",
                 payload={"tick": 52, "move": [False, False], "actions": [[1, "dash"]]},
@@ -260,7 +259,7 @@ class TestInputHandling(unittest.TestCase):
             client.send(input_msg, ("127.0.0.1", 18008))
             time.sleep(0.02)
             server.update()
-            self.assertFalse(player._dashed)
+            self.assertEqual(game._pending_steps[1], [((0, 0), [])])
 
         finally:
             server.shutdown()
@@ -427,7 +426,7 @@ class TestClientState(unittest.TestCase):
     """Tests for ClientState and ClientManager."""
 
     def test_client_state_input_model(self):
-        """ClientState should track movement state and dedupe actions."""
+        """ClientState should run one step per input and dedupe actions."""
         from scripts.network.client_state import ClientState
 
         client = ClientState(
@@ -441,9 +440,9 @@ class TestClientState(unittest.TestCase):
 
         self.assertEqual(client.movement, [True, False])
         self.assertEqual(client.last_input_tick, 11)
-        # jump (seq 1) only queued once despite being re-sent
-        self.assertEqual(client.drain_actions(), ["jump", "dash"])
-        self.assertEqual(client.drain_actions(), [])
+        # jump (seq 1) runs once despite being re-sent, each action in its tick
+        self.assertEqual(client.take_steps(), [(10, [True, False], ["jump"]), (11, [True, False], ["dash"])])
+        self.assertEqual(client.take_steps(), [])
 
     def test_client_manager_add_remove(self):
         """ClientManager should add and remove clients."""

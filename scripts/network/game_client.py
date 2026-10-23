@@ -40,8 +40,8 @@ CONNECT_RETRY_INTERVAL = 1.0  # seconds between connect retries
 MAX_CONNECT_ATTEMPTS = 5  # give up after this many
 HEARTBEAT_INTERVAL = 1.0  # seconds between heartbeats
 SERVER_TIMEOUT = 10.0  # disconnect if no messages for this long
-TICK_LEAD = 2  # how many ticks the client runs ahead of the server
-TICK_HARD_RESYNC = 30  # snap local tick if drift exceeds this
+TICK_LEAD = 2  # the first local tick: this far ahead of the server's tick at connect
+INPUT_REDUNDANCY = 4  # each input packet carries this many ticks of movement
 ACTION_RESEND_WINDOW = 30  # re-send unacked actions for this many ticks
 STALL_MS = 100.0  # a snapshot gap this long is a visible network stall (3 snapshot intervals)
 MAX_RTT_SAMPLE = 5.0  # seconds; anything outside 0..this is a clock step, not a measurement
@@ -238,11 +238,15 @@ class GameClient:
     # --- Input ---
 
     def send_input_state(self, move: Tuple[bool, bool], actions: List[str]) -> None:
-        """Send this frame's input state to the server.
+        """Send this frame's input to the server (call once per local tick).
 
-        Movement is sent as held-key state every frame (drift/loss tolerant).
-        One-shot actions get sequence numbers and are re-sent in every packet
-        until acknowledged, so a lost packet cannot swallow a jump.
+        Every local tick is one input, and the server runs one physics step
+        per input, so ticks must stay contiguous. Movement is held-key
+        state; each packet also carries the movement of the previous ticks
+        (``history``), so a lost packet leaves no hole. One-shot actions
+        get sequence numbers and their tick, and are re-sent in every packet
+        until the server has run that tick, so a lost packet cannot swallow
+        a jump.
 
         Args:
             move: (left_held, right_held)
@@ -256,12 +260,19 @@ class GameClient:
             self._action_seq += 1
             self._pending_actions.append((self._action_seq, name, tick))
 
+        history = []
+        for t in range(tick - INPUT_REDUNDANCY + 1, tick):
+            if t in self._input_history:
+                history.append(list(self._input_history[t][0]))
+            else:
+                history = []  # only a gap-free run up to this tick
         msg = Message(
             type="input",
             payload={
                 "tick": tick,
                 "move": [bool(move[0]), bool(move[1])],
-                "actions": [[seq, name] for seq, name, _ in self._pending_actions],
+                "history": history,
+                "actions": [[seq, name, t] for seq, name, t in self._pending_actions],
             },
         )
         self._input_sent_at[tick] = time.time()
@@ -484,7 +495,6 @@ class GameClient:
             self._last_full_snapshot = snapshot
             self._server_tick = tick
             self.newest_snapshot_arrival = self.transport.last_arrival or time.time()
-            self._resync_local_tick()
         if not self._joined and self._connect_started:
             self._joined = True
             self.netstats.event(
@@ -514,24 +524,6 @@ class GameClient:
             return
         self._last_full_request_time = now
         self.transport.send(Message(type="request_full", payload={}), self._server_addr)
-
-    def _resync_local_tick(self) -> None:
-        """Keep the local tick slightly ahead of the server tick.
-
-        The client frame clock and the server tick clock drift apart over
-        time (they are independent 60 Hz loops). Without correction the
-        input ticks would wander arbitrarily far from the server timeline.
-        Large divergence snaps; small divergence is nudged one tick at a
-        time to avoid visible input timing jumps.
-        """
-        target = self._server_tick + TICK_LEAD
-        drift = self._local_tick - target
-        if abs(drift) > TICK_HARD_RESYNC:
-            self._local_tick = target
-        elif drift > TICK_LEAD:
-            self._local_tick -= 1
-        elif drift < -TICK_LEAD:
-            self._local_tick += 1
 
     def _handle_heartbeat_ack(self, payload: Dict[str, Any]) -> None:
         """Handle heartbeat acknowledgement: RTT sample and the server's view of our link."""

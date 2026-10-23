@@ -78,6 +78,8 @@ ROWS: List[tuple[str, str, int]] = [
     ("server.friend_starved_pct", "ticks w/o new friend input (%)", 1),
     ("server.friend_burst_pct", "ticks with 2+ friend inputs (%)", 1),
     ("server.host_starved_pct", "ticks w/o new host input (%)", 1),
+    ("server.friend_no_step_pct", "ticks friend's ninja made no step (%)", 1),
+    ("server.friend_multi_step_pct", "ticks friend's ninja made 2+ steps (%)", 1),
     ("friend.mispredictions_per_min", "friend: mispredictions / min", 0),
     ("friend.correction_max_px", "friend: largest snap (px)", 1),
     ("friend.rtt_p50_ms", "friend: RTT p50 (ms)", 1),
@@ -264,6 +266,8 @@ def _server_metrics(samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         prefix = who.lower()
         out[f"{prefix}_starved_pct"] = 100.0 * sum(p["ticks"]["starved"] for p in peers) / ticks if ticks else 0.0
         out[f"{prefix}_burst_pct"] = 100.0 * sum(p["ticks"]["burst"] for p in peers) / ticks if ticks else 0.0
+        for key in ("no_step", "multi_step"):
+            out[f"{prefix}_{key}_pct"] = 100.0 * sum(p["ticks"].get(key, 0) for p in peers) / ticks if ticks else 0.0
         out[f"{prefix}_c2s_loss_pct"] = 100.0 * lost / expected if expected else 0.0
         out[f"{prefix}_s2c_kbps"] = sum(x["tx_bytes"] for x in link) * 8 / 1000.0 / len(peers)
         max_packet = max(max_packet, max(x["tx_max_bytes"] for x in link))

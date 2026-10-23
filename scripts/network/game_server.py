@@ -253,8 +253,9 @@ class GameServer:
         tick = payload.get("tick", 0)
         move = payload.get("move", [False, False])
         actions = payload.get("actions", [])
+        history = payload.get("history", [])
         previous = client.last_input_arrival
-        client.receive_input(tick, move, actions, arrival=self.transport.last_arrival)
+        client.receive_input(tick, move, actions, arrival=self.transport.last_arrival, history=history)
         gap_ms = (client.last_input_arrival - previous) * 1000.0
         if previous and gap_ms >= INPUT_STALL_MS:
             self.netstats.count("input_stalls")
@@ -329,40 +330,28 @@ class GameServer:
             self._on_player_leave(client.player_id, reason)
 
     def _apply_client_inputs(self) -> None:
-        """Apply each client's held movement state and queued actions.
+        """Hand each player's input steps for this tick to the game.
 
-        Movement is applied every tick from the latest known state, so
-        clock drift or lost packets never freeze or drop movement.
-        One-shot actions fire exactly once (deduplicated by sequence).
+        Every client input is one physics step for its player, in input
+        order and with that input's actions (ClientState.take_steps), so the
+        server's trajectory matches the client's prediction step for step,
+        whenever the packets arrive. The game runs them in simulate_tick
+        (``game._pending_steps``: player id -> [(movement, actions), ...]).
         """
         if not self.game or not hasattr(self.game, "players"):
             return
 
-        players_by_id = {getattr(p, "id", None): p for p in self.game.players}
+        player_ids = {getattr(p, "id", None) for p in self.game.players}
+        steps_by_player = getattr(self.game, "_pending_steps", None)
 
         for client in self.clients.get_all_clients():
             client.count_tick_inputs()
-            player = players_by_id.get(client.player_id)
-            if player is None:
-                client.drain_actions()
+            steps = client.take_steps()
+            if steps_by_player is None or client.player_id not in player_ids:
                 continue
-
-            for action in client.drain_actions():
-                if action == "jump":
-                    player.jump()
-                elif action == "dash":
-                    player.dash()
-                elif action == "shoot":
-                    # Prefer the game's multiplayer shoot hook (per-player ammo);
-                    # fall back to the entity's own shoot.
-                    if hasattr(self.game, "player_shoot"):
-                        self.game.player_shoot(player)
-                    elif hasattr(player, "shoot"):
-                        player.shoot()
-
-            movement = (int(client.movement[1]) - int(client.movement[0]), 0)
-            if hasattr(self.game, "_pending_inputs"):
-                self.game._pending_inputs[client.player_id] = movement
+            steps_by_player[client.player_id] = [
+                ((int(move[1]) - int(move[0]), 0), actions) for _, move, actions in steps
+            ]
 
     def _broadcast_snapshot(self) -> None:
         """Broadcast game state snapshot to all clients.
@@ -378,9 +367,9 @@ class GameServer:
         # and the Mersenne tuple would add ~5KB of JSON to every snapshot)
         snapshot = SnapshotService.capture(self.game, include_rng=False)
 
-        # Per-player input acknowledgements (client tick of newest applied
-        # input) — clients use these for prediction reconciliation.
-        acks = {str(c.player_id): c.last_input_tick for c in self.clients.get_all_clients()}
+        # Per-player input acknowledgements (client tick of the newest input
+        # that has run) — clients use these for prediction reconciliation.
+        acks = {str(c.player_id): c.ack_tick for c in self.clients.get_all_clients()}
 
         # Prepare full snapshot message
         full_msg = Message(
@@ -433,14 +422,15 @@ class GameServer:
 
     def _send_snapshot(self, msg: Message, addr: Address, size_metric: str) -> None:
         """Send one snapshot, stamped with input hold times; record its size."""
-        # How long each acked input has been here, measured right before the
-        # send: the client subtracts it from (snapshot arrival - input send)
-        # to get the network RTT, so time spent serializing must be in it
+        # How long each acked input has been here (in the socket buffer,
+        # the input queue and until this send): the client subtracts it from
+        # (snapshot arrival - input send) to get the network RTT, so it is
+        # measured right before the send. None for an input filled in.
         now = time.time()
         msg.payload["holds"] = {
-            str(c.player_id): round(max(0.0, now - c.last_input_arrival) * 1000.0, 3)
+            str(c.player_id): round(max(0.0, now - c.last_processed_arrival) * 1000.0, 3)
             for c in self.clients.get_all_clients()
-            if c.last_input_arrival
+            if c.last_processed_arrival
         }
         if self.transport.send(msg, addr):
             size = self.transport.last_send_bytes
@@ -465,6 +455,9 @@ class GameServer:
                 "c2s_jitter_ms": link["jitter_ms"],
                 "starved_pct": round(100.0 * counts["starved"] / ticks, 1) if ticks else 0.0,
                 "burst_pct": round(100.0 * counts["burst"] / ticks, 1) if ticks else 0.0,
+                "no_step_pct": round(100.0 * counts["no_step"] / ticks, 1) if ticks else 0.0,
+                "multi_step_pct": round(100.0 * counts["multi_step"] / ticks, 1) if ticks else 0.0,
+                "backlog": len(client.input_queue),
             }
             client.server_view = view
             reports[str(client.player_id)] = {

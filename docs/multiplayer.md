@@ -56,19 +56,31 @@ second machine times out. (Loopback play is never affected.)
 | Dedicated server | `server.py` | 60 Hz fixed-timestep loop, session log (see [Session logs](#session-logs)) |
 | World simulation | `scripts/network/headless_game.py` | Full sim without rendering: players, enemies (AI targets nearest player), projectiles, collectables, respawns |
 | Networking (server) | `scripts/network/game_server.py` | Connections, input ingestion, snapshot broadcast (30 Hz, delta-compressed, periodic full) |
-| Networking (client) | `scripts/network/game_client.py` | Connection lifecycle, input sending, snapshot reconstruction, RTT, tick resync |
+| Networking (client) | `scripts/network/game_client.py` | Connection lifecycle, input sending, snapshot reconstruction, RTT |
 | Client gameplay | `scripts/multiplayer_state.py` | Prediction (rewind+replay), interpolation, world application, HUD |
 | Lobby UI | `scripts/multiplayer_menu.py` | Host/Join menu states, server subprocess spawn |
 | Netcode metrics | `scripts/network/netstats.py` | Link statistics, metrics, events, session logs |
 
 Protocol decisions:
 
-- **Inputs = state + events.** Held movement is sent as state every frame
-  (loss/drift tolerant); one-shot actions (jump/dash/shoot) carry sequence
-  numbers, are re-sent until acknowledged and deduplicated server-side.
-- **Acks for prediction.** Snapshots carry per-player `acks` (newest applied
-  input tick). The client rewinds to server state and replays unacknowledged
-  inputs — no threshold rubber-banding.
+- **One physics step per input.** Every client frame is one input: held
+  movement plus the actions pressed in it. The server runs each player one
+  physics step per input, in input order, with that input's actions (as the
+  Source engine runs player commands), so its trajectory matches the
+  client's prediction step for step, however the packets arrive: a tick
+  without a new input makes no step for that player, a burst catches up at
+  most 2 steps per tick. Before, the server applied the newest movement
+  once per tick, and arrival jitter alone made the friend's ninja snap up
+  to 200 times a minute (see `docs/online-benchmark-brainstorm.md`).
+- **Inputs survive loss.** Each packet carries the movement of the 3
+  previous ticks (`history`); a hole that stays anyway is filled with the
+  last movement after 3 ticks. Actions (jump/dash/shoot) carry a sequence
+  number and their tick, are re-sent until the server has run that tick,
+  and are deduplicated server-side. Client ticks advance by exactly one
+  per input, so they are never resynced to the server's tick.
+- **Acks for prediction.** Snapshots carry per-player `acks`: the newest
+  input that has run. The client rewinds to server state and replays the
+  inputs after it — no threshold rubber-banding.
 - **Snapshots exclude RNG state** (was ~5 KB JSON per snapshot, now ~2.2 KB
   total for a full snapshot).
 - **Remote entities render on a 60 Hz interpolation clock** trailing the
@@ -171,7 +183,7 @@ second; counters are the count in that second.
 | `reconcile_ms_*` | CPU time of rewind and replay |
 | `freeze_ms_*`, `freezes` | How long a remote player stood still while it should move; freezes of 50 ms or more |
 | `frame_ms_*`, `frame_hitches` | Real frame intervals; hitches > 25 ms |
-| `server_view` | How the server receives this client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct`, `burst_pct` |
+| `server_view` | How the server receives this client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct`, `burst_pct`, `no_step_pct`, `multi_step_pct`, `backlog` |
 
 The older cumulative fields (`interp_underruns`, `remote_frozen_frames`,
 `remote_jump_frames`, `net_*`, ...) are still there.
@@ -183,7 +195,7 @@ The older cumulative fields (`interp_underruns`, `remote_frozen_frames`,
 | `tick_ms_*`, `tick_interval_ms_*`, `hitches` | Simulation time per tick, time between tick starts; hitches are ticks > 16.7 ms or starting > 33 ms after the previous one |
 | `full_bytes_*`, `delta_bytes_*` | Sizes of sent snapshot packets |
 | `input_stalls` | Gaps of 100 ms or more between a client's inputs |
-| `peers.<id>` | Per client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct` (server ticks without a new input: the old movement is reused), `burst_pct` (ticks with 2+ new inputs: all but the newest are skipped), `link` (rx = client to server, tx = server to client), `client` (the client's own summary from its heartbeats) |
+| `peers.<id>` | Per client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct` / `burst_pct` (server ticks in which no / 2+ new inputs arrived), `no_step_pct` / `multi_step_pct` (ticks in which the player made no / 2+ physics steps), `backlog` (inputs waiting), `ticks` (counts, also `filled`, `dropped`, `late_actions`), `link` (rx = client to server, tx = server to client), `client` (the client's own summary from its heartbeats) |
 
 Since every client sends its summary with its heartbeat, the host's server
 log alone shows how the session went for every player.
