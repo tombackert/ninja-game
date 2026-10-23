@@ -110,6 +110,34 @@ Patterns: `runner` (moves/jumps/dashes), `shooter` (jumps/shoots).
 To test against an emulated bad network, put `tools/mp_netem.py` between a
 client and the server (delay, jitter, loss, Wi-Fi doze bursts).
 
+## Netbench
+
+```bash
+python tools/mp_netbench.py           # 4 network profiles x 3 runs (~6 min)
+python tools/mp_netbench.py --quick   # 1 short run per profile
+python tools/mp_netbench.py --save    # record a new reference point
+```
+
+Each run plays a real two-player session: the server, the host's game
+client on loopback and the friend's game client behind `tools/mp_netem.py`,
+both the real game with the `runner` autopilot and closing their window at
+the end. The session logs are reduced to the core metrics (own-ninja snaps
+per minute, freezes, view age, inputs per server tick, RTT, loss,
+bandwidth), and the median of the runs is shown next to the reference
+point `docs/benchmarks/netbench-baseline.json`. The netbench fails if any
+player data file changes during the runs.
+
+| Profile | Emulates | `mp_netem` settings |
+| --- | --- | --- |
+| `loopback` | both on one machine | none |
+| `internet` | wired lines within Germany | 12 ms delay, 0-4 ms jitter, 0.5 % loss |
+| `wlan` | friend on Wi-Fi at home | 15 ms, 0-10 ms, 1 %, 40 ms doze every 500 ms |
+| `bad_wlan` | weak Wi-Fi with power-save bursts | 15 ms, 0-25 ms, 2 %, 80 ms doze every 300 ms |
+
+The profiles are starting values until a real session calibrates them.
+`mp_netem` adds jitter independently per packet, so it reorders more than a
+real line with the same jitter.
+
 ## Session logs
 
 Every multiplayer session writes a JSONL log to `data/netlogs/` (newest 20
