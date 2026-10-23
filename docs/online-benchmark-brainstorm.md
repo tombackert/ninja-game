@@ -1,7 +1,7 @@
 # Online Benchmark Brainstorm
 
 **Date:** 2026-10-23
-**Status:** Step 1 (`NetStats` core and session logs) implemented, see section 12; steps 2-5 open
+**Status:** Step 1 (`NetStats` core, section 12) and a first netbench (section 13) implemented; next: the server input fix
 
 The online mode works on loopback and over the LAN (see [multiplayer.md](multiplayer.md)). The goal now is to make it reliably playable over the internet with friends. This document collects the first step: what to measure, how to see it live, and how to benchmark it reproducibly, so every netcode change is backed by numbers the way the single-player suite ([BENCHMARKS.md](../BENCHMARKS.md)) backs frame-time changes.
 
@@ -197,10 +197,12 @@ Starting values, rules of thumb to be calibrated with the first real session:
 
 ## 10. Order of Work
 
+Changed on 2026-10-23 after the first measurements: the netbench and the fixes for the own-ninja snaps come before the HUD, because those snaps are what players would notice first.
+
 1. **`NetStats` core** in client and server, with always-on session logging. *Done (section 12).*
 2. **Dev HUD on F2** (levels 1 and 2).
 3. **Connectivity for a first real session** (rendezvous and hole punching, see [online-connectivity-brainstorm.md](online-connectivity-brainstorm.md); Tailscale works as a stopgap). Record one real evening and calibrate the friend's-line profile. Can happen at any point; it only needs step 1 for useful data.
-4. **Netbench**: 2 players, levels 0 and 9, profiles from section 7, `mp_netem` with `--mtu` and burst loss.
+4. **Netbench**: 2 players, levels 0 and 9, profiles from section 7, `mp_netem` with `--mtu` and burst loss. *First version done (section 13): level 0, no `--mtu` or burst loss yet.*
 5. **Fixes driven by the numbers.** Likely order: packet size (MTU), server input buffer, correction smoothing, interpolation delay tuning, lag compensation only if the fairness metric demands it.
 
 ## 11. Open Questions
@@ -237,3 +239,25 @@ Profile: 15 ms one-way delay, 0-25 ms uniform jitter, 2 % loss per direction, 80
 | **Visible corrections of the own ninja** | **~2-3 per second** (mispredictions ~10/s) | target < 1 per minute |
 
 The friend's own corrections and the server's input classification line up: under client-to-server jitter almost half of the server ticks apply the wrong input timing, and the friend sees the own ninja snap several times per second. The host sees none of it. This makes the server input buffer (6d) and correction smoothing (6e) the first candidates once the netbench (step 4) can measure fixes against a baseline.
+
+## 13. Netbench Baseline
+
+`tools/mp_netbench.py` ([multiplayer.md](multiplayer.md#netbench)) plays a real two-player session per run: the server, the host's game client on loopback and the friend's game client behind `mp_netem`, both the real game with the `runner` autopilot. Reference point `docs/benchmarks/netbench-baseline.json` (commit `7237cd2`, level 0, median of 3 runs of 20 s per profile):
+
+| | loopback | internet | wlan | bad_wlan |
+| --- | ---: | ---: | ---: | ---: |
+| `mp_netem` | - | 12 ms, 0-4 ms jitter, 0.5 % | 15 ms, 0-10 ms, 1 %, 40 ms doze / 500 ms | 15 ms, 0-25 ms, 2 %, 80 ms doze / 300 ms |
+| **Friend: own ninja snaps / min** | **0** | **52** | **120** | **165** |
+| Host: own ninja snaps / min | 0 | 0 | 4 | 0 |
+| Remote freezes / min (either side) | 0 | 0 | 0 | 0 |
+| Friend: view age p95 | 85 ms | 181 ms | 197 ms | 285 ms |
+| Server ticks without a new friend input / with 2+ | 0 / 0 % | 6 / 6 % | 16 / 15 % | 28 / 17 % |
+| Friend: RTT p50 / p95 | 0.3 / 0.3 ms | 29 / 31 ms | 40 / 62 ms | 57 / 118 ms |
+| Loss server to friend / friend to server | 0 / 0 % | 0.8 / 0.5 % | 1.6 / 0.9 % | 2.0 / 2.2 % |
+| Bandwidth to friend, largest packet | 231 kbit/s, 2442 B | 227, 2445 | 238, 2540 | 234, 2413 |
+
+**The own-ninja snaps depend on luck, not only on the line.** The three `internet` runs gave 0, 52 and 206 snaps per minute (0.7 %, 6 % and 25 % of ticks without a new input) with only 0-4 ms of jitter. The client sends an input every 16.7 ms and the server ticks every 16.7 ms on its own clock; when the inputs happen to arrive close to a tick boundary, a few milliseconds of jitter push them alternately before and after it, and ticks without an input alternate with ticks with two. Which phase a session gets is decided at start-up and drifts slowly, so on a real line the friend's experience would change from evening to evening. The fix therefore has to make the server independent of when inputs arrive, not just tolerate more jitter.
+
+The adaptive interpolation delay (5ddb08c) already keeps remote freezes at zero on every profile; the price is the view age, which grows with jitter.
+
+**Next: one physics step per input.** Instead of applying the newest movement once per tick, the server runs each player one physics step per received input, in input order, with the input's own actions (the way the Source engine runs player commands). A tick without a new input makes 0 steps for that player, a tick with two makes 2 (capped, so a burst catches up over a few ticks). The server's trajectory then matches the client's prediction step for step; inputs carry the last few movement states, so a lost packet leaves no hole. The client's tick resync nudges have to go, since every client tick must be exactly one input.
