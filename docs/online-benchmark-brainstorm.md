@@ -1,7 +1,7 @@
 # Online Benchmark Brainstorm
 
 **Date:** 2026-10-23
-**Status:** `NetStats` core (section 12), netbench (section 13) and the own-ninja snap fix (section 14) implemented; next: interpolation delay, HUD
+**Status:** `NetStats` core (section 12), netbench (section 13), the own-ninja snap fix (section 14) and the gap-sized interpolation delay (section 15) implemented; next: deltas against the acked snapshot, HUD
 
 The online mode works on loopback and over the LAN (see [multiplayer.md](multiplayer.md)). The goal now is to make it reliably playable over the internet with friends. This document collects the first step: what to measure, how to see it live, and how to benchmark it reproducibly, so every netcode change is backed by numbers the way the single-player suite ([BENCHMARKS.md](../BENCHMARKS.md)) backs frame-time changes.
 
@@ -281,3 +281,21 @@ All 12 runs had zero snaps. Before, the internet profile alone ranged from 0 to 
 **The last snaps came from the ack, not the server.** After the first commit, bad_wlan still had 1-2 snaps of 3-5 px per run (median 2 per minute over 6 runs), all in seconds with snapshot loss and reordering, with no filled, dropped or late inputs on the server. The client took the ack from every snapshot packet, also from a delta parked because its base was missing; when an older, reordered snapshot was applied next, the client replayed a few inputs too few. With the ack bound to its snapshot, 6 more bad_wlan runs had zero snaps (before both fixes: 135-184 per minute).
 
 **Not caused by the fix, but found on the way: the interpolation delay overshoots.** The friend's view age on bad_wlan moved between runs from 207 to 470 ms (before: 208-346 ms; the difference is not significant over 6 + 15 runs, p ~ 0.2-0.3). It is almost all interpolation delay (RTT stays at ~62 ms), and `_sync_interp_clock` grows that delay by at least one tick in every frame the buffer is starved, while the clock may slew back only 0.12 ticks per frame. A 100 ms gap therefore adds ~6 ticks instead of the ~2 that were missing, and the delay shrinks by only half a tick per 5 s. On bad_wlan it climbs with every doze window, up to the 24-tick (400 ms) cap in 3 of 15 runs. Growing by the measured deficit once per starvation (not per frame) is the next candidate; the netbench can show whether view age drops without freezes coming back.
+
+## 15. Fix: Size the Interpolation Delay by the Gap
+
+`3515053` sizes the delay by the gap that starved the clock (frames since the newest snapshot advanced, plus one tick) instead of growing it in every starved frame. Netbench reference `3515053` against `d05666b`, median of 3 runs of 20 s, bad_wlan also over 6 more runs each:
+
+| | loopback | internet | wlan | bad_wlan | bad_wlan, 6 runs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Friend: view age p95 | 84 -> 87 ms | 182 -> **171** | 195 -> 192 | 348 -> **271** | 309 -> **279** |
+| Friend: view age p95, range over the runs | 77-84 -> 85-88 | 178-188 -> 161-172 | 166-196 -> 177-215 | 238-469 -> 206-336 | 225-471 -> **242-373** |
+| Runs in which the friend sees the host freeze | 0 -> 0 | 0 -> 0 | 0 -> 0 | 2 of 3 -> 2 of 3 | 1 of 6 -> **3 of 6** |
+| Longest freeze seen by the friend, worst run | | | | 166 -> 166 ms | 135 -> **266 ms** |
+| Own ninja snaps, host sees friend freeze | 0 -> 0 | 0 -> 0 | 0 -> 0 | 0 -> 0 | 0 -> 0 |
+
+The overshoot is gone: the delay no longer climbs to the cap, the worst bad_wlan run dropped from 471 to 373 ms, and on the internet profile the view is 11 ms younger. But on bad_wlan the friend now sees the host freeze in half the runs (4 freezes in 120 s, up to 266 ms), a guardrail the old, oversized buffer had hidden.
+
+**The gaps the buffer covers are mostly not the network's.** In the run with the 266 ms freeze the delay grew to 18 ticks (300 ms), although no two snapshot packets arrived more than 151 ms apart: the newest *reconstructed* snapshot stood still for 17 frames while packets kept arriving. Deltas are computed against the server's previous broadcast, so one lost delta makes every following delta unusable until the full snapshot the client requests arrives: one round trip plus up to one broadcast, more if the request or the full is lost (6a predicted this). Per bad_wlan run the network lost 8-14 snapshot packets, and the client threw away 17-41 deltas and needed 6-15 extra full snapshots on top of the 20 forced ones. A lost packet costs ~100-250 ms of standstill instead of 33 ms, and a buffer sized to cover that makes the view old.
+
+**Next: deltas against the acked snapshot** (as Quake 3 does). Every input carries the newest snapshot tick the client has reconstructed; the server keeps its last broadcasts and computes each client's delta against that one. A lost packet then only makes the next delta a little larger, no request and no full snapshot needed, and the forced full snapshot every 30 broadcasts can go.
