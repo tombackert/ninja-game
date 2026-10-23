@@ -17,7 +17,6 @@ sends inputs, receives snapshots, and renders the full game world:
 
 from __future__ import annotations
 
-import json
 import os
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -27,6 +26,8 @@ import pygame
 from scripts.constants import DASH_MIN_ACTIVE_ABS
 from scripts.entities import Enemy, Player
 from scripts.network.interpolation import SnapshotBuffer, interpolate_entity
+from scripts.network.netstats import NetStats, SessionLog
+from scripts.perf_hud import HITCH_MS
 from scripts.snapshot import EntitySnapshot, SimulationSnapshot
 from scripts.state_manager import State
 
@@ -36,6 +37,14 @@ INTERP_DELAY_MAX = 24  # Adaptive ceiling under jitter/burst delivery (~400ms)
 INTERP_HARD_SNAP = 40  # Snap the interp clock if it drifts further than this
 INTERP_HEADROOM_MARGIN = 2.5  # Spare buffered ticks required before shrinking the delay
 INTERP_SHRINK_WINDOW = 300  # Frames of sustained headroom before shrinking (~5s)
+
+# Netcode health metrics
+TICK_MS = 1000.0 / 60.0
+MISPREDICT_PX = 0.5  # reconciliation moved the local player at all
+CORRECTION_PX = 2.0  # ... far enough that the player sees the own ninja snap
+CORRECTION_EVENT_PX = 8.0  # snaps this large are logged as events
+FREEZE_EVENT_MS = 50.0  # remote freezes from ~3 frames on are logged as events
+CLIENT_HITCH_EVENT_MS = 50.0  # frames this long are logged as events
 
 
 def _autopilot_input(pattern: str, frame: int) -> Tuple[Tuple[bool, bool], List[str]]:
@@ -161,13 +170,20 @@ class MultiplayerGameState(State):
             "remote_jump_max_px": 0.0,
         }
         self._remote_prev_pos: Dict[int, Tuple[float, float]] = {}
-        self._frame_times: List[float] = []
+        self._freeze_since: Dict[int, float] = {}
         self._last_frame_t = 0.0
 
-        # E2E hooks: scripted inputs + per-second metrics logging
+        # Netcode health metrics, written to the session log once per second
+        # (data/netlogs/; NINJA_MP_METRICS=<path> logs to that file instead,
+        # NINJA_NETLOG=0 turns logging off)
+        self._netstats = NetStats()
+        self._log: SessionLog | None = None
+        self._next_report = 0.0
+        self._session_started = time.time()
+
+        # E2E hooks: scripted inputs
         self._autopilot = os.environ.get("NINJA_MP_AUTOPILOT", "")
         self._metrics_path = os.environ.get("NINJA_MP_METRICS", "")
-        self._metrics_fh: Any = None
         self._frame = 0
 
     # ------------------------------------------------------------------
@@ -199,15 +215,15 @@ class MultiplayerGameState(State):
         self._client.on_player_left(self._on_player_left)
 
         self._client.connect()
+        self._session_started = time.time()
+        self._log = self._open_session_log()
 
     def on_exit(self, next_state: State | None) -> None:
         if self._client:
             if self._client.is_connected:
                 self._client.disconnect()
             self._client.close()
-        if self._metrics_fh is not None:
-            self._metrics_fh.close()
-            self._metrics_fh = None
+        self._close_session_log()
         self._stop_host_process()
 
     def _stop_host_process(self) -> None:
@@ -236,6 +252,7 @@ class MultiplayerGameState(State):
 
     def _on_player_left(self, player_id: int, reason: str) -> None:
         self._remote_player_buffers.pop(player_id, None)
+        self._freeze_since.pop(player_id, None)
 
     # ------------------------------------------------------------------
     # Input handling
@@ -324,11 +341,7 @@ class MultiplayerGameState(State):
         self._frame += 1
 
         # Real frame interval (includes render + flip of the previous frame)
-        if self._metrics_path:
-            now = time.perf_counter()
-            if self._last_frame_t:
-                self._frame_times.append((now - self._last_frame_t) * 1000.0)
-            self._last_frame_t = now
+        self._track_frame_interval()
 
         # E2E: scripted inputs replace user input when autopilot is active
         if self._autopilot:
@@ -352,6 +365,7 @@ class MultiplayerGameState(State):
         self._interp_tick += 1.0
         self._sync_interp_clock()
         self._update_remote_entities()
+        self._measure_view_age()
 
         # 6. Extrapolate projectiles between snapshots
         self._extrapolate_projectiles()
@@ -382,25 +396,108 @@ class MultiplayerGameState(State):
             g.update_camera()
 
         g.clock.tick()
-        self._write_metrics()
+        self._report_second()
 
-    def _write_metrics(self) -> None:
-        """Append one JSONL metrics sample per second (NINJA_MP_METRICS)."""
-        if not self._metrics_path or self._frame % 60 != 0:
+    # ------------------------------------------------------------------
+    # Netcode health metrics and session log
+    # ------------------------------------------------------------------
+
+    def _open_session_log(self) -> SessionLog | None:
+        if os.environ.get("NINJA_NETLOG") == "0" and not self._metrics_path:
+            return None
+        try:
+            log = (
+                SessionLog(self._metrics_path) if self._metrics_path else SessionLog.create("client", self._player_name)
+            )
+        except OSError:
+            return None
+        if log is not None:
+            log.write(
+                {
+                    "type": "session",
+                    "role": "client",
+                    "t": round(self._session_started, 3),
+                    "pid": os.getpid(),
+                    "name": self._player_name,
+                    "host": self._host,
+                    "port": self._port,
+                    "hosting": self._host_process is not None,
+                }
+            )
+        return log
+
+    def _close_session_log(self) -> None:
+        if self._log is None:
             return
-        if self._metrics_fh is None:
-            self._metrics_fh = open(self._metrics_path, "a")
+        counts: Dict[str, Any] = dict(self._netstats.totals)
+        link: Dict[str, Any] = {}
+        if self._client is not None:
+            counts.update(self._client.netstats.totals)
+            stats = self._client.transport.link(self._client.server_address)
+            stats.take()  # fold the last partial window into the totals
+            link = stats.totals
+            self._log.write_all(self._client.netstats.drain_events())
+        self._log.write_all(self._netstats.drain_events())
+        self._log.write(
+            {
+                "type": "summary",
+                "t": round(time.time(), 3),
+                "duration_s": round(time.time() - self._session_started, 1),
+                "frames": self._frame,
+                "counts": counts,
+                "link": link,
+                "reconcile_max_px": round(self._stats["reconcile_max_px"], 2),
+                "remote_jump_max_px": round(self._stats["remote_jump_max_px"], 2),
+            }
+        )
+        self._log.close()
+        self._log = None
+
+    def _track_frame_interval(self) -> None:
+        now = time.perf_counter()
+        if self._last_frame_t:
+            frame_ms = (now - self._last_frame_t) * 1000.0
+            self._netstats.add("frame_ms", frame_ms)
+            if frame_ms > HITCH_MS:
+                self._netstats.count("frame_hitches")
+            if frame_ms > CLIENT_HITCH_EVENT_MS:
+                self._netstats.event("client_hitch", tick=self._client.server_tick, ms=round(frame_ms, 1))
+        self._last_frame_t = now
+
+    def _measure_view_age(self) -> None:
+        """How old the rendered remote world (other players, enemies) is, in ms.
+
+        Half the RTT (server to us) + how far the interpolation clock trails
+        the newest snapshot + how long that snapshot has been here.
+        """
+        arrival = self._client.newest_snapshot_arrival
+        if not arrival or not (self._remote_player_buffers or self._enemy_buffers):
+            return
+        behind_ms = (self._client.server_tick - self._interp_tick) * TICK_MS
+        age_ms = self._client.rtt * 500.0 + behind_ms + (time.time() - arrival) * 1000.0
+        self._netstats.add("view_age_ms", age_ms)
+
+    def _report_second(self) -> None:
+        """Once per second: one sample to the session log, a summary for the server."""
+        now = time.perf_counter()
+        if now < self._next_report:
+            return
+        if not self._next_report:
+            self._next_report = now + 1.0  # first window starts now
+            return
+        self._next_report = now + 1.0
+        c = self._client
         g = self._game
-        frame_ms = sorted(self._frame_times)
-        self._frame_times = []
-        sample = {
-            "t": time.time(),
+        link = c.transport.link(c.server_address).take()
+        sample: Dict[str, Any] = {
+            "type": "sample",
+            "t": round(time.time(), 3),
             "frame": self._frame,
             "fps": round(g.clock.get_fps(), 2),
-            "rtt_ms": round(self._client.rtt * 1000, 2),
-            "server_tick": self._client.server_tick,
-            "local_tick": self._client.local_tick,
-            "ack_lag": self._client.local_tick - self._client.input_ack_tick,
+            "rtt_ms": round(c.rtt * 1000, 2),
+            "server_tick": c.server_tick,
+            "local_tick": c.local_tick,
+            "ack_lag": c.local_tick - c.input_ack_tick,
             "snapshots_applied": self._stats["snapshots_applied"],
             "reconcile_error_px": round(self._stats["reconcile_error_px"], 3),
             "reconcile_max_px": round(self._stats["reconcile_max_px"], 3),
@@ -414,15 +511,38 @@ class MultiplayerGameState(State):
             "remote_jump_frames": self._stats["remote_jump_frames"],
             "remote_jump_max_px": round(self._stats["remote_jump_max_px"], 2),
             "interp_delay": self._current_interp_delay(),
-            # Real frame intervals for this window (render + flip included)
-            "frame_ms_p50": round(frame_ms[len(frame_ms) // 2], 2) if frame_ms else 0,
-            "frame_ms_p95": round(frame_ms[int(len(frame_ms) * 0.95)], 2) if frame_ms else 0,
-            "frame_ms_max": round(frame_ms[-1], 2) if frame_ms else 0,
+            "interp_delay_ms": round(self._interp_delay * TICK_MS, 1),
             # Network arrival health (cumulative counters)
-            **{f"net_{k}": v for k, v in self._client.net_stats.items()},
+            **{f"net_{k}": v for k, v in c.net_stats.items()},
+            # This window: RTT, snapshot gaps, stalls (client) and frame times,
+            # view age, corrections, freezes (this state)
+            **c.netstats.take_sample(),
+            **self._netstats.take_sample(),
+            # Packet level, from our side: rx = server to us, tx = us to server
+            **{f"link_{k}": v for k, v in link.items()},
+            # How the server receives us (from the last heartbeat ack)
+            "server_view": c.server_view,
         }
-        self._metrics_fh.write(json.dumps(sample) + "\n")
-        self._metrics_fh.flush()
+        if self._log is not None:
+            self._log.write(sample)
+            self._log.write_all(c.netstats.drain_events())
+            self._log.write_all(self._netstats.drain_events())
+        else:
+            c.netstats.drain_events()
+            self._netstats.drain_events()
+        c.set_report(
+            {
+                "rtt_p50": sample.get("rtt_ms_p50"),
+                "rtt_p95": sample.get("rtt_ms_p95"),
+                "s2c_loss_pct": link["loss_pct"],
+                "s2c_jitter_ms": link["jitter_ms"],
+                "view_age_p95": sample.get("view_age_ms_p95"),
+                "corrections": sample.get("corrections", 0),
+                "stalls": sample.get("stalls", 0),
+                "freeze_ms_max": sample.get("freeze_ms_max"),
+                "fps": sample["fps"],
+            }
+        )
 
     def _current_interp_delay(self) -> float:
         """Interpolation delay in ticks the remote view currently trails by."""
@@ -440,6 +560,9 @@ class MultiplayerGameState(State):
             if self._client.is_connected:
                 self._movement = [False, False]
                 self._client.send_input_state((False, False), [])
+        # The pause itself is neither a frame hitch nor a remote freeze
+        self._last_frame_t = 0.0
+        self._freeze_since.clear()
 
     def _return_to_menu(self) -> None:
         if self.manager:
@@ -563,6 +686,7 @@ class MultiplayerGameState(State):
 
     def _reconcile_local_player(self, player: Any, p_snap: EntitySnapshot) -> None:
         g = self._game
+        started = time.perf_counter()
         predicted = list(player.pos)
 
         # Rewind to authoritative state
@@ -597,6 +721,16 @@ class MultiplayerGameState(State):
         err = max(abs(player.pos[0] - predicted[0]), abs(player.pos[1] - predicted[1]))
         self._stats["reconcile_error_px"] = err
         self._stats["reconcile_max_px"] = max(self._stats["reconcile_max_px"], err)
+        # The position is set hard, so every error above CORRECTION_PX is a
+        # snap the player sees
+        self._netstats.add("reconcile_ms", (time.perf_counter() - started) * 1000.0)
+        self._netstats.add("reconcile_px", err)
+        if err > MISPREDICT_PX:
+            self._netstats.count("mispredictions")
+        if err > CORRECTION_PX:
+            self._netstats.count("corrections")
+            if err > CORRECTION_EVENT_PX:
+                self._netstats.event("correction", tick=self._last_applied_tick, px=round(err, 1))
 
     def _snap_player_to_state(self, player: Any, p_snap: EntitySnapshot) -> None:
         player.pos = list(p_snap.pos)
@@ -682,9 +816,23 @@ class MultiplayerGameState(State):
         should_move = max(abs(newest.velocity[0]), abs(newest.velocity[1])) > 0.3
         if d < 0.01 and should_move:
             self._stats["remote_frozen_frames"] += 1
-        elif d > 5.0:
+            self._freeze_since.setdefault(player.id, time.perf_counter())
+            return
+        self._end_freeze(player.id)
+        if d > 5.0:
             self._stats["remote_jump_frames"] += 1
             self._stats["remote_jump_max_px"] = max(self._stats["remote_jump_max_px"], d)
+
+    def _end_freeze(self, player_id: int) -> None:
+        """A remote player moves again: record how long it was frozen."""
+        since = self._freeze_since.pop(player_id, None)
+        if since is None:
+            return
+        ms = (time.perf_counter() - since) * 1000.0
+        self._netstats.add("freeze_ms", ms)
+        if ms >= FREEZE_EVENT_MS:
+            self._netstats.count("freezes")
+            self._netstats.event("remote_freeze", tick=self._client.server_tick, player=player_id, ms=round(ms, 1))
 
     def _interpolate_onto(self, entity: Any, buffer: SnapshotBuffer) -> None:
         prev_snap, next_snap, t = buffer.get_surrounding_snapshots(self._interp_tick)

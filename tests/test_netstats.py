@@ -1,16 +1,20 @@
 """Tests for the network statistics core (scripts/network/netstats.py).
 
 Covers the packet-level link statistics (loss, reordering, duplicates,
-jitter), metrics and samples, the session log, and the transport's
-per-peer sequences, arrival timestamps and link statistics.
+jitter), metrics and samples, the session log, and the way the metrics
+travel through the transport, server and client.
 """
 
 import json
 import os
 import time
 import unittest
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 from scripts.network import netstats
+from scripts.network.game_client import GameClient
+from scripts.network.game_server import GameServer
 from scripts.network.messages import Message
 from scripts.network.netstats import LINK_WINDOW, LinkStats, Metric, NetStats, SessionLog
 from scripts.network.udp_transport import UDPTransport
@@ -268,6 +272,133 @@ class TestTransportStats(unittest.TestCase):
         finally:
             sender.close()
             receiver.close()
+
+
+@dataclass
+class _Player:
+    id: int
+    pos: List[float] = field(default_factory=lambda: [0.0, 0.0])
+    velocity: List[float] = field(default_factory=lambda: [0.0, 0.0])
+    flip: bool = False
+    action: str = "idle"
+    lives: int = 3
+    air_time: int = 0
+    jumps: int = 1
+    wall_slide: bool = False
+    dashing: int = 0
+    shoot_cooldown: int = 0
+
+
+@dataclass
+class _Collectables:
+    coins: int = 0
+    ammo: int = 0
+
+
+@dataclass
+class _Game:
+    tick: int = 0
+    dead: int = 0
+    transition: int = 0
+    players: List[Any] = field(default_factory=list)
+    enemies: List[Any] = field(default_factory=list)
+    cm: _Collectables = field(default_factory=_Collectables)
+    _pending_inputs: Dict[int, Any] = field(default_factory=dict)
+
+
+def _connect(client: GameClient, server: GameServer) -> None:
+    client.connect()
+    for _ in range(5):
+        time.sleep(0.02)
+        server.update()
+        time.sleep(0.02)
+        client.update()
+        if client.is_connected:
+            return
+
+
+class TestEndToEndMetrics(unittest.TestCase):
+    """Metrics travelling through a real server and client over loopback."""
+
+    def setUp(self):
+        self.game = _Game(players=[_Player(id=1)])
+        self.server = GameServer(port=0, game=self.game)
+        self.client = GameClient(server_port=self.server.port, player_name="M", transport=UDPTransport(port=0))
+        _connect(self.client, self.server)
+        self.assertTrue(self.client.is_connected)
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.client.close()
+
+    def _play(self, frames: int) -> None:
+        for _ in range(frames):
+            self.client.update()
+            self.client.send_input_state((False, True), [])
+            time.sleep(0.004)
+            self.server.process_inputs()
+            self.game.tick += 1
+            self.server.post_tick()
+            time.sleep(0.004)
+
+    def test_snapshots_carry_input_hold_times(self):
+        sent: List[Dict[str, Any]] = []
+        real_send = self.server.transport.send
+
+        def spy(message, address):
+            if message.type == "snapshot":
+                sent.append(message.payload)
+            return real_send(message, address)
+
+        self.server.transport.send = spy
+        self._play(10)
+        with_holds = [p for p in sent if p.get("holds")]
+        self.assertTrue(with_holds)
+        hold = with_holds[-1]["holds"][str(self.client.player_id)]
+        self.assertGreaterEqual(hold, 0.0)
+        self.assertLess(hold, 100.0)
+
+    def test_client_measures_rtt_per_snapshot(self):
+        self._play(30)
+        rtt = self.client.netstats.metric("rtt_ms")
+        stats = rtt.take()
+        self.assertIsNotNone(stats)
+        self.assertGreaterEqual(stats["n"], 5)
+        # Loopback with queueing removed: far below one 16.7 ms tick
+        self.assertLess(stats["p50"], 10.0)
+        self.assertGreater(self.client.rtt, 0.0)
+
+    def test_server_counts_inputs_per_tick(self):
+        self._play(30)
+        report = self.server.client_reports()[str(self.client.player_id)]
+        ticks = report["ticks"]
+        self.assertGreater(ticks["ticks"], 20)
+        # One input per tick in this lockstep loop
+        self.assertEqual(ticks["starved"], 0)
+        self.assertEqual(ticks["burst"], 0)
+        self.assertEqual(report["link"]["lost"], 0)
+
+    def test_heartbeat_carries_reports_both_ways(self):
+        self._play(5)
+        self.server.client_reports()  # fills the compact server view
+        self.client.set_report({"rtt_p95": 12.5})
+        self.client._last_heartbeat_time = 0.0  # force a heartbeat
+        self._play(3)
+        server_client = self.server.clients.get_client_by_id(self.client.player_id)
+        self.assertEqual(server_client.report, {"rtt_p95": 12.5})
+        self.assertIn("starved_pct", self.client.server_view)
+        self.assertIsNotNone(self.client.netstats.metric("rtt_hb_ms").take())
+
+    def test_join_and_leave_events(self):
+        self._play(5)
+        client_events = [e["event"] for e in self.client.netstats.drain_events()]
+        self.assertIn("connected", client_events)
+        self.assertIn("joined", client_events)
+        self.client.disconnect()
+        time.sleep(0.02)
+        self.server.update()
+        server_events = [e["event"] for e in self.server.netstats.drain_events()]
+        self.assertEqual(server_events, ["client_joined", "client_left"])
 
 
 if __name__ == "__main__":

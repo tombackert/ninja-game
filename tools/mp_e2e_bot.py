@@ -2,7 +2,8 @@
 
 Connects a real GameClient to a running server, plays a scripted input
 pattern at 60 Hz, and records what it observes: RTT, snapshot arrival
-rate, input acks, and per-snapshot player/enemy/collectable state.
+rate, input acks, per-snapshot player/enemy/collectable state, and one
+netcode health sample per second (client.netstats plus link statistics).
 
 At the end it writes a JSON report to --report so the orchestrator can
 assert cross-client consistency (both clients must observe identical
@@ -80,6 +81,7 @@ def main() -> int:
         "snapshots": [],  # sampled (tick -> state digest)
         "rtt_samples": [],
         "ack_lag_samples": [],
+        "net_samples": [],  # one per second: netstats sample + link_* (rx = server to us)
         "frame_overruns": 0,
     }
     if not client.is_connected:
@@ -120,6 +122,11 @@ def main() -> int:
         if frame % 60 == 30:
             report["rtt_samples"].append(round(client.rtt * 1000, 3))
             report["ack_lag_samples"].append(client.local_tick - client.input_ack_tick)
+            link = client.transport.link(client.server_address).take()
+            sample = {**client.netstats.take_sample(), **{f"link_{k}": v for k, v in link.items()}}
+            report["net_samples"].append(sample)
+            # Same summary a game client sends with its heartbeats
+            client.set_report({"rtt_p95": sample.get("rtt_ms_p95"), "s2c_loss_pct": link["loss_pct"]})
 
         frame += 1
         next_frame += FRAME_INTERVAL
@@ -140,6 +147,10 @@ def main() -> int:
 
     client.disconnect()
     client.close()
+    link = client.transport.link(client.server_address)
+    link.take()
+    report["link_totals"] = link.totals
+    report["events"] += [e["event"] for e in client.netstats.drain_events()]
 
     with open(args.report, "w") as f:
         json.dump(report, f)

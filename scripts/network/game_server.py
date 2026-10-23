@@ -22,11 +22,16 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from scripts.network.client_state import ClientManager, ClientState
 from scripts.network.delta import compute_delta
 from scripts.network.messages import Message
+from scripts.network.netstats import NetStats
 from scripts.network.udp_transport import UDPTransport
 from scripts.snapshot import SimulationSnapshot, SnapshotService
 
 # Type alias
 Address = Tuple[str, int]
+
+# A gap this long between a client's inputs is an input-side network stall
+# (the client sends one input per frame, ~17 ms apart)
+INPUT_STALL_MS = 100.0
 
 
 class GameServer:
@@ -80,6 +85,8 @@ class GameServer:
             "snapshots_sent": 0,
             "last_snapshot_bytes": 0,
         }
+        # Netcode health metrics and events (sizes, stalls, joins/leaves)
+        self.netstats = NetStats()
 
         # Callbacks for game events
         self._on_player_join: Optional[Callable[[int, str], None]] = None
@@ -192,6 +199,7 @@ class GameServer:
             client = self.clients.add_client(addr, player_name)
             self._clients_needing_full.add(addr)
             self._send_connection_accept(client, addr)
+            self.netstats.event("client_joined", tick=self.tick, player=client.player_id, name=player_name)
 
             # Notify other clients
             self._broadcast_player_joined(client)
@@ -245,7 +253,12 @@ class GameServer:
         tick = payload.get("tick", 0)
         move = payload.get("move", [False, False])
         actions = payload.get("actions", [])
-        client.receive_input(tick, move, actions)
+        previous = client.last_input_arrival
+        client.receive_input(tick, move, actions, arrival=self.transport.last_arrival)
+        gap_ms = (client.last_input_arrival - previous) * 1000.0
+        if previous and gap_ms >= INPUT_STALL_MS:
+            self.netstats.count("input_stalls")
+            self.netstats.event("input_stall", tick=self.tick, player=client.player_id, ms=round(gap_ms, 1))
 
     def _handle_heartbeat(self, payload: Dict[str, Any], addr: Address) -> None:
         """Handle heartbeat from client."""
@@ -254,17 +267,25 @@ class GameServer:
             return
 
         client_time = payload.get("client_time", 0.0)
+        arrival = self.transport.last_arrival
         server_time = time.time()
+        report = payload.get("report")
+        if isinstance(report, dict):
+            client.report = report
 
         # Update client activity
         client.last_activity = server_time
 
-        # Send heartbeat response
+        # Send heartbeat response. hold_ms is how long the heartbeat waited
+        # here (until this tick read it), so the client can subtract it from
+        # its RTT; link tells the client how we receive it.
         msg = Message(
             type="heartbeat_ack",
             payload={
                 "client_time": client_time,
                 "server_time": server_time,
+                "hold_ms": round(max(0.0, server_time - arrival) * 1000.0, 3),
+                "link": client.server_view,
             },
         )
         self.transport.send(msg, addr)
@@ -289,6 +310,8 @@ class GameServer:
         client = self.clients.remove_client(addr)
         if not client:
             return
+        self.transport.forget(addr)
+        self.netstats.event("client_left", tick=self.tick, player=client.player_id, reason=reason)
 
         # Notify other clients
         msg = Message(
@@ -318,6 +341,7 @@ class GameServer:
         players_by_id = {getattr(p, "id", None): p for p in self.game.players}
 
         for client in self.clients.get_all_clients():
+            client.count_tick_inputs()
             player = players_by_id.get(client.player_id)
             if player is None:
                 client.drain_actions()
@@ -373,13 +397,12 @@ class GameServer:
         self._snapshot_broadcast_count += 1
         force_full = self._snapshot_broadcast_count % self.FULL_SNAPSHOT_INTERVAL == 0
 
-        self.stats["last_snapshot_bytes"] = len(full_msg.to_json())
         self.stats["snapshots_sent"] += 1
 
         if force_full:
             # Send full snapshot to all clients to reset delta chain
             for client in self.clients.get_all_clients():
-                self.transport.send(full_msg, client.address)
+                self._send_snapshot(full_msg, client.address, "full_bytes")
             self._clients_needing_full.clear()
         else:
             # Prepare delta message if we have a previous snapshot
@@ -397,17 +420,61 @@ class GameServer:
                         "data": delta,
                     },
                 )
-                self.stats["last_delta_bytes"] = len(delta_msg.to_json())
 
             # Send per-client: full to new clients, delta to established ones
             for client in self.clients.get_all_clients():
                 if client.address in self._clients_needing_full or delta_msg is None:
-                    self.transport.send(full_msg, client.address)
+                    self._send_snapshot(full_msg, client.address, "full_bytes")
                     self._clients_needing_full.discard(client.address)
                 else:
-                    self.transport.send(delta_msg, client.address)
+                    self._send_snapshot(delta_msg, client.address, "delta_bytes")
 
         self._last_full_snapshot = snapshot
+
+    def _send_snapshot(self, msg: Message, addr: Address, size_metric: str) -> None:
+        """Send one snapshot, stamped with input hold times; record its size."""
+        # How long each acked input has been here, measured right before the
+        # send: the client subtracts it from (snapshot arrival - input send)
+        # to get the network RTT, so time spent serializing must be in it
+        now = time.time()
+        msg.payload["holds"] = {
+            str(c.player_id): round(max(0.0, now - c.last_input_arrival) * 1000.0, 3)
+            for c in self.clients.get_all_clients()
+            if c.last_input_arrival
+        }
+        if self.transport.send(msg, addr):
+            size = self.transport.last_send_bytes
+            self.netstats.add(size_metric, size)
+            self.stats["last_snapshot_bytes" if size_metric == "full_bytes" else "last_delta_bytes"] = size
+
+    def client_reports(self) -> Dict[str, Dict[str, Any]]:
+        """Per-client netcode health for the last report window (call once per second).
+
+        Keyed by player id. Each report holds the link statistics as the
+        server sees them (rx = client to server, tx = server to client), how
+        the client's inputs arrive per tick, and the client's own summary
+        from its heartbeats. A compact part is cached for heartbeat acks.
+        """
+        reports: Dict[str, Dict[str, Any]] = {}
+        for client in self.clients.get_all_clients():
+            link = self.transport.link(client.address).take()
+            counts = client.take_tick_counts()
+            ticks = counts["ticks"]
+            view = {
+                "c2s_loss_pct": link["loss_pct"],
+                "c2s_jitter_ms": link["jitter_ms"],
+                "starved_pct": round(100.0 * counts["starved"] / ticks, 1) if ticks else 0.0,
+                "burst_pct": round(100.0 * counts["burst"] / ticks, 1) if ticks else 0.0,
+            }
+            client.server_view = view
+            reports[str(client.player_id)] = {
+                "name": client.player_name,
+                **view,
+                "ticks": counts,
+                "link": link,
+                "client": client.report,
+            }
+        return reports
 
     def get_client_count(self) -> int:
         """Get number of connected clients."""

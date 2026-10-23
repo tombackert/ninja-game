@@ -28,6 +28,7 @@ from scripts.network.client_state import ConnectionState
 from scripts.network.delta import apply_delta
 from scripts.network.interpolation import SnapshotBuffer
 from scripts.network.messages import Message
+from scripts.network.netstats import NetStats
 from scripts.network.udp_transport import UDPTransport
 from scripts.snapshot import SimulationSnapshot, SnapshotService
 
@@ -42,6 +43,8 @@ SERVER_TIMEOUT = 10.0  # disconnect if no messages for this long
 TICK_LEAD = 2  # how many ticks the client runs ahead of the server
 TICK_HARD_RESYNC = 30  # snap local tick if drift exceeds this
 ACTION_RESEND_WINDOW = 30  # re-send unacked actions for this many ticks
+STALL_MS = 100.0  # a snapshot gap this long is a visible network stall (3 snapshot intervals)
+MAX_RTT_SAMPLE = 5.0  # seconds; anything outside 0..this is a clock step, not a measurement
 
 
 class GameClient:
@@ -53,6 +56,13 @@ class GameClient:
     - Receiving and reconstructing state snapshots
     - Heartbeat and RTT measurement
     - Player join/leave event callbacks
+    - Netcode health metrics (``netstats``) for the session log and HUD
+
+    RTT is measured from every snapshot: it acks our newest input tick and
+    says how long that input waited on the server (``holds``), so
+    ``snapshot arrival - input send - hold`` is the network round trip
+    without the time packets sit in socket buffers until the next tick or
+    frame reads them (arrival times are kernel timestamps where available).
     """
 
     def __init__(
@@ -99,6 +109,16 @@ class GameClient:
         # RTT measurement
         self._rtt_estimate = 0.0
         self._pending_heartbeat_time = 0.0
+        self._input_sent_at: Dict[int, float] = {}  # local tick -> wall-clock send time
+
+        # Netcode health (session log, HUD). Arrival times are wall clock.
+        self.netstats = NetStats()
+        self._last_snap_arrival: Optional[float] = None
+        self.newest_snapshot_arrival: Optional[float] = None  # when server_tick's snapshot became usable
+        self.server_view: Dict[str, Any] = {}  # how the server receives us (from heartbeat acks)
+        self._report: Dict[str, Any] = {}  # our own summary, sent with heartbeats
+        self._connect_started = 0.0
+        self._joined = False
 
         # Network health counters (read by metrics logging / diagnostics)
         self.net_stats: Dict[str, int] = {
@@ -150,7 +170,12 @@ class GameClient:
 
     @property
     def rtt(self) -> float:
+        """Smoothed network round-trip time in seconds (0.0 until measured)."""
         return self._rtt_estimate
+
+    @property
+    def server_address(self) -> Address:
+        return self._server_addr
 
     @property
     def input_ack_tick(self) -> int:
@@ -169,6 +194,10 @@ class GameClient:
         if self._state != ConnectionState.DISCONNECTED:
             return
         self._state = ConnectionState.CONNECTING
+        # A new session: the server restarts its packet sequence for us
+        self.transport.forget(self._server_addr)
+        self._connect_started = time.perf_counter()
+        self._joined = False
         self._connect_attempt_count = 0
         self._last_connect_attempt_time = 0.0
         self._send_connect_request()
@@ -179,9 +208,7 @@ class GameClient:
             return
         msg = Message(type="disconnect", payload={})
         self.transport.send(msg, self._server_addr)
-        self._state = ConnectionState.DISCONNECTED
-        if self._on_disconnected:
-            self._on_disconnected("client_disconnect")
+        self._set_disconnected("client_disconnect")
 
     def update(self) -> None:
         """Process one frame of networking. Call once per game tick."""
@@ -237,6 +264,7 @@ class GameClient:
                 "actions": [[seq, name] for seq, name, _ in self._pending_actions],
             },
         )
+        self._input_sent_at[tick] = time.time()
         self.transport.send(msg, self._server_addr)
         self._input_history[tick] = ((bool(move[0]), bool(move[1])), list(actions))
 
@@ -276,6 +304,12 @@ class GameClient:
         cutoff = self._input_ack_tick if since_tick is None else since_tick
         return {t: inp for t, inp in self._input_history.items() if t > cutoff}
 
+    # --- Metrics ---
+
+    def set_report(self, report: Dict[str, Any]) -> None:
+        """Summary of our netcode health, sent to the server with each heartbeat."""
+        self._report = report
+
     # --- Callbacks ---
 
     def on_connected(self, callback: Callable[[int], None]) -> None:
@@ -305,9 +339,7 @@ class GameClient:
     def _update_connecting(self, now: float) -> None:
         """Handle retry logic while in CONNECTING state."""
         if self._connect_attempt_count >= MAX_CONNECT_ATTEMPTS:
-            self._state = ConnectionState.DISCONNECTED
-            if self._on_disconnected:
-                self._on_disconnected("max_retries")
+            self._set_disconnected("max_retries")
             return
         if now - self._last_connect_attempt_time >= CONNECT_RETRY_INTERVAL:
             self._send_connect_request()
@@ -354,22 +386,36 @@ class GameClient:
         self._state = ConnectionState.CONNECTED
         self._last_server_message_time = time.time()
         self._last_heartbeat_time = time.time()
+        self.netstats.event(
+            "connected",
+            player=self._player_id,
+            ms=round((time.perf_counter() - self._connect_started) * 1000.0, 1),
+            attempts=self._connect_attempt_count,
+        )
         if self._on_connected and self._player_id is not None:
             self._on_connected(self._player_id)
 
     def _handle_connect_reject(self, payload: Dict[str, Any]) -> None:
         """Handle connection rejection from server."""
         reason = payload.get("reason", "rejected")
-        self._state = ConnectionState.DISCONNECTED
-        if self._on_disconnected:
-            self._on_disconnected(reason)
+        self._set_disconnected(reason)
 
     def _handle_snapshot(self, payload: Dict[str, Any]) -> None:
         """Handle snapshot message (full or delta)."""
         self._last_server_message_time = time.time()
+        arrival = self.transport.last_arrival or time.time()
         tick = payload["tick"]
         is_delta = payload.get("is_delta", False)
         data = payload["data"]
+
+        # Arrival gaps in real time: a long one is a stall the player sees
+        if self._last_snap_arrival is not None:
+            gap_ms = (arrival - self._last_snap_arrival) * 1000.0
+            self.netstats.add("snap_gap_ms", gap_ms)
+            if gap_ms >= STALL_MS:
+                self.netstats.count("stalls")
+                self.netstats.event("net_stall", tick=tick, ms=round(gap_ms, 1))
+        self._last_snap_arrival = arrival
 
         # Arrival-stream diagnostics (gaps = lost/late snapshots)
         self.net_stats["snapshots_recv"] += 1
@@ -389,6 +435,10 @@ class GameClient:
             ack = acks.get(str(self._player_id))
             if ack is not None:
                 self._input_ack_tick = max(self._input_ack_tick, int(ack))
+                hold_ms = payload.get("holds", {}).get(str(self._player_id))
+                sent = self._input_sent_at.get(int(ack))
+                if hold_ms is not None and sent is not None:
+                    self._add_rtt_sample(arrival - sent - hold_ms / 1000.0, "rtt_ms")
 
         if is_delta:
             # Deltas are computed against the server's previous broadcast.
@@ -433,7 +483,13 @@ class GameClient:
         if tick > self._server_tick or self._last_full_snapshot is None:
             self._last_full_snapshot = snapshot
             self._server_tick = tick
+            self.newest_snapshot_arrival = self.transport.last_arrival or time.time()
             self._resync_local_tick()
+        if not self._joined and self._connect_started:
+            self._joined = True
+            self.netstats.event(
+                "joined", tick=tick, ms=round((time.perf_counter() - self._connect_started) * 1000.0, 1)
+            )
         self._snapshot_buffer.push(tick, snapshot)
         self._new_snapshots.append(snapshot)
         if len(self._new_snapshots) > 30:
@@ -478,15 +534,26 @@ class GameClient:
             self._local_tick += 1
 
     def _handle_heartbeat_ack(self, payload: Dict[str, Any]) -> None:
-        """Handle heartbeat acknowledgement and compute RTT."""
+        """Handle heartbeat acknowledgement: RTT sample and the server's view of our link."""
         self._last_server_message_time = time.time()
+        arrival = self.transport.last_arrival or time.time()
         if self._pending_heartbeat_time > 0:
-            rtt = time.time() - self._pending_heartbeat_time
-            if self._rtt_estimate == 0:
-                self._rtt_estimate = rtt
-            else:
-                self._rtt_estimate = 0.9 * self._rtt_estimate + 0.1 * rtt
+            hold = payload.get("hold_ms", 0.0) / 1000.0
+            self._add_rtt_sample(arrival - self._pending_heartbeat_time - hold, "rtt_hb_ms")
             self._pending_heartbeat_time = 0.0
+        link = payload.get("link")
+        if isinstance(link, dict):
+            self.server_view = link
+
+    def _add_rtt_sample(self, rtt: float, metric: str) -> None:
+        """Feed one RTT measurement (seconds) into the metric and the smoothed estimate."""
+        if not 0.0 <= rtt < MAX_RTT_SAMPLE:
+            return  # wall-clock step, not a measurement
+        self.netstats.add(metric, rtt * 1000.0)
+        if self._rtt_estimate == 0:
+            self._rtt_estimate = rtt
+        else:
+            self._rtt_estimate = 0.9 * self._rtt_estimate + 0.1 * rtt
 
     def _handle_player_joined(self, payload: Dict[str, Any]) -> None:
         """Handle player joined broadcast."""
@@ -502,9 +569,7 @@ class GameClient:
 
     def _handle_server_shutdown(self, payload: Dict[str, Any]) -> None:
         """Handle server shutdown notification."""
-        self._state = ConnectionState.DISCONNECTED
-        if self._on_disconnected:
-            self._on_disconnected("server_shutdown")
+        self._set_disconnected("server_shutdown")
 
     # --- Internal: heartbeat ---
 
@@ -514,7 +579,7 @@ class GameClient:
             self._pending_heartbeat_time = now
             msg = Message(
                 type="heartbeat",
-                payload={"client_time": now},
+                payload={"client_time": now, "report": self._report},
             )
             self.transport.send(msg, self._server_addr)
             self._last_heartbeat_time = now
@@ -522,9 +587,13 @@ class GameClient:
     def _check_server_timeout(self, now: float) -> None:
         """Disconnect if server has been silent too long."""
         if now - self._last_server_message_time >= SERVER_TIMEOUT:
-            self._state = ConnectionState.DISCONNECTED
-            if self._on_disconnected:
-                self._on_disconnected("server_timeout")
+            self._set_disconnected("server_timeout")
+
+    def _set_disconnected(self, reason: str) -> None:
+        self._state = ConnectionState.DISCONNECTED
+        self.netstats.event("disconnected", tick=self._server_tick, reason=reason)
+        if self._on_disconnected:
+            self._on_disconnected(reason)
 
     # --- Internal: cleanup ---
 
@@ -540,6 +609,8 @@ class GameClient:
         old_ticks = [t for t in self._input_history if t < cutoff]
         for t in old_ticks:
             del self._input_history[t]
+        for t in [t for t in self._input_sent_at if t < cutoff]:
+            del self._input_sent_at[t]
         # Stop re-sending actions once acked or too old to matter
         action_cutoff = self._local_tick - ACTION_RESEND_WINDOW
         self._pending_actions = [

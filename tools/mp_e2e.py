@@ -11,7 +11,8 @@ scripted session, then verifies correctness and performance:
 - Movement actually happens (inputs are applied server-side)
 - Enemies are simulated and synced
 - Server holds ~60 ticks/s; clients hold ~60 fps; snapshot rate ~20/s
-- RTT stays low on loopback
+- RTT stays low on loopback, no packets are lost in either direction,
+  and the per-client netcode reports reach the server's session log
 
 Usage:
     python tools/mp_e2e.py [--duration 10] [--port 21777] [--keep-logs]
@@ -91,10 +92,11 @@ def run(duration: float, port: int, keep_logs: bool) -> int:
         a = json.load(f)
     with open(report_b) as f:
         b = json.load(f)
-    server_samples = []
+    server_records = []
     if os.path.exists(server_metrics):
         with open(server_metrics) as f:
-            server_samples = [json.loads(line) for line in f if line.strip()]
+            server_records = [json.loads(line) for line in f if line.strip()]
+    server_samples = [r for r in server_records if r.get("type") == "sample"]
 
     failures: list[str] = []
 
@@ -162,6 +164,17 @@ def run(duration: float, port: int, keep_logs: bool) -> int:
         f"(max {max(ack_lags) if ack_lags else '?'} ticks)",
     )
 
+    # Netcode health (netstats): per-snapshot RTT, loss in both directions
+    net = a["net_samples"] + b["net_samples"]
+    rtt_p95 = [s["rtt_ms_p95"] for s in net if "rtt_ms_p95" in s]
+    check(
+        bool(rtt_p95) and max(rtt_p95) < 50,
+        "per-snapshot RTT p95 < 50ms on loopback",
+        f"(max {max(rtt_p95):.2f}ms)" if rtt_p95 else "(no samples)",
+    )
+    s2c_lost = a["link_totals"]["lost"] + b["link_totals"]["lost"]
+    check(s2c_lost == 0, "no server->client packet loss on loopback", f"({s2c_lost} lost)")
+
     # Server performance
     if server_samples:
         rates = [s["tick_rate"] for s in server_samples[1:]] or [0]
@@ -171,6 +184,27 @@ def run(duration: float, port: int, keep_logs: bool) -> int:
         check(max(p95s) < 12, "server tick p95 < 12ms", f"(max {max(p95s):.2f}ms)")
         if sizes:
             print(f"[e2e] info full-snapshot size ~{max(sizes)} bytes")
+
+        peers = [p for s in server_samples for p in s.get("peers", {}).values()]
+        c2s_lost = sum(p["link"]["lost"] for p in peers)
+        check(c2s_lost == 0, "no client->server packet loss on loopback", f"({c2s_lost} lost)")
+        check(
+            any(p.get("client") for p in peers),
+            "client netcode reports reach the server log",
+        )
+        if peers:
+            starved = max(p["starved_pct"] for p in peers)
+            burst = max(p["burst_pct"] for p in peers)
+            print(f"[e2e] info server ticks without a new input: max {starved}%, with 2+ inputs: max {burst}%")
+        rtt_p50 = [s["rtt_ms_p50"] for s in net if "rtt_ms_p50" in s]
+        jitter = [s["link_jitter_ms"] for s in net]
+        if rtt_p50:
+            print(
+                f"[e2e] info RTT p50 {sorted(rtt_p50)[len(rtt_p50) // 2]:.2f}ms, " f"s2c jitter max {max(jitter):.2f}ms"
+            )
+        delta_p95 = [s["delta_bytes_p95"] for s in server_samples if "delta_bytes_p95" in s]
+        if delta_p95:
+            print(f"[e2e] info delta snapshot p95 up to {max(delta_p95):.0f} bytes")
     else:
         check(False, "server metrics recorded")
 

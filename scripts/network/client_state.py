@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 # Type alias for network address
 Address = Tuple[str, int]
@@ -51,6 +51,13 @@ class ClientState:
         last_activity: Timestamp of last received message
         rtt_estimate: Estimated round-trip time in seconds
         pending_heartbeat: Timestamp of sent heartbeat awaiting response
+        last_input_arrival: Arrival time (wall clock) of the input behind last_input_tick
+        new_inputs_this_tick: Newer input packets received since the last server tick
+        tick_counts: Per report window: server ticks, ticks without a new input
+            (starved: the old movement state is reused) and ticks with 2+
+            (burst: all but the newest are skipped)
+        report: The client's own netcode summary (sent with its heartbeats)
+        server_view: Compact link summary for this client, echoed in heartbeat acks
     """
 
     player_id: int
@@ -64,20 +71,30 @@ class ClientState:
     last_activity: float = field(default_factory=time.time)
     rtt_estimate: float = 0.0
     pending_heartbeat: float = 0.0
+    last_input_arrival: float = 0.0
+    new_inputs_this_tick: int = 0
+    tick_counts: Dict[str, int] = field(default_factory=lambda: {"ticks": 0, "starved": 0, "burst": 0})
+    report: Dict[str, Any] = field(default_factory=dict)
+    server_view: Dict[str, Any] = field(default_factory=dict)
 
-    def receive_input(self, tick: int, move: List[bool], actions: List[List]) -> None:
+    def receive_input(self, tick: int, move: List[bool], actions: List[List], arrival: float = 0.0) -> None:
         """Ingest an input packet from the client.
 
         Args:
             tick: Client tick the packet was generated at
             move: Held movement state [left, right]
             actions: List of [seq, name] pairs (includes re-sent unacked ones)
+            arrival: Packet arrival time (wall clock), 0 if unknown
         """
         self.last_activity = time.time()
         # Movement is last-writer-wins; ignore stale (out-of-order) packets.
         if tick >= self.last_input_tick:
+            if tick > self.last_input_tick:
+                self.new_inputs_this_tick += 1
             self.last_input_tick = tick
             self.movement = [bool(move[0]), bool(move[1])]
+            if arrival:
+                self.last_input_arrival = arrival
         # Actions are deduplicated by sequence number.
         new_actions = sorted((int(seq), str(name)) for seq, name in actions if int(seq) > self.last_action_seq)
         for seq, name in new_actions:
@@ -89,6 +106,24 @@ class ClientState:
         actions = self.pending_actions
         self.pending_actions = []
         return actions
+
+    def count_tick_inputs(self) -> None:
+        """Classify this server tick by how many new inputs arrived (call once per tick)."""
+        n = self.new_inputs_this_tick
+        self.new_inputs_this_tick = 0
+        if not self.last_input_arrival:
+            return  # no input yet (just connected)
+        self.tick_counts["ticks"] += 1
+        if n == 0:
+            self.tick_counts["starved"] += 1
+        elif n >= 2:
+            self.tick_counts["burst"] += 1
+
+    def take_tick_counts(self) -> Dict[str, int]:
+        """Return this window's tick classification and start a new window."""
+        counts = self.tick_counts
+        self.tick_counts = {"ticks": 0, "starved": 0, "burst": 0}
+        return counts
 
     def update_rtt(self, client_time: float, server_time: float) -> None:
         """Update RTT estimate from heartbeat response.
