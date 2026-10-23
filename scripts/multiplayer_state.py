@@ -36,6 +36,7 @@ INTERP_DELAY = 4  # Minimum ticks the remote-entity clock trails the newest snap
 INTERP_DELAY_MAX = 24  # Adaptive ceiling under jitter/burst delivery (~400ms)
 INTERP_HARD_SNAP = 40  # Snap the interp clock if it drifts further than this
 INTERP_HEADROOM_MARGIN = 2.5  # Spare buffered ticks required before shrinking the delay
+INTERP_GROW_MARGIN = 1.0  # Ticks of delay beyond the snapshot gap that starved the clock
 INTERP_SHRINK_WINDOW = 300  # Frames of sustained headroom before shrinking (~5s)
 
 # Netcode health metrics
@@ -150,6 +151,8 @@ class MultiplayerGameState(State):
         self._interp_delay = float(INTERP_DELAY)
         self._headroom_min = float("inf")
         self._headroom_frames = 0
+        self._last_newest_tick = -1
+        self._frames_without_snapshot = 0  # frames since the newest snapshot tick last advanced
 
         # Snapshot bookkeeping
         self._last_applied_tick = -1
@@ -757,20 +760,32 @@ class MultiplayerGameState(State):
 
         The trailing delay is an adaptive jitter buffer: when the clock
         starves (catches up with the newest snapshot, so remote entities
-        would freeze and then jump) the delay grows immediately; after a
-        sustained window of comfortable headroom it shrinks again. The
-        clock itself is slewed proportionally (max ~±12% playback speed)
-        so corrections stay invisible instead of stepping.
+        would freeze and then jump) the delay grows to cover the snapshot
+        gap that caused it; after a sustained window of comfortable headroom
+        it shrinks again. The clock itself is slewed proportionally (max
+        ~±12% playback speed) so corrections stay invisible instead of
+        stepping.
         """
         newest = self._client.server_tick
+        if newest != self._last_newest_tick:
+            self._last_newest_tick = newest
+            self._frames_without_snapshot = 0
+        else:
+            self._frames_without_snapshot += 1
         headroom = newest - self._interp_tick
 
-        # Grow fast on starvation (a freeze is imminent or already visible):
-        # cover the observed deficit in one step instead of creeping up,
-        # so one bad burst is enough to size the buffer for the next one.
-        if headroom < 0.5 and self._interp_delay < INTERP_DELAY_MAX:
-            grow = max(1.0, 0.5 - headroom)
-            self._interp_delay = min(self._interp_delay + grow, INTERP_DELAY_MAX)
+        # Grow on starvation (a freeze is imminent or already visible) so
+        # one bad burst is enough to size the buffer for the next one: the
+        # delay has to cover the snapshot gap that starved the clock (one
+        # tick per frame) plus a margin. Sizing by the gap, not by adding to
+        # the delay, keeps a long gap from growing it again in every
+        # starved frame (the clock slews back only 0.12 ticks a frame, so it
+        # stays starved for the whole gap: that overshot 2-3x), and lets the
+        # normal 2-frame snapshot cadence never count as a gap.
+        if headroom < 0.5:
+            needed = self._frames_without_snapshot + INTERP_GROW_MARGIN
+            if needed > self._interp_delay:
+                self._interp_delay = min(needed, INTERP_DELAY_MAX)
             self._headroom_min = float("inf")
             self._headroom_frames = 0
 

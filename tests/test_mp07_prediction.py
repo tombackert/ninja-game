@@ -251,3 +251,76 @@ class TestInterpDelayConstant:
 
         assert INTERP_DELAY > 0
         assert INTERP_DELAY <= 10  # Reasonable upper bound
+
+
+class _TickClient:
+    """Stand-in for GameClient: only the newest snapshot tick matters here."""
+
+    server_tick = 0
+
+
+def _run_interp(state, gaps):
+    """Drive the interpolation clock frame by frame (60 Hz).
+
+    Snapshots arrive every 2 frames (+2 ticks); a gap of g frames holds them
+    back and then releases them at once, as Wi-Fi power save does.
+    Returns the delay (ticks) after each gap has been absorbed.
+    """
+    state._client = _TickClient()
+    delays = []
+    server = 0
+    for gap in gaps:
+        for frame in range(240 + gap):  # 4 s of normal play, then the gap
+            server += 1
+            if frame < 240 and frame % 2 == 0:
+                state._client.server_tick = server
+            state._interp_tick += 1.0
+            state._sync_interp_clock()
+        state._client.server_tick = server  # the held snapshots arrive together
+        for _ in range(60):
+            server += 1
+            if server % 2 == 0:
+                state._client.server_tick = server
+            state._interp_tick += 1.0
+            state._sync_interp_clock()
+        delays.append(state._interp_delay)
+    return delays
+
+
+class TestAdaptiveInterpDelay:
+    """The jitter buffer grows by what a gap was missing, once per gap."""
+
+    def test_gap_grows_delay_by_its_deficit_not_per_frame(self):
+        from scripts.multiplayer_state import INTERP_DELAY, MultiplayerGameState
+
+        state = MultiplayerGameState()
+        state._interp_tick = 0.0
+        # A 120 ms gap: 7 frames without snapshots, on top of the 2-frame cadence
+        (delay,) = _run_interp(state, [7])
+        # The clock trailed by INTERP_DELAY ticks; the gap left it ~5 short.
+        # Growing a tick per starved frame went to ~3x that.
+        assert INTERP_DELAY + 3 <= delay <= INTERP_DELAY + 7
+
+    def test_same_gap_again_needs_no_more_delay(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+        state._interp_tick = 0.0
+        first, second, third = _run_interp(state, [7, 7, 7])
+        assert second == first
+        assert third == first
+
+    def test_bigger_gap_grows_further(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+        state._interp_tick = 0.0
+        small, big = _run_interp(state, [5, 12])
+        assert big > small
+
+    def test_gap_the_delay_already_covers_changes_nothing(self):
+        from scripts.multiplayer_state import INTERP_DELAY, MultiplayerGameState
+
+        state = MultiplayerGameState()
+        state._interp_tick = 0.0
+        assert _run_interp(state, [2]) == [INTERP_DELAY]
