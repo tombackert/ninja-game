@@ -44,7 +44,7 @@ def default_player_name() -> str:
 def start_host_server(level: int, port: int = DEFAULT_PORT) -> subprocess.Popen:
     """Spawn the dedicated server subprocess for a hosted game."""
     return subprocess.Popen(
-        [sys.executable, "server.py", "--port", str(port), "--level", str(level)],
+        [sys.executable, "server.py", "--port", str(port), "--level", str(level), "--parent-pid", str(os.getpid())],
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     )
 

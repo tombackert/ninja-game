@@ -83,6 +83,9 @@ Protocol decisions:
   `snapshot arrival - input send - hold`, with kernel receive timestamps
   (`SO_TIMESTAMP`) as arrival times, so the time packets sit in socket
   buffers until the next tick/frame reads them is not counted as ping.
+- **The hosted server follows its game.** It gets `--parent-pid` and shuts
+  down when the host's game exits; closing the window also leaves the
+  session cleanly.
 
 ## E2E testing
 

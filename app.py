@@ -161,7 +161,14 @@ def main():
         sm.render(screen)
         pygame.display.flip()
 
-    # Graceful shutdown
+    # Graceful shutdown. Closing the window skips the states' on_exit, but a
+    # multiplayer session still has to leave the server, stop the server it
+    # hosts and close its session log.
+    from scripts.multiplayer_state import MultiplayerGameState
+
+    mp_state = sm.find(MultiplayerGameState)
+    if mp_state is not None:
+        mp_state.on_exit(None)
     pygame.quit()
 
 

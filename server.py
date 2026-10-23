@@ -40,6 +40,7 @@ def main() -> None:
     parser.add_argument("--max-clients", type=int, default=4, help="Max players")
     parser.add_argument("--metrics-file", default=None, help="Write the session log (JSONL) to this file")
     parser.add_argument("--no-netlog", action="store_true", help="Do not write a session log")
+    parser.add_argument("--parent-pid", type=int, default=0, help="Shut down when this process (the host's game) exits")
     args = parser.parse_args()
 
     # Initialize pygame minimally (needed for Rect in physics)
@@ -117,6 +118,11 @@ def main() -> None:
                 _report(server, game, ticks_this_second, log)
                 ticks_this_second = 0
                 last_report = now
+                if args.parent_pid and os.getppid() != args.parent_pid:
+                    # The game that hosts us is gone (crash, force quit):
+                    # an orphaned server would keep holding the port
+                    print("Host game exited, shutting down", flush=True)
+                    break
 
             next_tick += TICK_INTERVAL
             sleep_time = next_tick - time.perf_counter()

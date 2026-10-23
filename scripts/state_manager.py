@@ -90,6 +90,13 @@ class StateManager:
     def stack_size(self) -> int:
         return len(self._stack)
 
+    def find(self, state_type: type) -> State | None:
+        """Topmost state on the stack of the given type (None if absent)."""
+        for state in reversed(self._stack):
+            if isinstance(state, state_type):
+                return state
+        return None
+
     # Transitions ---------------------------------------------------
     def push(self, state: State) -> None:
         state.manager = self
