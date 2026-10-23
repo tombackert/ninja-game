@@ -95,7 +95,7 @@ class GameClient:
         # Recently reconstructed snapshots by tick (delta base lookup) and
         # deltas that arrived before their base (reordered packets).
         self._recent_by_tick: Dict[int, SimulationSnapshot] = {}
-        self._pending_deltas: Dict[int, Tuple[int, Any]] = {}
+        self._pending_deltas: Dict[int, Tuple[int, Any, Optional[int]]] = {}  # base tick -> (tick, data, ack)
 
         # Input tracking (state + events model)
         # History of what was input each local tick: {tick: (move, actions)}
@@ -440,14 +440,17 @@ class GameClient:
             self.net_stats["snap_gap_max"] = max(self.net_stats["snap_gap_max"], gap)
         self._last_snap_recv_tick = tick
 
-        # Input acknowledgement for prediction reconciliation
-        acks = payload.get("acks", {})
+        # Input acknowledgement for prediction reconciliation. It belongs to
+        # this snapshot's state, so it only counts once the snapshot is
+        # accepted as the newest (see _accept_snapshot); the RTT sample is
+        # valid for this packet either way.
+        ack: Optional[int] = None
         if self._player_id is not None:
-            ack = acks.get(str(self._player_id))
-            if ack is not None:
-                self._input_ack_tick = max(self._input_ack_tick, int(ack))
+            raw_ack = payload.get("acks", {}).get(str(self._player_id))
+            if raw_ack is not None:
+                ack = int(raw_ack)
                 hold_ms = payload.get("holds", {}).get(str(self._player_id))
-                sent = self._input_sent_at.get(int(ack))
+                sent = self._input_sent_at.get(ack)
                 if hold_ms is not None and sent is not None:
                     self._add_rtt_sample(arrival - sent - hold_ms / 1000.0, "rtt_ms")
 
@@ -461,7 +464,7 @@ class GameClient:
             base = self._resolve_delta_base(base_tick)
             if base is None:
                 if base_tick is not None and len(self._pending_deltas) < 8:
-                    self._pending_deltas[base_tick] = (tick, data)
+                    self._pending_deltas[base_tick] = (tick, data, ack)
                     self.net_stats["deltas_deferred"] += 1
                 else:
                     self.net_stats["deltas_dropped"] += 1
@@ -477,7 +480,7 @@ class GameClient:
         else:
             snapshot = SnapshotService.deserialize(data)
 
-        self._accept_snapshot(tick, snapshot)
+        self._accept_snapshot(tick, snapshot, ack)
 
     def _resolve_delta_base(self, base_tick: Any) -> SimulationSnapshot | None:
         """Find the snapshot a delta must be applied to."""
@@ -485,16 +488,20 @@ class GameClient:
             return self._last_full_snapshot
         return self._recent_by_tick.get(base_tick)
 
-    def _accept_snapshot(self, tick: int, snapshot: SimulationSnapshot) -> None:
+    def _accept_snapshot(self, tick: int, snapshot: SimulationSnapshot, ack: Optional[int] = None) -> None:
         """Store a reconstructed snapshot and resolve any deltas waiting on it.
 
         Reordered (older) snapshots still serve as interpolation samples,
-        but must not roll back the delta base or the tick clock.
+        but must not roll back the delta base, the tick clock or the input
+        ack: the ack always belongs to the newest snapshot, the one the
+        game reconciles against.
         """
         if tick > self._server_tick or self._last_full_snapshot is None:
             self._last_full_snapshot = snapshot
             self._server_tick = tick
             self.newest_snapshot_arrival = self.transport.last_arrival or time.time()
+            if ack is not None:
+                self._input_ack_tick = max(self._input_ack_tick, ack)
         if not self._joined and self._connect_started:
             self._joined = True
             self.netstats.event(
@@ -510,9 +517,9 @@ class GameClient:
 
         pending = self._pending_deltas.pop(tick, None)
         if pending is not None:
-            p_tick, p_data = pending
+            p_tick, p_data, p_ack = pending
             try:
-                self._accept_snapshot(p_tick, apply_delta(snapshot, p_data))
+                self._accept_snapshot(p_tick, apply_delta(snapshot, p_data), p_ack)
             except Exception:
                 self.net_stats["deltas_dropped"] += 1
                 self._request_full_snapshot()

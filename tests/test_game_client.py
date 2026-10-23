@@ -433,6 +433,32 @@ class TestInputSending(unittest.TestCase):
         finally:
             client.close()
 
+    def test_parked_delta_does_not_move_the_ack(self):
+        """An ack only counts with its snapshot.
+
+        A delta parked for its missing base must not advance the ack, or an
+        older snapshot applied next would replay too few inputs (a snap).
+        """
+        client = GameClient(transport=UDPTransport(port=0))
+        try:
+            client._player_id = 3
+
+            def full(tick: int, ack: int) -> None:
+                client._handle_snapshot(
+                    {"tick": tick, "is_delta": False, "acks": {"3": ack}, "data": {"tick": tick, "rng_state": []}}
+                )
+
+            full(100, 95)
+            # Delta 108 arrives, its base 106 was lost: parked
+            client._handle_snapshot({"tick": 108, "is_delta": True, "base_tick": 106, "acks": {"3": 103}, "data": {}})
+            self.assertEqual(client.input_ack_tick, 95)
+            # The late snapshot 104 becomes the newest one: its own ack applies
+            full(104, 99)
+            self.assertEqual(client.server_tick, 104)
+            self.assertEqual(client.input_ack_tick, 99)
+        finally:
+            client.close()
+
 
 class TestSnapshotReception(unittest.TestCase):
     """Tests for receiving snapshots."""
