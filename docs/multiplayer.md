@@ -33,6 +33,15 @@ python app.py --multiplayer --host <ip> --port 7777 --name Tom
 Same as single player (arrows/WASD move, jump, `x` dash, `c` shoot). ESC pauses
 locally — the connection stays alive while paused.
 
+**F2** cycles the network HUD (top right): off → status line → status line
+plus graphs. The status line rates ping, packet loss (to you / to the
+server), view age (how old the other player you see is, p95) and own-ninja
+snaps in the last 10 s, each green / yellow / red by the starting targets
+in `docs/online-benchmark-brainstorm.md` (section 9). The graphs show the
+last 10 s: RTT per snapshot, gaps between arriving snapshots (red ≥ 100 ms),
+the interpolation buffer (headroom against the delay, red when starved,
+own-ninja snaps as red marks), and what the server reports about your link.
+
 ## Rules (multiplayer specific)
 
 - Every player spawns with a gun and 15 ammo; ammo pickups give +5.
@@ -183,7 +192,7 @@ second; counters are the count in that second.
 | `reconcile_ms_*` | CPU time of rewind and replay |
 | `freeze_ms_*`, `freezes` | How long a remote player stood still while it should move; freezes of 50 ms or more |
 | `frame_ms_*`, `frame_hitches` | Real frame intervals; hitches > 25 ms |
-| `server_view` | How the server receives this client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct`, `burst_pct`, `no_step_pct`, `multi_step_pct`, `backlog` |
+| `server_view` | How the server receives this client: `c2s_loss_pct`, `c2s_jitter_ms`, `starved_pct`, `burst_pct`, `no_step_pct`, `multi_step_pct`, `backlog`, `s2c_max_bytes` / `s2c_oversize` (largest packet to this client, packets > 1200 B) |
 
 The older cumulative fields (`interp_underruns`, `remote_frozen_frames`,
 `remote_jump_frames`, `net_*`, ...) are still there.

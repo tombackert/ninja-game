@@ -89,7 +89,7 @@ class InputRouter:
         # MultiplayerGameState: like GameState, but dash is on Space
         # (Space therefore no longer jumps in multiplayer).
         mp_game_rules: List[Rule] = []
-        for act in ["pause_toggle", "debug_toggle", "shoot"]:
+        for act in ["pause_toggle", "debug_toggle", "net_hud_toggle", "shoot"]:
             if act in game_binds:
                 mp_game_rules.extend(bind(game_binds[act], act))
         mp_jump_keys = [k for k in game_binds.get("jump", []) if k != pygame.K_SPACE]

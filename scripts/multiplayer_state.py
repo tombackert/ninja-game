@@ -25,6 +25,7 @@ import pygame
 
 from scripts.constants import DASH_MIN_ACTIVE_ABS
 from scripts.entities import Enemy, Player
+from scripts.net_hud import NetHUD
 from scripts.network.interpolation import SnapshotBuffer, interpolate_entity
 from scripts.network.netstats import NetStats, SessionLog
 from scripts.perf_hud import HITCH_MS
@@ -181,6 +182,7 @@ class MultiplayerGameState(State):
         # NINJA_NETLOG=0 turns logging off)
         self._netstats = NetStats()
         self._log: SessionLog | None = None
+        self._net_hud = NetHUD()  # F2
         self._next_report = 0.0
         self._session_started = time.time()
 
@@ -291,6 +293,8 @@ class MultiplayerGameState(State):
                 self._movement[1] = False
             elif act in ("jump", "dash", "shoot"):
                 self._action_buffer.append(act)
+            elif act == "net_hud_toggle":
+                self._net_hud.toggle()
 
     # ------------------------------------------------------------------
     # Level setup (deferred until the server tells us its level)
@@ -367,6 +371,7 @@ class MultiplayerGameState(State):
         # 5. Advance remote entities on the smooth interpolation clock
         self._interp_tick += 1.0
         self._sync_interp_clock()
+        self._net_hud.note_frame(self._client.server_tick - self._interp_tick, self._interp_delay)
         self._update_remote_entities()
         self._measure_view_age()
 
@@ -526,6 +531,7 @@ class MultiplayerGameState(State):
             # How the server receives us (from the last heartbeat ack)
             "server_view": c.server_view,
         }
+        self._net_hud.note_sample(sample)
         if self._log is not None:
             self._log.write(sample)
             self._log.write_all(c.netstats.drain_events())
@@ -732,6 +738,7 @@ class MultiplayerGameState(State):
             self._netstats.count("mispredictions")
         if err > CORRECTION_PX:
             self._netstats.count("corrections")
+            self._net_hud.note_snap(err)
             if err > CORRECTION_EVENT_PX:
                 self._netstats.event("correction", tick=self._last_applied_tick, px=round(err, 1))
 
@@ -975,6 +982,8 @@ class MultiplayerGameState(State):
         self._renderer.render(g, surface)
 
         self._render_mp_hud(surface)
+        if self._connected:
+            self._net_hud.render(surface, self._client)
 
     def _render_mp_hud(self, surface: pygame.Surface) -> None:
         """Render minimal multiplayer HUD info (game font + outline)."""

@@ -458,6 +458,8 @@ class GameServer:
                 "no_step_pct": round(100.0 * counts["no_step"] / ticks, 1) if ticks else 0.0,
                 "multi_step_pct": round(100.0 * counts["multi_step"] / ticks, 1) if ticks else 0.0,
                 "backlog": len(client.input_queue),
+                "s2c_max_bytes": link["tx_max_bytes"],
+                "s2c_oversize": link["tx_oversize"],
             }
             client.server_view = view
             reports[str(client.player_id)] = {

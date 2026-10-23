@@ -56,6 +56,7 @@ class Settings:
             "GameState": {
                 "pause_toggle": [pygame.K_ESCAPE],
                 "debug_toggle": [pygame.K_F1],
+                "net_hud_toggle": [pygame.K_F2],
                 "left": [pygame.K_LEFT, pygame.K_a],
                 "right": [pygame.K_RIGHT, pygame.K_d],
                 "jump": [pygame.K_UP, pygame.K_w, pygame.K_SPACE],
