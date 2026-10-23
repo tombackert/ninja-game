@@ -1,7 +1,7 @@
 # Online Benchmark Brainstorm
 
 **Date:** 2026-10-23
-**Status:** Step 1 (`NetStats` core, section 12) and a first netbench (section 13) implemented; next: the server input fix
+**Status:** `NetStats` core (section 12), netbench (section 13) and the own-ninja snap fix (section 14) implemented; next: interpolation delay, HUD
 
 The online mode works on loopback and over the LAN (see [multiplayer.md](multiplayer.md)). The goal now is to make it reliably playable over the internet with friends. This document collects the first step: what to measure, how to see it live, and how to benchmark it reproducibly, so every netcode change is backed by numbers the way the single-player suite ([BENCHMARKS.md](../BENCHMARKS.md)) backs frame-time changes.
 
@@ -261,3 +261,23 @@ The friend's own corrections and the server's input classification line up: unde
 The adaptive interpolation delay (5ddb08c) already keeps remote freezes at zero on every profile; the price is the view age, which grows with jitter.
 
 **Next: one physics step per input.** Instead of applying the newest movement once per tick, the server runs each player one physics step per received input, in input order, with the input's own actions (the way the Source engine runs player commands). A tick without a new input makes 0 steps for that player, a tick with two makes 2 (capped, so a burst catches up over a few ticks). The server's trajectory then matches the client's prediction step for step; inputs carry the last few movement states, so a lost packet leaves no hole. The client's tick resync nudges have to go, since every client tick must be exactly one input.
+
+## 14. Fix: One Physics Step per Input
+
+Two commits: `35101fb` runs every client input as one physics step on the server (section 13), `d05666b` binds the client's input ack to its snapshot. Netbench reference `d05666b` against `7237cd2`, median of 3 runs of 20 s:
+
+| | loopback | internet | wlan | bad_wlan |
+| --- | ---: | ---: | ---: | ---: |
+| **Friend: own ninja snaps / min** | 0 -> **0** | 52 -> **0** | 120 -> **0** | 165 -> **0** |
+| Friend: mispredictions / min | 0 -> 0 | 154 -> 0 | 472 -> 0 | 664 -> 0 |
+| Host: own ninja snaps / min | 0 -> 0 | 0 -> 0 | 4 -> 0 | 0 -> 0 |
+| Host sees friend freeze / min | 0 -> 0 | 0 -> 0 | 0 -> 0 | 0 -> 0 |
+| Ticks the friend's ninja made no step / 2+ steps | - / - | 0.7 / 0.7 % | 20 / 20 % | 25 / 25 % |
+| Friend: view age p95 | 85 -> 84 ms | 181 -> 182 | 197 -> 195 | 285 -> 348 |
+| Host: view age p95 | 87 -> 82 ms | 83 -> 86 | 82 -> 83 | 87 -> 85 |
+
+All 12 runs had zero snaps. Before, the internet profile alone ranged from 0 to 206 per minute depending on the phase; that dependence is gone. The price is invisible so far: on Wi-Fi the friend's ninja makes no step in a fifth to a quarter of the server ticks and two in as many, and the host still never sees it freeze.
+
+**The last snaps came from the ack, not the server.** After the first commit, bad_wlan still had 1-2 snaps of 3-5 px per run (median 2 per minute over 6 runs), all in seconds with snapshot loss and reordering, with no filled, dropped or late inputs on the server. The client took the ack from every snapshot packet, also from a delta parked because its base was missing; when an older, reordered snapshot was applied next, the client replayed a few inputs too few. With the ack bound to its snapshot, 6 more bad_wlan runs had zero snaps (before both fixes: 135-184 per minute).
+
+**Not caused by the fix, but found on the way: the interpolation delay overshoots.** The friend's view age on bad_wlan moved between runs from 207 to 470 ms (before: 208-346 ms; the difference is not significant over 6 + 15 runs, p ~ 0.2-0.3). It is almost all interpolation delay (RTT stays at ~62 ms), and `_sync_interp_clock` grows that delay by at least one tick in every frame the buffer is starved, while the clock may slew back only 0.12 ticks per frame. A 100 ms gap therefore adds ~6 ticks instead of the ~2 that were missing, and the delay shrinks by only half a tick per 5 s. On bad_wlan it climbs with every doze window, up to the 24-tick (400 ms) cap in 3 of 15 runs. Growing by the measured deficit once per starvation (not per frame) is the next candidate; the netbench can show whether view age drops without freezes coming back.
