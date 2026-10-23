@@ -17,6 +17,7 @@ gemini*
 # Gameplay specific data ignores
 data/saves/
 data/replays/
+data/netlogs/
 data/collectables.json
 data/best_times.json
 data/settings.json

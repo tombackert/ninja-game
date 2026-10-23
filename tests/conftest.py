@@ -30,3 +30,8 @@ from scripts.settings import Settings as _Settings  # noqa: E402
 
 _collectables.DATA_FILE = os.path.join(_SAVE_DIR, "collectables.json")
 _Settings.SETTINGS_FILE = os.path.join(_SAVE_DIR, "settings.json")
+
+# Multiplayer session logs go to the scratch directory too
+from scripts.network import netstats as _netstats  # noqa: E402
+
+_netstats.NETLOG_DIR = os.path.join(_SAVE_DIR, "netlogs")
