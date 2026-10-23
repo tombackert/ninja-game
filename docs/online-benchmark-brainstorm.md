@@ -1,7 +1,7 @@
 # Online Benchmark Brainstorm
 
 **Date:** 2026-10-23
-**Status:** Brainstorm, direction agreed; nothing implemented yet
+**Status:** Step 1 (`NetStats` core and session logs) implemented, see section 12; steps 2-5 open
 
 The online mode works on loopback and over the LAN (see [multiplayer.md](multiplayer.md)). The goal now is to make it reliably playable over the internet with friends. This document collects the first step: what to measure, how to see it live, and how to benchmark it reproducibly, so every netcode change is backed by numbers the way the single-player suite ([BENCHMARKS.md](../BENCHMARKS.md)) backs frame-time changes.
 
@@ -197,7 +197,7 @@ Starting values, rules of thumb to be calibrated with the first real session:
 
 ## 10. Order of Work
 
-1. **`NetStats` core** in client and server, with always-on session logging.
+1. **`NetStats` core** in client and server, with always-on session logging. *Done (section 12).*
 2. **Dev HUD on F2** (levels 1 and 2).
 3. **Connectivity for a first real session** (rendezvous and hole punching, see [online-connectivity-brainstorm.md](online-connectivity-brainstorm.md); Tailscale works as a stopgap). Record one real evening and calibrate the friend's-line profile. Can happen at any point; it only needs step 1 for useful data.
 4. **Netbench**: 2 players, levels 0 and 9, profiles from section 7, `mp_netem` with `--mtu` and burst loss.
@@ -208,3 +208,32 @@ Starting values, rules of thumb to be calibrated with the first real session:
 - **Lag compensation for player-vs-player hits:** needed? Decide once the fairness metric (4.4) has numbers.
 - **When does the HUD become a player feature** (connection indicator for everyone)?
 
+## 12. Step 1 Implemented: First Measurements
+
+`scripts/network/netstats.py` plus the wiring in transport, server, client and `MultiplayerGameState`; fields and log format in [multiplayer.md](multiplayer.md#session-logs). Sections 6b and 6c are resolved: RTT is measured from every snapshot (30 samples/s) with kernel receive timestamps and the server's hold time subtracted, and loss is counted per direction from per-peer sequence numbers.
+
+Two things surfaced while verifying:
+
+- **Hold time measured too early.** It was taken before the snapshot was serialized (three times per broadcast, one of them only for the `last_snapshot_bytes` stat), which added ~1 ms to every RTT sample on level 0 and more on large levels. Now it is stamped right before each send, and sizes come from the sent packets; loopback RTT p50 went from 1.26 ms to 0.43 ms.
+- **Orphaned host server.** Closing the window skipped `MultiplayerGameState.on_exit`, so the hosted server kept running with the port bound, and the next "Host Game" would join the old server. Fixed: the window close ends the session cleanly, and the server shuts down when its parent game exits (`--parent-pid`).
+
+### Loopback (`tools/mp_e2e.py`, 2 bots)
+
+RTT p50 0.43 ms, p95 < 1 ms, no loss either way. Even on loopback up to 1.7 % of server ticks get no new input and 1.7 % get two: the client and server 60 Hz clocks drift against each other.
+
+### Emulated WLAN: host on loopback, friend through `mp_netem`
+
+Profile: 15 ms one-way delay, 0-25 ms uniform jitter, 2 % loss per direction, 80 ms doze every 300 ms. Level 0, the game client (`MultiplayerGameState`, autopilot `runner`) as the friend, a bot as the host.
+
+| Metric | Measured | Check |
+| --- | --- | --- |
+| RTT p50 / p95 | 57 / 113 ms | expected ~55 ms (2 x 15 ms + mean jitter) |
+| Jitter client to server | 8.5 ms | theory for uniform 0-25 ms: 8.3 ms |
+| Jitter server to client | 18 ms | higher: doze windows release packets in bursts |
+| Loss client to server / server to client | 1.7 % / 1.3 % | 2 % configured |
+| Snapshot stalls (gap >= 100 ms) | 25 in 15 s | doze windows |
+| View age of the other player, p95 | ~350 ms | interpolation delay grew to 283 ms |
+| **Server ticks without a new input / with 2+** | **28 % / 20 %** (host: 0 %) | confirms 6d |
+| **Visible corrections of the own ninja** | **~2-3 per second** (mispredictions ~10/s) | target < 1 per minute |
+
+The friend's own corrections and the server's input classification line up: under client-to-server jitter almost half of the server ticks apply the wrong input timing, and the friend sees the own ninja snap several times per second. The host sees none of it. This makes the server input buffer (6d) and correction smoothing (6e) the first candidates once the netbench (step 4) can measure fixes against a baseline.
