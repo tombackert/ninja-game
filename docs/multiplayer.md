@@ -64,7 +64,7 @@ second machine times out. (Loopback play is never affected.)
 | --- | --- | --- |
 | Dedicated server | `server.py` | 60 Hz fixed-timestep loop, session log (see [Session logs](#session-logs)) |
 | World simulation | `scripts/network/headless_game.py` | Full sim without rendering: players, enemies (AI targets nearest player), projectiles, collectables, respawns |
-| Networking (server) | `scripts/network/game_server.py` | Connections, input ingestion, snapshot broadcast (30 Hz, delta-compressed, periodic full) |
+| Networking (server) | `scripts/network/game_server.py` | Connections, input ingestion, snapshot broadcast (30 Hz, deltas against each client's acked snapshot) |
 | Networking (client) | `scripts/network/game_client.py` | Connection lifecycle, input sending, snapshot reconstruction, RTT |
 | Client gameplay | `scripts/multiplayer_state.py` | Prediction (rewind+replay), interpolation, world application, HUD |
 | Lobby UI | `scripts/multiplayer_menu.py` | Host/Join menu states, server subprocess spawn |
@@ -90,6 +90,13 @@ Protocol decisions:
 - **Acks for prediction.** Snapshots carry per-player `acks`: the newest
   input that has run. The client rewinds to server state and replays the
   inputs after it — no threshold rubber-banding.
+- **Deltas against the acked snapshot.** Every input carries `snap`, the
+  newest snapshot the client has reconstructed; the server keeps its last
+  32 broadcasts and sends each client a delta against its acked one (as
+  Quake 3 does), or a full snapshot without a usable ack. A lost packet
+  only makes the next delta a little larger. Before, deltas went against
+  the previous broadcast, and one lost delta made every following one
+  unusable until a requested full snapshot arrived.
 - **Snapshots exclude RNG state** (was ~5 KB JSON per snapshot, now ~2.2 KB
   total for a full snapshot).
 - **Remote entities render on a 60 Hz interpolation clock** trailing the

@@ -94,6 +94,8 @@ class ClientState:
             filled in, dropped from an overlong backlog, and late actions
         report: The client's own netcode summary (sent with its heartbeats)
         server_view: Compact link summary for this client, echoed in heartbeat acks
+        snapshot_ack: Newest snapshot tick the client has reconstructed (its
+            delta base; None until the first one)
     """
 
     player_id: int
@@ -118,6 +120,7 @@ class ClientState:
     tick_counts: Dict[str, int] = field(default_factory=_new_tick_counts)
     report: Dict[str, Any] = field(default_factory=dict)
     server_view: Dict[str, Any] = field(default_factory=dict)
+    snapshot_ack: Optional[int] = None
 
     @property
     def ack_tick(self) -> int:

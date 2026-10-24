@@ -53,8 +53,9 @@ class GameServer:
     # Broadcast snapshot every N ticks (~30 Hz at 60 fps)
     SNAPSHOT_INTERVAL = 2
 
-    # Every Nth broadcast is a full snapshot to recover from UDP packet loss
-    FULL_SNAPSHOT_INTERVAL = 30
+    # Broadcasts kept as delta bases (~1 s at 30 Hz): a client whose acked
+    # snapshot is older than that gets a full snapshot
+    SNAPSHOT_HISTORY = 32
 
     # Client timeout in seconds
     CLIENT_TIMEOUT = 10.0
@@ -76,9 +77,8 @@ class GameServer:
         self.clients = ClientManager(max_clients=max_clients)
         self.game = game
         self._last_snapshot_tick = 0
-        self._last_full_snapshot: Optional[SimulationSnapshot] = None
+        self._sent_snapshots: Dict[int, SimulationSnapshot] = {}  # tick -> broadcast, oldest first
         self._clients_needing_full: set[Address] = set()
-        self._snapshot_broadcast_count = 0
         self._running = False
         # Lightweight performance counters (read by server.py metrics loop)
         self.stats: Dict[str, int] = {
@@ -254,6 +254,11 @@ class GameServer:
         move = payload.get("move", [False, False])
         actions = payload.get("actions", [])
         history = payload.get("history", [])
+        # The newest snapshot the client has reconstructed: the base of its
+        # next delta (inputs can arrive reordered, so only ever move forward)
+        snap = payload.get("snap")
+        if isinstance(snap, int) and (client.snapshot_ack is None or snap > client.snapshot_ack):
+            client.snapshot_ack = snap
         previous = client.last_input_arrival
         client.receive_input(tick, move, actions, arrival=self.transport.last_arrival, history=history)
         gap_ms = (client.last_input_arrival - previous) * 1000.0
@@ -292,7 +297,7 @@ class GameServer:
         self.transport.send(msg, addr)
 
     def _handle_request_full(self, addr: Address) -> None:
-        """Client detected a broken delta chain; send it a full snapshot."""
+        """Client could not apply a delta; send it a full snapshot."""
         if self.clients.get_client(addr) is not None:
             self._clients_needing_full.add(addr)
 
@@ -356,9 +361,12 @@ class GameServer:
     def _broadcast_snapshot(self) -> None:
         """Broadcast game state snapshot to all clients.
 
-        Sends full snapshots to newly-connected clients and deltas to the rest.
-        Periodically forces a full snapshot to all clients to recover from
-        UDP packet loss that would otherwise corrupt the delta chain.
+        Each client gets a delta against the newest snapshot it has acked
+        (``snap`` in its inputs), as Quake 3 does: a lost packet only makes
+        the next delta against an older base, the client never waits for a
+        missing base. Clients without a usable ack (just connected, acked
+        snapshot no longer kept, or a delta failed to apply) get a full
+        snapshot.
         """
         if not self.game:
             return
@@ -371,54 +379,44 @@ class GameServer:
         # that has run) — clients use these for prediction reconciliation.
         acks = {str(c.player_id): c.ack_tick for c in self.clients.get_all_clients()}
 
-        # Prepare full snapshot message
-        full_msg = Message(
-            type="snapshot",
-            payload={
-                "tick": snapshot.tick,
-                "is_delta": False,
-                "acks": acks,
-                "data": SnapshotService.serialize(snapshot),
-            },
-        )
-
-        # Check if this broadcast should force full snapshots to everyone
-        self._snapshot_broadcast_count += 1
-        force_full = self._snapshot_broadcast_count % self.FULL_SNAPSHOT_INTERVAL == 0
-
         self.stats["snapshots_sent"] += 1
-
-        if force_full:
-            # Send full snapshot to all clients to reset delta chain
-            for client in self.clients.get_all_clients():
+        full_msg: Optional[Message] = None
+        deltas: Dict[int, Message] = {}  # base tick -> delta message, shared by clients with the same base
+        for client in self.clients.get_all_clients():
+            base = self._sent_snapshots.get(client.snapshot_ack) if client.snapshot_ack is not None else None
+            if base is None or client.address in self._clients_needing_full:
+                if full_msg is None:
+                    full_msg = Message(
+                        type="snapshot",
+                        payload={
+                            "tick": snapshot.tick,
+                            "is_delta": False,
+                            "acks": acks,
+                            "data": SnapshotService.serialize(snapshot),
+                        },
+                    )
                 self._send_snapshot(full_msg, client.address, "full_bytes")
-            self._clients_needing_full.clear()
-        else:
-            # Prepare delta message if we have a previous snapshot
-            delta_msg = None
-            if self._last_full_snapshot:
-                delta = compute_delta(self._last_full_snapshot, snapshot)
-                delta_msg = Message(
+                self._clients_needing_full.discard(client.address)
+                continue
+            msg = deltas.get(base.tick)
+            if msg is None:
+                msg = Message(
                     type="snapshot",
                     payload={
                         "tick": snapshot.tick,
                         "is_delta": True,
-                        # Clients verify their base matches before applying
-                        "base_tick": self._last_full_snapshot.tick,
+                        # Clients apply it to exactly this snapshot
+                        "base_tick": base.tick,
                         "acks": acks,
-                        "data": delta,
+                        "data": compute_delta(base, snapshot),
                     },
                 )
+                deltas[base.tick] = msg
+            self._send_snapshot(msg, client.address, "delta_bytes")
 
-            # Send per-client: full to new clients, delta to established ones
-            for client in self.clients.get_all_clients():
-                if client.address in self._clients_needing_full or delta_msg is None:
-                    self._send_snapshot(full_msg, client.address, "full_bytes")
-                    self._clients_needing_full.discard(client.address)
-                else:
-                    self._send_snapshot(delta_msg, client.address, "delta_bytes")
-
-        self._last_full_snapshot = snapshot
+        self._sent_snapshots[snapshot.tick] = snapshot
+        while len(self._sent_snapshots) > self.SNAPSHOT_HISTORY:
+            del self._sent_snapshots[next(iter(self._sent_snapshots))]
 
     def _send_snapshot(self, msg: Message, addr: Address, size_metric: str) -> None:
         """Send one snapshot, stamped with input hold times; record its size."""

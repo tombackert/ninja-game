@@ -246,7 +246,8 @@ class GameClient:
         (``history``), so a lost packet leaves no hole. One-shot actions
         get sequence numbers and their tick, and are re-sent in every packet
         until the server has run that tick, so a lost packet cannot swallow
-        a jump.
+        a jump. ``snap`` acks the newest snapshot reconstructed here: the
+        server computes our next delta against it.
 
         Args:
             move: (left_held, right_held)
@@ -266,15 +267,15 @@ class GameClient:
                 history.append(list(self._input_history[t][0]))
             else:
                 history = []  # only a gap-free run up to this tick
-        msg = Message(
-            type="input",
-            payload={
-                "tick": tick,
-                "move": [bool(move[0]), bool(move[1])],
-                "history": history,
-                "actions": [[seq, name, t] for seq, name, t in self._pending_actions],
-            },
-        )
+        payload: Dict[str, Any] = {
+            "tick": tick,
+            "move": [bool(move[0]), bool(move[1])],
+            "history": history,
+            "actions": [[seq, name, t] for seq, name, t in self._pending_actions],
+        }
+        if self._server_tick in self._recent_by_tick:
+            payload["snap"] = self._server_tick
+        msg = Message(type="input", payload=payload)
         self._input_sent_at[tick] = time.time()
         self.transport.send(msg, self._server_addr)
         self._input_history[tick] = ((bool(move[0]), bool(move[1])), list(actions))
@@ -455,11 +456,11 @@ class GameClient:
                     self._add_rtt_sample(arrival - sent - hold_ms / 1000.0, "rtt_ms")
 
         if is_delta:
-            # Deltas are computed against the server's previous broadcast.
-            # Applying one to the wrong base silently corrupts state, so
-            # resolve the exact base by tick. A delta whose base has not
-            # arrived yet (reordered packet) is parked and re-applied the
-            # moment its base is reconstructed.
+            # Deltas are computed against the newest snapshot we acked, so
+            # the base is normally here. Applying one to the wrong base
+            # silently corrupts state, so resolve the exact base by tick. A
+            # delta whose base is missing (evicted, or not reconstructed
+            # yet) is parked and re-applied the moment its base is.
             base_tick = payload.get("base_tick")
             base = self._resolve_delta_base(base_tick)
             if base is None:
@@ -525,7 +526,7 @@ class GameClient:
                 self._request_full_snapshot()
 
     def _request_full_snapshot(self) -> None:
-        """Ask the server to reset our delta chain with a full snapshot."""
+        """Ask the server for a full snapshot (a delta could not be applied)."""
         now = time.time()
         if now - self._last_full_request_time < 0.1:
             return

@@ -77,7 +77,7 @@ def main() -> None:
                 "max_clients": args.max_clients,
                 "tick_rate": TICK_RATE,
                 "snapshot_interval": GameServer.SNAPSHOT_INTERVAL,
-                "full_snapshot_interval": GameServer.FULL_SNAPSHOT_INTERVAL,
+                "snapshot_history": GameServer.SNAPSHOT_HISTORY,
             }
         )
         print(f"Session log: {log.path}", flush=True)

@@ -323,6 +323,29 @@ class TestInputSending(unittest.TestCase):
             server.shutdown()
             client.close()
 
+    def test_inputs_ack_the_newest_snapshot(self):
+        """Inputs carry the newest reconstructed snapshot: the base of the next delta."""
+        server = GameServer(port=19012)
+        client = GameClient(server_port=19012, player_name="Acker", transport=UDPTransport(port=0))
+
+        try:
+            _connect_client_to_server(client, server)
+            state = server.clients.get_all_clients()[0]
+            client.send_input_state((False, False), [])
+            time.sleep(0.02)
+            server.update()
+            self.assertIsNone(state.snapshot_ack)
+
+            client._handle_snapshot({"tick": 50, "is_delta": False, "acks": {}, "data": {"tick": 50, "rng_state": []}})
+            client.update()
+            client.send_input_state((False, False), [])
+            time.sleep(0.02)
+            server.update()
+            self.assertEqual(state.snapshot_ack, 50)
+        finally:
+            server.shutdown()
+            client.close()
+
     def test_inputs_stored_in_history(self):
         """send_input_state should record per-tick history for replay."""
         server = GameServer(port=19011)

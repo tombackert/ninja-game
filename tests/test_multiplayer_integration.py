@@ -18,6 +18,7 @@ os.environ["NINJA_GAME_TESTING"] = "1"
 from scripts.network.game_client import GameClient
 from scripts.network.game_server import GameServer
 from scripts.network.headless_game import HeadlessGame
+from scripts.snapshot import SnapshotService
 
 
 @pytest.fixture(autouse=True)
@@ -246,3 +247,46 @@ class TestMultiplayerIntegration:
             server.shutdown()
             client1.close()
             client2.close()
+
+    def test_lost_snapshots_do_not_break_the_delta_chain(self):
+        """Deltas go against the acked snapshot: a lost packet costs that snapshot, nothing more."""
+        game = HeadlessGame(level=0)
+        server = GameServer(port=20005, max_clients=4, game=game)
+        server.on_player_join(lambda pid, name: game.add_player(pid))
+        server.on_player_leave(lambda pid, reason: game.remove_player(pid))
+        client = GameClient(server_host="127.0.0.1", server_port=20005, player_name="Lossy")
+        client.connect()
+
+        send = server.transport.send
+        snapshots = [0]
+
+        def lossy_send(msg, addr):
+            if msg.type == "snapshot":
+                snapshots[0] += 1
+                if snapshots[0] % 4 == 0:
+                    return True  # lost on the way
+            return send(msg, addr)
+
+        server.transport.send = lossy_send
+        try:
+            _pump(server, [client], ticks=15)
+            assert client.is_connected
+            fulls = None
+            for i in range(120):
+                game.simulate_tick()
+                server.update()
+                client.update()
+                client.send_input_state((i % 40 < 20, i % 40 >= 20), [])
+                if i == 10:
+                    fulls = client.net_stats["fulls_recv"]
+                time.sleep(0.003)
+
+            assert snapshots[0] >= 50
+            assert client.net_stats["deltas_dropped"] == 0
+            assert client.net_stats["deltas_deferred"] == 0
+            assert client.net_stats["fulls_recv"] == fulls  # once acked, deltas only
+            newest = client.get_latest_snapshot()
+            assert SnapshotService.serialize(newest) == SnapshotService.serialize(server._sent_snapshots[newest.tick])
+        finally:
+            server.shutdown()
+            client.close()

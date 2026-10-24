@@ -12,9 +12,11 @@ import unittest
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from scripts.network.delta import apply_delta
 from scripts.network.game_server import GameServer
 from scripts.network.messages import Message
 from scripts.network.udp_transport import UDPTransport
+from scripts.snapshot import SnapshotService
 
 
 @dataclass
@@ -341,6 +343,67 @@ class TestSnapshotBroadcast(unittest.TestCase):
         finally:
             server.shutdown()
             client.close()
+
+
+class TestAckedDeltas(unittest.TestCase):
+    """Each client gets a delta against the newest snapshot it has acked."""
+
+    def setUp(self):
+        self.server = GameServer(port=18012)
+        self.game = MockGame(tick=0, players=[MockPlayer(id=1), MockPlayer(id=2)])
+        self.server.set_game(self.game)
+        self.a = self.server.clients.add_client(("127.0.0.1", 40001), "A")
+        self.b = self.server.clients.add_client(("127.0.0.1", 40002), "B")
+        self.sent: Dict[Any, Dict[str, Any]] = {}
+        self.server._send_snapshot = lambda msg, addr, metric: self.sent.__setitem__(addr, dict(msg.payload))
+
+    def tearDown(self):
+        self.server.shutdown()
+
+    def _broadcast(self) -> Dict[Any, Dict[str, Any]]:
+        self.sent.clear()
+        self.game.tick += 2
+        self.game.players[0].pos[0] += 1.0
+        self.server._broadcast_snapshot()
+        return dict(self.sent)
+
+    def test_clients_without_an_ack_get_full_snapshots(self):
+        sent = self._broadcast()
+        self.assertFalse(sent[self.a.address]["is_delta"])
+        self.assertFalse(sent[self.b.address]["is_delta"])
+
+    def test_delta_against_each_clients_acked_snapshot(self):
+        for _ in range(3):  # ticks 2, 4, 6
+            self._broadcast()
+        self.a.snapshot_ack = 2
+        self.b.snapshot_ack = 4
+        sent = self._broadcast()  # tick 8
+        self.assertEqual(sent[self.a.address]["base_tick"], 2)
+        self.assertEqual(sent[self.b.address]["base_tick"], 4)
+        # Applied to the acked snapshot, the delta gives the new one
+        base = self.server._sent_snapshots[2]
+        rebuilt = apply_delta(base, sent[self.a.address]["data"])
+        self.assertEqual(SnapshotService.serialize(rebuilt), SnapshotService.serialize(self.server._sent_snapshots[8]))
+
+    def test_an_ack_older_than_the_history_gets_a_full_snapshot(self):
+        self._broadcast()
+        self.a.snapshot_ack = 2
+        self.assertTrue(self._broadcast()[self.a.address]["is_delta"])
+        for _ in range(self.server.SNAPSHOT_HISTORY):
+            self._broadcast()
+        self.assertFalse(self._broadcast()[self.a.address]["is_delta"])
+
+    def test_a_reordered_older_ack_does_not_move_the_base_back(self):
+        for snap in (6, 4):
+            self.server._handle_input({"tick": snap, "move": [False, False], "snap": snap}, self.a.address)
+        self.assertEqual(self.a.snapshot_ack, 6)
+
+    def test_request_full_sends_one_full_snapshot(self):
+        self._broadcast()
+        self.a.snapshot_ack = 2
+        self.server._handle_request_full(self.a.address)
+        self.assertFalse(self._broadcast()[self.a.address]["is_delta"])
+        self.assertTrue(self._broadcast()[self.a.address]["is_delta"])
 
 
 class TestHeartbeat(unittest.TestCase):
