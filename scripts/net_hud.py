@@ -4,8 +4,8 @@ F2 cycles off -> one status line -> status line plus graphs -> off.
 
 The status line rates what a player feels, each part colored by the
 starting targets of docs/online-benchmark-brainstorm.md (section 9): ping,
-packet loss in both directions, how old the shown remote world is, and
-own-ninja snaps. The graphs show the last 10 seconds: RTT per snapshot, the
+packet loss in both directions (mean of the last 10 s), how old the shown
+remote world is, and own-ninja snaps. The graphs show the last 10 seconds: RTT per snapshot, the
 gaps between arriving snapshots, and the interpolation buffer (headroom
 against the delay, starved frames in red) with own-ninja snaps marked.
 
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Deque, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pygame
 
@@ -64,6 +64,9 @@ class NetHUD:
         self._buffer: Deque[Tuple[float, float, float]] = deque(maxlen=int(WINDOW_S * 60) + 30)
         self._snaps: Deque[Tuple[float, float]] = deque(maxlen=200)  # (time, px)
         self._sample: Dict[str, Any] = {}
+        # Loss per second is too coarse to rate (one lost snapshot of ~30 is
+        # 3 %), so the line shows the mean of the last 10 seconds
+        self._losses: Deque[Tuple[Optional[float], Optional[float]]] = deque(maxlen=int(WINDOW_S))
         self._frame = 0
         self._cache: Optional[pygame.Surface] = None
 
@@ -86,6 +89,7 @@ class NetHUD:
     def note_sample(self, sample: Dict[str, Any]) -> None:
         """The per-second sample MultiplayerGameState writes to the session log."""
         self._sample = sample
+        self._losses.append((sample.get("link_loss_pct"), (sample.get("server_view") or {}).get("c2s_loss_pct")))
 
     # --- Status line ---
 
@@ -93,8 +97,8 @@ class NetHUD:
         """The parts of the status line, each with its rating."""
         now = time.monotonic() if now is None else now
         s = self._sample
-        loss_in = s.get("link_loss_pct")
-        loss_out = (s.get("server_view") or {}).get("c2s_loss_pct")
+        loss_in = _mean(v for v, _ in self._losses)
+        loss_out = _mean(v for _, v in self._losses)
         view = s.get("view_age_ms_p95")
         snaps = sum(1 for t, _ in self._snaps if t >= now - WINDOW_S)
         losses = [v for v in (loss_in, loss_out) if v is not None]
@@ -243,6 +247,11 @@ class NetHUD:
 
 def _row_height(kind: str) -> int:
     return 34 if kind == "graph" else SMALL_FONT + 3
+
+
+def _mean(values: Iterable[Optional[float]]) -> Optional[float]:
+    known = [v for v in values if v is not None]
+    return sum(known) / len(known) if known else None
 
 
 def _num(value: Optional[float], decimals: int) -> str:

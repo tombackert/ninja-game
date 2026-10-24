@@ -64,8 +64,19 @@ class TestRating(unittest.TestCase):
             hud.status(34.0),
             [("Ping 34 ms", 0), ("Loss 0.2/0.1 %", 0), ("View 110 ms", 0), ("Snaps 0", 0)],
         )
+        hud = NetHUD()
         hud.note_sample(_sample(view_age_ms_p95=300.0, link_loss_pct=1.5))
         self.assertEqual([r for _, r in hud.status(34.0)], [0, 1, 2, 0])
+
+    def test_loss_is_the_mean_of_the_last_ten_seconds(self):
+        hud = NetHUD()
+        hud.note_sample(_sample(link_loss_pct=3.2))  # one lost snapshot of ~30
+        for _ in range(9):
+            hud.note_sample(_sample(link_loss_pct=0.0))
+        self.assertEqual(hud.status(34.0)[1], ("Loss 0.3/0.1 %", 0))
+        for _ in range(10):  # the bad second has left the window
+            hud.note_sample(_sample(link_loss_pct=0.0))
+        self.assertEqual(hud.status(34.0)[1], ("Loss 0.0/0.1 %", 0))
 
     def test_snaps_count_the_last_ten_seconds(self):
         hud = NetHUD()

@@ -35,7 +35,7 @@ locally — the connection stays alive while paused.
 
 **F2** cycles the network HUD (top right): off → status line → status line
 plus graphs. The status line rates ping, packet loss (to you / to the
-server), view age (how old the other player you see is, p95) and own-ninja
+server, mean of the last 10 s), view age (how old the other player you see is, p95) and own-ninja
 snaps in the last 10 s, each green / yellow / red by the starting targets
 in `docs/online-benchmark-brainstorm.md` (section 9). The graphs show the
 last 10 s: RTT per snapshot, gaps between arriving snapshots (red ≥ 100 ms),
