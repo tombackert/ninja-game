@@ -210,11 +210,11 @@ class TestIdentity(unittest.TestCase):
 
     def test_codes(self):
         code = new_code()
-        self.assertRegex(code, r"^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$")
-        self.assertEqual(normalize_code("k7qm 2xra"), "K7QM-2XRA")
-        self.assertEqual(normalize_code("K7QM-2XRO"), "K7QM-2XR0")  # O is read as 0
-        self.assertIsNone(normalize_code("K7QM-2XR"))
-        self.assertIsNone(normalize_code("K7QM-2XRU"))  # U is not in the alphabet
+        self.assertRegex(code, r"^[2-9ACEFHJKMNPRTWXY]{4}-[2-9ACEFHJKMNPRTWXY]{4}$")
+        self.assertEqual(normalize_code("k7hm 2xra"), "K7HM-2XRA")
+        self.assertIsNone(normalize_code("K7HM-2XR"))
+        for lookalike in "0OQD1ILZSGBUV":  # never part of a code
+            self.assertIsNone(normalize_code("K7HM-2XR" + lookalike))
 
     def test_created_once_then_loaded(self):
         first = Identity.load(self.path)
@@ -224,14 +224,14 @@ class TestIdentity(unittest.TestCase):
 
     def test_friends(self):
         me = Identity.load(self.path)
-        self.assertTrue(me.add_friend("k7qm-2xra", "Max"))
-        self.assertFalse(me.add_friend("K7QM2XRA"))  # already there
+        self.assertTrue(me.add_friend("k7hm-2xra", "Max"))
+        self.assertFalse(me.add_friend("K7HM2XRA"))  # already there
         self.assertFalse(me.add_friend(me.code))  # ourselves
         self.assertFalse(me.add_friend("hello"))
-        me.set_friend_name("K7QM-2XRA", "Maxi")
+        me.set_friend_name("K7HM-2XRA", "Maxi")
         again = Identity.load(self.path)
-        self.assertEqual(again.friends, [{"code": "K7QM-2XRA", "name": "Maxi"}])
-        again.remove_friend("K7QM-2XRA")
+        self.assertEqual(again.friends, [{"code": "K7HM-2XRA", "name": "Maxi"}])
+        again.remove_friend("K7HM-2XRA")
         self.assertEqual(Identity.load(self.path).friends, [])
 
     def test_a_broken_file_gives_a_new_identity(self):

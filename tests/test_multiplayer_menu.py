@@ -146,10 +146,10 @@ class TestFriendsState:
         state = FriendsState()
         state.handle_actions(["menu_select"])  # the only row: "+ Add friend"
         assert state.adding
-        _type(state, "k7qm2xra")
+        _type(state, "k7hm2xra")
         state.handle_actions(["menu_select"])
         assert not state.adding
-        assert online.Identity.load().friends == [{"code": "K7QM-2XRA", "name": ""}]
+        assert online.Identity.load().friends == [{"code": "K7HM-2XRA", "name": ""}]
         assert state.selected == 0
 
     def test_typing_w_and_s_does_not_move_the_selection(self):
@@ -170,17 +170,17 @@ class TestFriendsState:
 
     def test_join_only_a_friend_who_is_hosting(self):
         state = FriendsState()
-        state.identity.add_friend("K7QM-2XRA", "Max")
+        state.identity.add_friend("K7HM-2XRA", "Max")
         state.handle_actions(["menu_select"])
         assert state.join_request is None
         assert state.message == "Max is not hosting right now"
-        state.status = {"K7QM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
+        state.status = {"K7HM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
         state.handle_actions(["menu_select"])
-        assert state.join_request == ("K7QM-2XRA", "Max")
+        assert state.join_request == ("K7HM-2XRA", "Max")
 
     def test_delete_asks_once_then_removes(self):
         state = FriendsState()
-        state.identity.add_friend("K7QM-2XRA", "Max")
+        state.identity.add_friend("K7HM-2XRA", "Max")
         _key(state, pygame.K_DELETE)
         assert len(state.identity.friends) == 1 and "Max" in state.message
         _key(state, pygame.K_DELETE)
@@ -195,6 +195,6 @@ class TestFriendsState:
 
     def test_renders(self):
         state = FriendsState()
-        state.identity.add_friend("K7QM-2XRA", "Max")
-        state.status = {"K7QM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
+        state.identity.add_friend("K7HM-2XRA", "Max")
+        state.status = {"K7HM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
         state.render(pygame.Surface((1280, 720)))

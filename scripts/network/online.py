@@ -41,7 +41,10 @@ Candidate = List[Any]  # [kind, host, port], kind "lan" | "v6" | "v4"
 DEFAULT_RENDEZVOUS_URL = "https://ninja-rendezvous.tombackert.workers.dev"
 # NINJA_ONLINE_FILE gives a second game on the same machine its own identity (tests)
 ONLINE_FILE = os.environ.get("NINJA_ONLINE_FILE", "data/online.json")
-CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # Crockford base32: no I, L, O, U
+# Nothing the pixel font (or a photo of the screen) makes look alike: none
+# of 0/O/Q/D, 1/I/L, U/V, and of 2/Z, 5/S, 6/G, 8/B only the digit.
+# 23^8 codes, ~36 bits.
+CODE_ALPHABET = "23456789ACEFHJKMNPRTWXY"
 
 HOST_POLL_S = 2.0  # presence refresh, and how quickly the host sees a join
 PUNCH_INTERVAL_S = 0.1
@@ -64,9 +67,8 @@ def new_code() -> str:
 
 
 def normalize_code(text: str) -> Optional[str]:
-    """'tom7 f3kx' -> 'TOM7-F3KX'; None if it cannot be a friend code."""
+    """'k7hm 2xra' -> 'K7HM-2XRA'; None if it cannot be a friend code."""
     raw = "".join(ch for ch in text.upper() if ch.isalnum())
-    raw = raw.replace("O", "0").replace("I", "1").replace("L", "1")
     if len(raw) != 8 or any(ch not in CODE_ALPHABET for ch in raw):
         return None
     return raw[:4] + "-" + raw[4:]

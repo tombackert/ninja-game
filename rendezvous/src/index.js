@@ -17,7 +17,7 @@ const JOIN_TTL_MS = 20_000;
 const MAX_BODY_BYTES = 4096;
 const MAX_CANDIDATES = 8;
 const MAX_ENTRIES = 2000;
-const CODE_RE = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+const CODE_RE = /^[2-9ACEFHJKMNPRTWXY]{4}-[2-9ACEFHJKMNPRTWXY]{4}$/; // scripts/network/online.py CODE_ALPHABET
 
 export default {
   async fetch(request, env) {

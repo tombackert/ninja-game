@@ -81,7 +81,7 @@
   "mp.add_hint": "Type a friend's code, ENTER add / ESC cancel",
   "mp.add_friend": "+ Add friend",
   "mp.remove_confirm": "DEL again removes {name}",
-  "mp.code_invalid": "Not a friend code (like K7QM-2XRA)",
+  "mp.code_invalid": "Not a friend code (like K7HM-2XRA)",
   "mp.code_own": "That is your own code",
   "mp.code_known": "Already in your list",
   "mp.not_hosting": "{name} is not hosting right now",

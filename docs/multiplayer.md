@@ -9,7 +9,7 @@ internet, or by address on the LAN.
 ### Friend codes (once)
 
 Every installation has a friend code, shown in **Multiplayer** (e.g.
-`K7QM-2XRA`). Send yours to your friend once; they add it under
+`K7HM-2XRA`). Send yours to your friend once; they add it under
 **Join Friend** → **+ Add friend**. The code is the invitation: whoever
 knows it can join your game while you host.
 
@@ -18,7 +18,7 @@ knows it can join your game while you host.
 1. Start the game: `python app.py`
 2. Menu → **Multiplayer** → **Host Game**
 3. You enter the currently selected level immediately. The HUD (bottom left)
-   shows your code and LAN address, e.g. `Tom | Code K7QM-2XRA | LAN 192.168.178.92:7777`
+   shows your code and LAN address, e.g. `Tom | Code K7HM-2XRA | LAN 192.168.178.92:7777`
    (`(not online)` if the rendezvous cannot be reached; LAN play still works).
 
 ### Join (Player B)

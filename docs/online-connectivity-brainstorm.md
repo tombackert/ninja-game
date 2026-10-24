@@ -151,7 +151,7 @@ Quick wins, dual-stack transport, STUN, candidates, the Worker and the menu (ste
 
 Decisions while building:
 
-- **The code is the invitation.** Instead of the host publishing the codes it allows, anyone who knows the host's code can join while it hosts. Codes are 8 characters from 32 (40 bits) and only shared with friends; it saves the second exchange (the host adding the friend). The server still accepts `connect_request` from any address, as on the LAN. Revisit with the friends-only list if codes ever get shared publicly.
+- **The code is the invitation.** Instead of the host publishing the codes it allows, anyone who knows the host's code can join while it hosts. Codes are 8 characters from 23 that the pixel font cannot mix up (~36 bits) and only shared with friends; it saves the second exchange (the host adding the friend). The server still accepts `connect_request` from any address, as on the LAN. Revisit with the friends-only list if codes ever get shared publicly.
 - **One dual-stack socket**, not a socket pinned to the STUN-learned IPv6 address (7.2): STUN runs on the game socket, so the advertised address is the one it sends from; macOS rotates temporary addresses daily, a session is hours at most. The local test showed exactly that: STUN reported the temporary address, not the stable one.
 - **Polling every 2 s** combines presence refresh and picking up join requests in one call (~1800 requests per hour of hosting, Workers Free allows 100,000 per day).
 - **Punch answers come from the server process itself** (`punch` -> `punch_ack`), so on a LAN or with an open IPv6 firewall the friend connects before the host has even seen the join request.
