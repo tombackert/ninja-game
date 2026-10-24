@@ -18,6 +18,7 @@ gemini*
 data/saves/
 data/replays/
 data/netlogs/
+data/online.json
 data/collectables.json
 data/best_times.json
 data/settings.json
@@ -26,3 +27,7 @@ data/settings.json
 performance_data.csv
 frame_pacing*.csv
 frame_pacing*.png
+
+# Rendezvous worker (npm, wrangler local state)
+rendezvous/node_modules/
+rendezvous/.wrangler/

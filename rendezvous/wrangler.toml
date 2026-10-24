@@ -1,0 +1,13 @@
+# Rendezvous for online play: npx wrangler deploy (after npx wrangler login once)
+name = "ninja-rendezvous"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "RENDEZVOUS"
+class_name = "Rendezvous"
+
+# SQLite-backed Durable Objects are available on the Workers Free plan
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Rendezvous"]
