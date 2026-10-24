@@ -38,7 +38,7 @@ from scripts.network.udp_transport import UDPTransport
 Address = Tuple[str, int]
 Candidate = List[Any]  # [kind, host, port], kind "lan" | "v6" | "v4"
 
-DEFAULT_RENDEZVOUS_URL = "https://ninja-rendezvous.tombackert.workers.dev"
+DEFAULT_RENDEZVOUS_URL = "https://ninja-rendezvous.ninja-rendezvous.workers.dev"
 # NINJA_ONLINE_FILE gives a second game on the same machine its own identity (tests)
 ONLINE_FILE = os.environ.get("NINJA_ONLINE_FILE", "data/online.json")
 # Nothing the pixel font (or a photo of the screen) makes look alike: none
