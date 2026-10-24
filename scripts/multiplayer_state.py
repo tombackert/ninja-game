@@ -121,6 +121,9 @@ class MultiplayerGameState(State):
         player_name: str = "Player",
         host_process: Any = None,
         host_ip: str | None = None,
+        host_code: str | None = None,
+        transport: Any = None,
+        via: str | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -128,6 +131,10 @@ class MultiplayerGameState(State):
         # When we host, we own the dedicated server subprocess.
         self._host_process = host_process
         self._host_ip = host_ip
+        self._host_code = host_code  # our friend code, shown while hosting
+        # Joined by friend code: the socket the path was punched with, and its kind
+        self._transport = transport
+        self._via = via
         self._game: Any = None
         self._client: Any = None
         self._my_player_id: int | None = None
@@ -213,6 +220,7 @@ class MultiplayerGameState(State):
             server_host=self._host,
             server_port=self._port,
             player_name=self._player_name,
+            transport=self._transport,
         )
 
         self._client.on_connected(self._on_connected)
@@ -1007,8 +1015,15 @@ class MultiplayerGameState(State):
             status = "Connecting..."
 
         label = self._player_name
+        if self._host_code:
+            online = getattr(self._client, "online_status", None) if self._client else None
+            label += f" | Code {self._host_code}"
+            if online and online != "online":
+                label += " (not online)"
         if self._host_ip:
-            label += f" | Hosting on {self._host_ip}:{self._port}"
+            label += f" | LAN {self._host_ip}:{self._port}"
+        if self._via:
+            label += " | via " + {"v6": "IPv6", "v4": "IPv4", "lan": "LAN"}.get(self._via, self._via)
 
         font = UI.get_font(14)
         UI.draw_text_with_outline(

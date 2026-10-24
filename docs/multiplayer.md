@@ -1,22 +1,36 @@
 # Multiplayer
 
 Server-authoritative multiplayer over UDP. One player hosts (the game spawns a
-dedicated server process locally), other players join over the LAN.
+dedicated server process locally), other players join by friend code over the
+internet, or by address on the LAN.
 
 ## Playing
+
+### Friend codes (once)
+
+Every installation has a friend code, shown in **Multiplayer** (e.g.
+`K7QM-2XRA`). Send yours to your friend once; they add it under
+**Join Friend** → **+ Add friend**. The code is the invitation: whoever
+knows it can join your game while you host.
 
 ### Host (Player A)
 
 1. Start the game: `python app.py`
 2. Menu → **Multiplayer** → **Host Game**
 3. You enter the currently selected level immediately. The HUD (bottom left)
-   shows the address other players use to join, e.g. `Hosting on 192.168.178.92:7777`.
+   shows your code and LAN address, e.g. `Tom | Code K7QM-2XRA | LAN 192.168.178.92:7777`
+   (`(not online)` if the rendezvous cannot be reached; LAN play still works).
 
 ### Join (Player B)
 
 1. Start the game: `python app.py`
-2. Menu → **Multiplayer** → **Join Game**
-3. Type the host's address (`192.168.178.92` or `192.168.178.92:7777`) and press Enter.
+2. Menu → **Multiplayer** → **Join Friend**: friends who are hosting show
+   `hosting level N`; select one and press Enter. The game finds the host
+   through the rendezvous and opens a direct path (IPv6, LAN or IPv4); the
+   HUD shows which one (`via IPv6`).
+3. Without the rendezvous: **Join by IP**, type the host's address
+   (`192.168.178.92` or `192.168.178.92:7777`) and press Enter. The last
+   address is remembered.
 
 Two windows on one machine work the same way: host in the first window, join
 `127.0.0.1` in the second.
@@ -53,10 +67,46 @@ own-ninja snaps as red marks), and what the server reports about your link.
 
 ## Two machines / firewall
 
-The server binds UDP `0.0.0.0:7777`. On macOS the Application Firewall must
-allow Python to accept incoming connections — accept the prompt on first host,
-or check *System Settings → Network → Firewall → Options* if joining from the
-second machine times out. (Loopback play is never affected.)
+The server binds UDP `[::]:7777` (IPv6 and IPv4). On macOS the Application
+Firewall must allow Python to accept incoming connections — accept the prompt
+on first host (and on first join by code), or check *System Settings → Network
+→ Firewall → Options* if joining times out. (Loopback play is never affected.)
+
+## Online play by friend code
+
+See `docs/online-connectivity-brainstorm.md` for the design. No game server
+runs anywhere: the host's machine is the server, as on the LAN.
+
+1. The host's server learns its addresses with STUN (`stun.cloudflare.com`)
+   on its own UDP socket: the IPv6 address it sends from and the public IPv4
+   address and port the router maps it to; plus its LAN address. These are
+   its *candidates*.
+2. Every 2 s it registers its code, name, level, protocol version and
+   candidates at the **rendezvous**, a Cloudflare Worker (`rendezvous/`); the
+   call also returns join requests waiting for it.
+3. The friend's game learns its own candidates the same way and sends them
+   with a join request; the rendezvous answers with the host's candidates.
+4. Both sides send `punch` packets to all of the other's candidates (every
+   100 ms, up to 10 s); each router takes the other side's packets for
+   replies. The first candidate that answers is the path; the game connects
+   over it with the normal protocol.
+
+The rendezvous only sees codes, names and addresses (presence expires after
+15 s); game traffic never passes through it. Each code's secret token is
+stored as a hash on first use, so nobody else can host under your code.
+Identity and friends live in `data/online.json`.
+
+```bash
+cd rendezvous && npm install && npx wrangler dev     # local rendezvous on :8787
+python tools/mp_online_e2e.py --rendezvous http://127.0.0.1:8787
+python tools/mp_online_e2e.py                       # against the deployed one
+cd rendezvous && npx wrangler deploy                 # after npx wrangler login
+```
+
+`NINJA_RENDEZVOUS_URL` points the game and server at another rendezvous,
+`NINJA_ONLINE_FILE` gives a second game on the same machine its own identity.
+If no path answers (both sides behind strict NAT without IPv6), **Join by IP**
+over Tailscale is the fallback.
 
 ## Architecture
 
@@ -69,6 +119,8 @@ second machine times out. (Loopback play is never affected.)
 | Client gameplay | `scripts/multiplayer_state.py` | Prediction (rewind+replay), interpolation, world application, HUD |
 | Lobby UI | `scripts/multiplayer_menu.py` | Host/Join menu states, server subprocess spawn |
 | Netcode metrics | `scripts/network/netstats.py` | Link statistics, metrics, events, session logs |
+| Online play | `scripts/network/online.py`, `stun.py` | Friend codes, rendezvous calls, STUN, candidates, hole punching |
+| Rendezvous | `rendezvous/src/index.js` | Cloudflare Worker + Durable Object: presence, join requests |
 
 Protocol decisions:
 
@@ -111,6 +163,13 @@ Protocol decisions:
   `snapshot arrival - input send - hold`, with kernel receive timestamps
   (`SO_TIMESTAMP`) as arrival times, so the time packets sit in socket
   buffers until the next tick/frame reads them is not counted as ping.
+- **Dual stack.** Sockets bind `::` with IPv4 mapped in; peers are plain
+  `(host, port)` tuples either way (IPv4 never as `::ffff:a.b.c.d`), host
+  names are resolved once. STUN answers arrive on the game socket and go to
+  the STUN probe instead of the game.
+- **Protocol version.** `connect_request` carries `version`
+  (`PROTOCOL_VERSION` in `messages.py`); the server rejects another version
+  with a clear reason instead of letting it run with a broken state.
 - **The hosted server follows its game.** It gets `--parent-pid` and shuts
   down when the host's game exits; closing the window also leaves the
   session cleanly.

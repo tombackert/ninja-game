@@ -12,6 +12,7 @@ Usage:
     python server.py --port 7777 --level 0 --max-clients 4
     python server.py --metrics-file /tmp/server_metrics.jsonl  # log to this file instead
     python server.py --no-netlog                               # no session log
+    python server.py --online --name Tom                       # friends join by code
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import pygame
 from scripts.network.game_server import GameServer
 from scripts.network.headless_game import HeadlessGame
 from scripts.network.netstats import SessionLog
+from scripts.network.online import HostOnline, Identity
 
 TICK_RATE = 60
 TICK_INTERVAL = 1.0 / TICK_RATE
@@ -41,6 +43,8 @@ def main() -> None:
     parser.add_argument("--metrics-file", default=None, help="Write the session log (JSONL) to this file")
     parser.add_argument("--no-netlog", action="store_true", help="Do not write a session log")
     parser.add_argument("--parent-pid", type=int, default=0, help="Shut down when this process (the host's game) exits")
+    parser.add_argument("--online", action="store_true", help="Register at the rendezvous: friends join by code")
+    parser.add_argument("--name", default="Host", help="Host name friends see (with --online)")
     args = parser.parse_args()
 
     # Initialize pygame minimally (needed for Rect in physics)
@@ -62,6 +66,11 @@ def main() -> None:
         f"Server started on port {args.port}, level {args.level}, " f"max {args.max_clients} players",
         flush=True,
     )
+    online = None
+    if args.online:
+        online = HostOnline(server, Identity.load(), args.name, args.level)
+        server.on_punch = online.on_punch
+        print(f"Online: friends join with code {online.identity.code} ({online.url})", flush=True)
 
     log = _open_log(args)
     started = time.time()
@@ -96,6 +105,13 @@ def main() -> None:
             server.process_inputs()
             game.simulate_tick()
             server.post_tick()
+            if online is not None:
+                online.update()
+                server.online_status = online.status
+                for event in online.events:
+                    print(f"Online: {event}", flush=True)
+                    server.netstats.event(event.pop("event"), tick=game.tick, **event)
+                online.events.clear()
 
             duration = time.perf_counter() - start
             server.netstats.add("tick_ms", duration * 1000.0)
@@ -134,6 +150,8 @@ def main() -> None:
     except KeyboardInterrupt:
         print("\nShutting down...")
     finally:
+        if online is not None:
+            online.stop()
         server.shutdown()
         if log:
             log.write_all(server.netstats.drain_events())

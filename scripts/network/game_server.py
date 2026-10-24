@@ -21,7 +21,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from scripts.network.client_state import ClientManager, ClientState
 from scripts.network.delta import compute_delta
-from scripts.network.messages import Message
+from scripts.network.messages import PROTOCOL_VERSION, Message
 from scripts.network.netstats import NetStats
 from scripts.network.udp_transport import UDPTransport
 from scripts.snapshot import SimulationSnapshot, SnapshotService
@@ -73,7 +73,7 @@ class GameServer:
             max_clients: Maximum number of clients
             game: Optional game instance to use
         """
-        self.transport = UDPTransport("0.0.0.0", port)
+        self.transport = UDPTransport("::", port)
         self.clients = ClientManager(max_clients=max_clients)
         self.game = game
         self._last_snapshot_tick = 0
@@ -91,6 +91,12 @@ class GameServer:
         # Callbacks for game events
         self._on_player_join: Optional[Callable[[int, str], None]] = None
         self._on_player_leave: Optional[Callable[[int, str], None]] = None
+        # Hole punching for online play (scripts/network/online.py): a punch
+        # from a friend who found us through the rendezvous
+        self.on_punch: Optional[Callable[[Message, Address], None]] = None
+        # "online" once registered at the rendezvous, else why not; told to
+        # clients with their heartbeat acks (None: not hosting online)
+        self.online_status: Optional[str] = None
 
     @property
     def port(self) -> int:
@@ -177,10 +183,21 @@ class GameServer:
             self._handle_disconnect(addr)
         elif msg_type == "request_full":
             self._handle_request_full(addr)
+        elif msg_type == "punch" and self.on_punch is not None:
+            self.on_punch(message, addr)
 
     def _handle_connect_request(self, payload: Dict[str, Any], addr: Address) -> None:
         """Handle connection request from new client."""
         player_name = payload.get("player_name", "Player")
+
+        # Another game version would misread our packets (clients from
+        # before the version check send none and are let in)
+        version = payload.get("version")
+        if version is not None and version != PROTOCOL_VERSION:
+            self._send_connection_reject(
+                f"Different game version (host {PROTOCOL_VERSION}, you {version}): update both games", addr
+            )
+            return
 
         # Check if already connected
         existing = self.clients.get_client(addr)
@@ -292,6 +309,7 @@ class GameServer:
                 "server_time": server_time,
                 "hold_ms": round(max(0.0, server_time - arrival) * 1000.0, 3),
                 "link": client.server_view,
+                "online": self.online_status,
             },
         )
         self.transport.send(msg, addr)

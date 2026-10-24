@@ -58,16 +58,19 @@ def main():
             start_host_server,
         )
         from scripts.multiplayer_state import MultiplayerGameState
+        from scripts.network.online import Identity
         from scripts.settings import settings
 
-        proc = start_host_server(level=settings.selected_level, port=DEFAULT_PORT)
+        name = default_player_name()
+        proc = start_host_server(level=settings.selected_level, port=DEFAULT_PORT, name=name)
         sm.set(
             MultiplayerGameState(
                 "127.0.0.1",
                 DEFAULT_PORT,
-                default_player_name(),
+                name,
                 host_process=proc,
                 host_ip=get_lan_ip(),
+                host_code=Identity.load().code,
             )
         )
 
@@ -116,11 +119,18 @@ def main():
                 cur.next_action = None
                 _start_hosting()
                 cur = sm.current
+            elif getattr(cur, "next_action", None) == "friends":
+                cur.next_action = None
+                from scripts.multiplayer_menu import FriendsState
+
+                sm.set(FriendsState())
+                cur = sm.current
             elif getattr(cur, "next_action", None) == "join":
                 cur.next_action = None
                 from scripts.multiplayer_menu import JoinGameState
+                from scripts.network.online import Identity
 
-                sm.set(JoinGameState())
+                sm.set(JoinGameState(Identity.load().last_address))
                 cur = sm.current
             elif getattr(cur, "request_back", False):
                 sm.set(MenuState())
@@ -131,13 +141,45 @@ def main():
                 cur.join_request = None
                 from scripts.multiplayer_menu import default_player_name
                 from scripts.multiplayer_state import MultiplayerGameState
+                from scripts.network.online import Identity
 
+                identity = Identity.load()
+                identity.last_address = cur.text.strip()
+                identity.save()
                 sm.set(MultiplayerGameState(host, port, default_player_name()))
                 cur = sm.current
             elif getattr(cur, "request_back", False):
                 from scripts.multiplayer_menu import MultiplayerMenuState
 
                 sm.set(MultiplayerMenuState())
+                cur = sm.current
+        # Online: friends list -> finding the friend's game -> playing
+        if hasattr(cur, "name") and cur.name == "FriendsState":
+            if getattr(cur, "join_request", None):
+                code, friend = cur.join_request
+                cur.join_request = None
+                from scripts.multiplayer_menu import JoiningState
+
+                sm.set(JoiningState(code, friend))
+                cur = sm.current
+            elif getattr(cur, "request_back", False):
+                from scripts.multiplayer_menu import MultiplayerMenuState
+
+                sm.set(MultiplayerMenuState())
+                cur = sm.current
+        if hasattr(cur, "name") and cur.name == "JoiningState":
+            if getattr(cur, "result", None):
+                transport, (host, port), via = cur.result
+                cur.result = None
+                from scripts.multiplayer_menu import default_player_name
+                from scripts.multiplayer_state import MultiplayerGameState
+
+                sm.set(MultiplayerGameState(host, port, default_player_name(), transport=transport, via=via))
+                cur = sm.current
+            elif getattr(cur, "request_back", False):
+                from scripts.multiplayer_menu import FriendsState
+
+                sm.set(FriendsState())
                 cur = sm.current
         # Generic back handling for submenu states
         if isinstance(cur, (LevelsState, StoreState, AccessoriesState, OptionsState)):

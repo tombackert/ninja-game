@@ -2,6 +2,11 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict
 import json
 
+# Bumped whenever the wire protocol changes; the server rejects a client
+# with another version instead of letting it run with a broken state.
+# 2: deltas against the snapshot the client acks in its inputs (``snap``)
+PROTOCOL_VERSION = 2
+
 
 @dataclass
 class Message:

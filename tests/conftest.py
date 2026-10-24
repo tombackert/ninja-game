@@ -35,3 +35,10 @@ _Settings.SETTINGS_FILE = os.path.join(_SAVE_DIR, "settings.json")
 from scripts.network import netstats as _netstats  # noqa: E402
 
 _netstats.NETLOG_DIR = os.path.join(_SAVE_DIR, "netlogs")
+
+# Online identity and friends (data/online.json) as well
+from scripts.network import online as _online  # noqa: E402
+
+_online.ONLINE_FILE = os.path.join(_SAVE_DIR, "online.json")
+# ... and no test ever talks to the real rendezvous (nothing listens on port 9)
+os.environ.setdefault("NINJA_RENDEZVOUS_URL", "http://127.0.0.1:9")

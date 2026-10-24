@@ -27,9 +27,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from scripts.network.client_state import ConnectionState
 from scripts.network.delta import apply_delta
 from scripts.network.interpolation import SnapshotBuffer
-from scripts.network.messages import Message
+from scripts.network.messages import PROTOCOL_VERSION, Message
 from scripts.network.netstats import NetStats
-from scripts.network.udp_transport import UDPTransport
+from scripts.network.udp_transport import UDPTransport, resolve_address
 from scripts.snapshot import SimulationSnapshot, SnapshotService
 
 # Type alias
@@ -73,7 +73,7 @@ class GameClient:
         transport: UDPTransport | None = None,
     ):
         self.transport = transport if transport is not None else UDPTransport(port=0)
-        self._server_addr: Address = (server_host, server_port)
+        self._server_addr: Address = resolve_address(server_host, server_port)
         self._player_name = player_name
 
         # Connection state
@@ -116,6 +116,7 @@ class GameClient:
         self._last_snap_arrival: Optional[float] = None
         self.newest_snapshot_arrival: Optional[float] = None  # when server_tick's snapshot became usable
         self.server_view: Dict[str, Any] = {}  # how the server receives us (from heartbeat acks)
+        self.online_status: Optional[str] = None  # host at the rendezvous: "online" or why not
         self._report: Dict[str, Any] = {}  # our own summary, sent with heartbeats
         self._connect_started = 0.0
         self._joined = False
@@ -342,7 +343,7 @@ class GameClient:
         """Send a connect_request message and track the attempt."""
         msg = Message(
             type="connect_request",
-            payload={"player_name": self._player_name},
+            payload={"player_name": self._player_name, "version": PROTOCOL_VERSION},
         )
         self.transport.send(msg, self._server_addr)
         self._connect_attempt_count += 1
@@ -544,6 +545,8 @@ class GameClient:
         link = payload.get("link")
         if isinstance(link, dict):
             self.server_view = link
+        # Whether the host is registered at the rendezvous (None: not online)
+        self.online_status = payload.get("online")
 
     def _add_rtt_sample(self, rtt: float, metric: str) -> None:
         """Feed one RTT measurement (seconds) into the metric and the smoothed estimate."""

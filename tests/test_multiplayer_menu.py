@@ -11,10 +11,12 @@ os.environ["NINJA_GAME_TESTING"] = "1"
 
 from scripts.multiplayer_menu import (
     DEFAULT_PORT,
+    FriendsState,
     JoinGameState,
     MultiplayerMenuState,
     parse_address,
 )
+from scripts.network import online
 
 
 @pytest.fixture(autouse=True)
@@ -51,15 +53,21 @@ class TestMultiplayerMenuState:
         state.update(0.016)
         assert state.next_action == "host"
 
-    def test_select_join(self):
+    def test_select_friends(self):
         state = MultiplayerMenuState()
         state.handle_actions(["menu_down", "menu_select"])
+        state.update(0.016)
+        assert state.next_action == "friends"
+
+    def test_select_join(self):
+        state = MultiplayerMenuState()
+        state.handle_actions(["menu_down", "menu_down", "menu_select"])
         state.update(0.016)
         assert state.next_action == "join"
 
     def test_select_back(self):
         state = MultiplayerMenuState()
-        state.handle_actions(["menu_down", "menu_down", "menu_select"])
+        state.handle_actions(["menu_down", "menu_down", "menu_down", "menu_select"])
         state.update(0.016)
         assert state.next_action is None
         assert state.request_back
@@ -119,3 +127,74 @@ class TestMenuStateMultiplayerEntry:
         menu.enter = True
         menu.update(0.016)
         assert menu.next_state == "Multiplayer"
+
+
+def _type(state, text):
+    state.handle([pygame.event.Event(pygame.KEYDOWN, {"key": 0, "unicode": ch}) for ch in text])
+
+
+def _key(state, key):
+    state.handle([pygame.event.Event(pygame.KEYDOWN, {"key": key, "unicode": ""})])
+
+
+class TestFriendsState:
+    @pytest.fixture(autouse=True)
+    def fresh_identity(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(online, "ONLINE_FILE", str(tmp_path / "online.json"))
+
+    def test_add_a_friend_by_code(self):
+        state = FriendsState()
+        state.handle_actions(["menu_select"])  # the only row: "+ Add friend"
+        assert state.adding
+        _type(state, "k7qm2xra")
+        state.handle_actions(["menu_select"])
+        assert not state.adding
+        assert online.Identity.load().friends == [{"code": "K7QM-2XRA", "name": ""}]
+        assert state.selected == 0
+
+    def test_typing_w_and_s_does_not_move_the_selection(self):
+        state = FriendsState()
+        state.handle_actions(["menu_select"])
+        _type(state, "ws")
+        assert state.text == "WS"
+
+    def test_invalid_and_own_codes_are_refused(self):
+        state = FriendsState()
+        state.handle_actions(["menu_select"])
+        _type(state, "hello")
+        state.handle_actions(["menu_select"])
+        assert state.adding and "Not a friend code" in state.message
+        state.text = state.identity.code
+        state.handle_actions(["menu_select"])
+        assert state.adding and state.message == "That is your own code"
+
+    def test_join_only_a_friend_who_is_hosting(self):
+        state = FriendsState()
+        state.identity.add_friend("K7QM-2XRA", "Max")
+        state.handle_actions(["menu_select"])
+        assert state.join_request is None
+        assert state.message == "Max is not hosting right now"
+        state.status = {"K7QM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
+        state.handle_actions(["menu_select"])
+        assert state.join_request == ("K7QM-2XRA", "Max")
+
+    def test_delete_asks_once_then_removes(self):
+        state = FriendsState()
+        state.identity.add_friend("K7QM-2XRA", "Max")
+        _key(state, pygame.K_DELETE)
+        assert len(state.identity.friends) == 1 and "Max" in state.message
+        _key(state, pygame.K_DELETE)
+        assert state.identity.friends == []
+
+    def test_escape_cancels_adding_then_goes_back(self):
+        state = FriendsState()
+        state.handle_actions(["menu_select", "menu_quit"])
+        assert not state.adding and not state.request_back
+        state.handle_actions(["menu_quit"])
+        assert state.request_back
+
+    def test_renders(self):
+        state = FriendsState()
+        state.identity.add_friend("K7QM-2XRA", "Max")
+        state.status = {"K7QM-2XRA": {"hosting": True, "name": "Max", "level": 3}}
+        state.render(pygame.Surface((1280, 720)))

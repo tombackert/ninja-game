@@ -10,6 +10,10 @@ Features:
 - Graceful handling of malformed packets
 - Per-peer link statistics (loss, jitter, bytes) with kernel arrival
   timestamps where the platform provides them
+- Dual stack: bound to ``::``, one socket talks IPv4 and IPv6 (peers are
+  plain ``(host, port)`` tuples either way; IPv4 never shows up as
+  ``::ffff:a.b.c.d``)
+- Non-game packets (STUN answers) go to ``raw_handler``
 
 Usage:
     # Server
@@ -33,10 +37,11 @@ import struct
 import sys
 import time
 from dataclasses import dataclass, asdict
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from .messages import Message
 from .netstats import LinkStats
+from .stun import is_stun
 
 
 # Maximum UDP packet size
@@ -127,20 +132,25 @@ class UDPTransport:
         links: Link statistics for each peer
         last_arrival: Arrival time (wall clock) of the packet receive() returned last
         last_send_bytes: Size of the datagram send() sent last
+        raw_handler: Called with (data, addr) for STUN packets instead of
+            dropping them as malformed
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 0):
+    def __init__(self, host: str = "::", port: int = 0):
         """Initialize UDP transport.
 
         Args:
-            host: Host address to bind to. Default "0.0.0.0" binds to all interfaces.
+            host: Host address to bind to. Default "::" binds to all
+                interfaces, IPv6 and IPv4 (falls back to IPv4 only where
+                the system has no IPv6).
             port: Port to bind to. Default 0 lets OS assign an ephemeral port.
         """
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket = _bind(host, port)
         self._socket.setblocking(False)
-        self._socket.bind((host, port))
-        self.local_addr: Tuple[str, int] = self._socket.getsockname()
+        self.ipv6 = self._socket.family == socket.AF_INET6
+        self.local_addr: Tuple[str, int] = normalize_address(self._socket.getsockname())
         self._rx_timestamps = self._enable_rx_timestamps()
+        self.raw_handler: Optional[Callable[[bytes, Tuple[str, int]], object]] = None
 
         # Packet sequencing (per peer: a receiver sees a gap-free stream
         # unless packets are lost, which is what loss counting relies on)
@@ -191,7 +201,7 @@ class UDPTransport:
             data = packet.to_bytes()
             if len(data) > MAX_PACKET_SIZE:
                 return False  # Packet too large
-            self._socket.sendto(data, address)
+            self._socket.sendto(data, self._sockaddr(address))
             self._sequences[address] = sequence + 1
             self.last_send_bytes = len(data)
             self.link(address).on_send(len(data))
@@ -199,38 +209,68 @@ class UDPTransport:
         except (OSError, socket.error):
             return False
 
+    def send_raw(self, data: bytes, address: Tuple[str, int]) -> bool:
+        """Send bytes as they are (STUN), outside the game protocol."""
+        try:
+            self._socket.sendto(data, self._sockaddr(address))
+            return True
+        except (OSError, socket.error, ValueError):
+            return False
+
+    def _sockaddr(self, address: Tuple[str, int]) -> Tuple:
+        """The socket address for a peer: IPv4 is v4-mapped on the dual-stack socket."""
+        host, port = address[0], address[1]
+        if not self.ipv6:
+            return (host, port)
+        if ":" in host:
+            return (host, port, 0, 0)
+        return ("::ffff:" + host, port, 0, 0)
+
     def receive(self) -> Optional[Tuple[Message, Tuple[str, int], PacketHeader]]:
         """Receive a message if one is available.
 
         Non-blocking: returns None immediately if no message is waiting.
+        STUN packets go to ``raw_handler`` and are skipped.
 
         Returns:
             Tuple of (message, sender_address, header) if a message was received,
             None if no message available or packet was malformed.
         """
-        try:
-            if self._rx_timestamps:
-                data, ancdata, _flags, addr = self._socket.recvmsg(MAX_PACKET_SIZE, socket.CMSG_SPACE(_TIMEVAL_BYTES))
-                arrival = _kernel_arrival(ancdata)
-            else:
-                data, addr = self._socket.recvfrom(MAX_PACKET_SIZE)
-                arrival = 0.0
-            packet = Packet.from_bytes(data)
+        while True:
+            try:
+                if self._rx_timestamps:
+                    data, ancdata, _flags, sockaddr = self._socket.recvmsg(
+                        MAX_PACKET_SIZE, socket.CMSG_SPACE(_TIMEVAL_BYTES)
+                    )
+                    arrival = _kernel_arrival(ancdata)
+                else:
+                    data, sockaddr = self._socket.recvfrom(MAX_PACKET_SIZE)
+                    arrival = 0.0
+            except BlockingIOError:
+                return None  # No data available
+            except (OSError, socket.error):
+                return None  # Socket error
+            addr = normalize_address(sockaddr)
+            if is_stun(data):
+                if self.raw_handler is not None:
+                    self.raw_handler(data, addr)
+                continue
+            return self._accept(data, addr, arrival)
 
-            if packet is None:
-                return None  # Malformed packet
+    def _accept(
+        self, data: bytes, addr: Tuple[str, int], arrival: float
+    ) -> Optional[Tuple[Message, Tuple[str, int], PacketHeader]]:
+        """Parse a game packet and update the peer's ack tracking and link statistics."""
+        packet = Packet.from_bytes(data)
+        if packet is None:
+            return None  # Malformed packet
 
-            # Update ack tracking and link statistics for this peer
-            self._update_ack_tracking(addr, packet.header.sequence)
-            self.last_arrival = arrival or time.time()
-            self.link(addr).on_receive(packet.header.sequence, len(data), self.last_arrival, packet.header.time)
+        # Update ack tracking and link statistics for this peer
+        self._update_ack_tracking(addr, packet.header.sequence)
+        self.last_arrival = arrival or time.time()
+        self.link(addr).on_receive(packet.header.sequence, len(data), self.last_arrival, packet.header.time)
 
-            return (packet.message, addr, packet.header)
-
-        except BlockingIOError:
-            return None  # No data available
-        except (OSError, socket.error):
-            return None  # Socket error
+        return (packet.message, addr, packet.header)
 
     def _update_ack_tracking(self, addr: Tuple[str, int], sequence: int) -> None:
         """Update ack tracking when a packet is received from a peer."""
@@ -310,6 +350,58 @@ class UDPTransport:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
+
+
+def _bind(host: str, port: int) -> socket.socket:
+    """A UDP socket bound to host:port; "::" is dual stack, IPv4 only without IPv6."""
+    if ":" in host and socket.has_ipv6:
+        try:
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+            try:
+                if host == "::":
+                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+                sock.bind((host, port))
+                return sock
+            except OSError:
+                sock.close()
+                if host != "::":
+                    raise
+        except OSError:
+            if host != "::":
+                raise
+        host = "0.0.0.0"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((host, port))
+    return sock
+
+
+def normalize_address(sockaddr: Tuple) -> Tuple[str, int]:
+    """(host, port) for any socket address: v4-mapped IPv6 becomes plain IPv4,
+    IPv6 is written in its canonical (compressed, lower case) form."""
+    host, port = sockaddr[0], sockaddr[1]
+    if host.startswith("::ffff:") and "." in host:
+        return host[7:], port
+    if ":" in host and "%" not in host:
+        try:
+            host = socket.inet_ntop(socket.AF_INET6, socket.inet_pton(socket.AF_INET6, host))
+        except OSError:
+            pass
+    return host, port
+
+
+def resolve_address(host: str, port: int) -> Tuple[str, int]:
+    """A peer address as receive() will report it: numeric and normalized.
+
+    Host names are resolved once (blocking DNS); an unresolvable name is
+    returned as it is, so sending to it simply fails.
+    """
+    try:
+        infos = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_DGRAM)
+    except (OSError, UnicodeError):
+        return host, port
+    # Prefer IPv4 for names like "localhost" that resolve to both
+    infos.sort(key=lambda info: info[0] != socket.AF_INET)
+    return normalize_address(infos[0][4])
 
 
 def _kernel_arrival(ancdata) -> float:

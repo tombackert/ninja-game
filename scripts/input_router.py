@@ -117,6 +117,11 @@ class InputRouter:
         join_rules.extend(bind(menu_binds.get("menu_select", []), "menu_select"))
         join_rules.extend(bind(menu_binds.get("menu_quit", []), "menu_quit"))
 
+        # FriendsState types friend codes (letters), so only the arrow keys move
+        friends_rules: List[Rule] = list(join_rules)
+        friends_rules.extend(bind([pygame.K_UP], "menu_up"))
+        friends_rules.extend(bind([pygame.K_DOWN], "menu_down"))
+
         self._rules.update(
             {
                 "MenuState": menu_rules,
@@ -130,6 +135,8 @@ class InputRouter:
                 "MultiplayerGameState": mp_game_rules,
                 "MultiplayerMenuState": menu_rules,
                 "JoinGameState": join_rules,
+                "FriendsState": friends_rules,
+                "JoiningState": join_rules,
             }
         )
 
