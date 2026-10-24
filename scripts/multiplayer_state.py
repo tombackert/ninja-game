@@ -697,6 +697,7 @@ class MultiplayerGameState(State):
         g = self._game
         started = time.perf_counter()
         predicted = list(player.pos)
+        lives_before = player.lives
 
         # Rewind to authoritative state
         self._snap_player_to_state(player, p_snap)
@@ -733,6 +734,12 @@ class MultiplayerGameState(State):
         # The position is set hard, so every error above CORRECTION_PX is a
         # snap the player sees
         self._netstats.add("reconcile_ms", (time.perf_counter() - started) * 1000.0)
+        if err > CORRECTION_PX and p_snap.lives != lives_before:
+            # Died on the server and respawned: a teleport the game shows on
+            # purpose, not a prediction error
+            self._netstats.count("respawns")
+            self._netstats.event("respawn", tick=self._last_applied_tick, px=round(err, 1))
+            return
         self._netstats.add("reconcile_px", err)
         if err > MISPREDICT_PX:
             self._netstats.count("mispredictions")

@@ -223,6 +223,28 @@ class TestReconciliation:
         assert state._stats["reconcile_error_px"] == 30.0
         assert state._stats["reconcile_max_px"] == 30.0
 
+    def test_a_respawn_is_not_counted_as_a_snap(self):
+        from scripts.multiplayer_state import MultiplayerGameState
+
+        state = MultiplayerGameState()
+        mock_player = MagicMock()
+        mock_player.pos = [300.0, 20.0]
+        mock_player.action = "idle"
+        mock_player.lives = 2  # the server respawned it with full lives
+
+        state._client = MagicMock()
+        state._client.get_unacknowledged_inputs.return_value = {}
+        state._game = MagicMock()
+        state._game.tilemap = MagicMock()
+
+        state._reconcile_local_player(mock_player, self._server_snap())
+
+        sample = state._netstats.take_sample()
+        assert sample.get("corrections", 0) == 0
+        assert sample.get("mispredictions", 0) == 0
+        assert sample["respawns"] == 1
+        assert mock_player.pos == [100.0, 100.0]
+
 
 class TestPauseNetworking:
     """While paused, the connection must stay alive with neutral inputs."""

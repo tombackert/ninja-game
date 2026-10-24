@@ -195,7 +195,7 @@ second; counters are the count in that second.
 | `link_*` | Packet level from the client's side: `link_lost`, `link_loss_pct`, `link_jitter_ms` for server-to-client, `link_rx_bytes`, `link_tx_bytes`, `link_tx_oversize` (packets > 1200 B) |
 | `view_age_ms_*` | How old the rendered other players and enemies are: half the RTT + interpolation delay + age of the newest snapshot |
 | `interp_delay_ms` | Current adaptive interpolation delay |
-| `reconcile_px_*`, `mispredictions`, `corrections` | How far reconciliation moved the own ninja; mispredictions > 0.5 px, corrections > 2 px (a visible snap) |
+| `reconcile_px_*`, `mispredictions`, `corrections`, `respawns` | How far reconciliation moved the own ninja; mispredictions > 0.5 px, corrections > 2 px (a visible snap); a move while the lives change is a respawn, not counted as a snap |
 | `reconcile_ms_*` | CPU time of rewind and replay |
 | `freeze_ms_*`, `freezes` | How long a remote player stood still while it should move; freezes of 50 ms or more |
 | `frame_ms_*`, `frame_hitches` | Real frame intervals; hitches > 25 ms |
@@ -217,6 +217,6 @@ Since every client sends its summary with its heartbeat, the host's server
 log alone shows how the session went for every player.
 
 **Events:** client `connected`, `joined` (with ms since connecting),
-`net_stall`, `correction` (> 8 px), `remote_freeze`, `client_hitch`
+`net_stall`, `correction` (> 8 px), `respawn`, `remote_freeze`, `client_hitch`
 (> 50 ms), `disconnected`; server `client_joined`, `client_left`,
 `input_stall`, `server_hitch`.
