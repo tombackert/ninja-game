@@ -1,7 +1,7 @@
 # Online Benchmark Brainstorm
 
 **Date:** 2026-10-23
-**Status:** `NetStats` core (section 12), netbench (section 13), the own-ninja snap fix (section 14) and the gap-sized interpolation delay (section 15) implemented; next: deltas against the acked snapshot, HUD
+**Status:** `NetStats` core (section 12), netbench (section 13), own-ninja snap fix (section 14), gap-sized interpolation delay (section 15), deltas against the acked snapshot (section 16) and the F2 HUD implemented; next: connectivity
 
 The online mode works on loopback and over the LAN (see [multiplayer.md](multiplayer.md)). The goal now is to make it reliably playable over the internet with friends. This document collects the first step: what to measure, how to see it live, and how to benchmark it reproducibly, so every netcode change is backed by numbers the way the single-player suite ([BENCHMARKS.md](../BENCHMARKS.md)) backs frame-time changes.
 
@@ -299,3 +299,23 @@ The overshoot is gone: the delay no longer climbs to the cap, the worst bad_wlan
 **The gaps the buffer covers are mostly not the network's.** In the run with the 266 ms freeze the delay grew to 18 ticks (300 ms), although no two snapshot packets arrived more than 151 ms apart: the newest *reconstructed* snapshot stood still for 17 frames while packets kept arriving. Deltas are computed against the server's previous broadcast, so one lost delta makes every following delta unusable until the full snapshot the client requests arrives: one round trip plus up to one broadcast, more if the request or the full is lost (6a predicted this). Per bad_wlan run the network lost 8-14 snapshot packets, and the client threw away 17-41 deltas and needed 6-15 extra full snapshots on top of the 20 forced ones. A lost packet costs ~100-250 ms of standstill instead of 33 ms, and a buffer sized to cover that makes the view old.
 
 **Next: deltas against the acked snapshot** (as Quake 3 does). Every input carries the newest snapshot tick the client has reconstructed; the server keeps its last broadcasts and computes each client's delta against that one. A lost packet then only makes the next delta a little larger, no request and no full snapshot needed, and the forced full snapshot every 30 broadcasts can go.
+
+## 16. Fix: Deltas Against the Acked Snapshot
+
+`e12c5cd` computes each client's delta against the newest snapshot the client has acked (`snap` in every input) instead of the previous broadcast, and drops the forced full snapshot every 30 broadcasts. Netbench reference `e12c5cd` against `3515053`, median of 3 runs of 20 s, bad_wlan also over 6 more runs each:
+
+| | loopback | internet | wlan | bad_wlan | bad_wlan, 6 runs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **Friend: view age p95** | 87 -> 87 ms | 171 -> **100** | 192 -> **112** | 271 -> **181** | 279 -> **182** |
+| Friend: view age p95, range over the runs | 85-88 -> 84-87 | 161-172 -> 94-105 | 177-215 -> 110-114 | 206-336 -> 155-186 | 242-373 -> **150-214** |
+| **Runs in which the friend sees the host freeze** | 0 -> 0 | 0 -> 0 | 0 -> 0 | 2 of 3 -> **0** | 3 of 6 -> **0** |
+| Longest freeze seen by the friend, median | 15 -> 18 ms | 17 -> 17 | 17 -> 17 | 150 -> **0** | 66 -> **19** |
+| **Largest packet** | 2525 -> **1174 B** | 2418 -> 1156 | 2490 -> 1129 | 2547 -> 1220 | 2544 -> 1138 |
+| Bandwidth to the friend | 241 -> 227 kbit/s | 235 -> 230 | 235 -> 217 | 240 -> 217 | 240 -> 218 |
+| Own ninja snaps, host sees friend freeze | 0 -> 0 | 0 -> 0 | 0 -> 0 | 0 -> 0 | 0 -> 0 |
+
+The diagnosis of section 15 holds: with a lost packet costing one snapshot instead of a round trip, the interpolation buffer only has to cover the network's own gaps. The friend now sees the world 70-90 ms younger on every internet profile, and the bad_wlan freezes are gone. The full snapshot every second was the largest packet; without it, the largest packet drops from ~2.5 KB to ~1.1-1.2 KB, below the 1200 B guardrail in most runs (largest single run: 1354 B), so fragmentation on internet paths (6a) mostly disappears as a side effect. Deltas against an older base are not noticeably larger.
+
+One loopback run logged an 80 px "snap" of the friend's ninja. It came with no stall, loss or misprediction around it; reconciliation counted the server's respawn teleport as a prediction error. Respawns are now counted on their own (`respawns`, `respawn` event) and stay out of the snap metrics.
+
+Ticks without a new host input (host on loopback) reached 11-23 % in 3 of the 6 bad_wlan runs; the earlier sets had the same in single runs (22 %, 29 %). It is the phase effect of section 13 on the host's own line; with one step per input it causes no snaps.
