@@ -2,10 +2,12 @@
 
 Plays random inputs on real maps with the real `Game` / `Player` (headless)
 and the replica side by side, and fails on the first frame where position,
-velocity or any movement state differs.
+velocity or any movement state differs. With --route both are put down at
+a random point of the level's planned route every 300 frames, so the
+random player also reaches what lies far from the spawn (currents, say).
 
 Usage:
-    python -m tools.worlds.check_physics [--maps 8 9 10] [--frames 20000]
+    python -m tools.worlds.check_physics [--maps 8 9 10] [--frames 20000] [--route]
 """
 
 from __future__ import annotations
@@ -39,15 +41,40 @@ def real_state(p) -> tuple:
     )
 
 
-def check_map(game, map_id, frames: int, seed: int) -> int:
+def set_state(p, s: tuple) -> None:
+    """Put the real player into replica state `s`."""
+    p.pos = [s[ph.X], s[ph.Y]]
+    p.velocity = [s[ph.VX], s[ph.VY]]
+    p.air_time, p.jumps, p.wall_slide, p.dashing, p.flip = s[ph.AIR : ph.LASTM]
+    p.last_movement = (s[ph.LASTM], 0)
+    p.breath, p.swim_cooldown = s[ph.BREATH], s[ph.SWIM]
+
+
+def route_states(map_id, solids) -> list:
+    """Replica state after every frame of the level's planned route."""
+    from tools.worlds.route import load_plan
+
+    data = load_plan(int(map_id))
+    states = [ph.spawn_state(*data["spawn"])]
+    for m, j, d in data["frame_list"]:
+        states.append(ph.apply_frame(states[-1], m, j, d, solids)[0])
+    return states
+
+
+def check_map(game, map_id, frames: int, seed: int, route: bool = False) -> int:
     game.load_level(map_id)
     solids = ph.Terrain(ph.solids_from_map(game.tilemap.tilemap), game.tilemap.water)
     p = game.player
     s = real_state(p)
     rng = random.Random(seed)
+    spots = route_states(map_id, solids) if route else []
     m, hold = 0, 0
-    wet = 0
+    wet = currents = 0
     for f in range(frames):
+        if spots and f % 300 == 0:
+            game.dead = 0
+            s = rng.choice(spots)
+            set_state(p, s)
         if hold <= 0:
             m = rng.choice((-1, 0, 1, 1, -1))
             hold = rng.randint(1, 40)
@@ -63,6 +90,7 @@ def check_map(game, map_id, frames: int, seed: int) -> int:
         game.step()
         s, _down, dead = ph.apply_frame(s, m, jump, dash, solids)
         wet += p.water is not None
+        currents += bool(p.water)
         r = real_state(p)
         if r != s:
             print(f"map {map_id} frame {f}: MISMATCH\n real    {r}\n replica {s}")
@@ -75,7 +103,8 @@ def check_map(game, map_id, frames: int, seed: int) -> int:
             p.air_time = 0
             p.breath = ph.BREATH_FRAMES
             s = real_state(p)
-    print(f"map {map_id}: {frames} frames identical" + (f" ({wet} of them in water)" if wet else ""))
+    water = f" ({wet} of them in water, {currents} in a current)" if wet else ""
+    print(f"map {map_id}: {frames} frames identical{water}")
     return 0
 
 
@@ -84,6 +113,7 @@ def main() -> int:
     ap.add_argument("--maps", nargs="+", default=["8", "9", "10"])
     ap.add_argument("--frames", type=int, default=20000)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--route", action="store_true", help="also start from points of the planned route")
     args = ap.parse_args()
 
     from game import Game
@@ -91,7 +121,7 @@ def main() -> int:
     game = Game(fullscreen=False)
     fails = 0
     for i, map_id in enumerate(args.maps):
-        fails += check_map(game, map_id, args.frames, args.seed + i)
+        fails += check_map(game, map_id, args.frames, args.seed + i, args.route)
     return 1 if fails else 0
 
 
