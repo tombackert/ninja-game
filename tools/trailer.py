@@ -93,7 +93,7 @@ TIMELINE: list[Shot | Card] = [
     Shot(level=5, start=2368, frames=52, caption="5 WEAPONS TO UNLOCK", weapon="Ninja Stars", fire=(2376,)),
     Shot(level=3, start=80, frames=40, caption="5 WEAPONS TO UNLOCK", weapon="Sword", fire=(94,)),
     Shot(level=4, start=3120, frames=50, caption="5 WEAPONS TO UNLOCK", weapon="Grapple Hook", fire=(3132,)),
-    Shot(level=21, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
+    Shot(level=26, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
     Shot(level=4, start=1570, frames=45, caption="21 HAND-BUILT LEVELS"),
     Shot(level=6, start=825, frames=45, caption="21 HAND-BUILT LEVELS"),
     Shot(level=5, start=2070, frames=45, caption="21 HAND-BUILT LEVELS"),
