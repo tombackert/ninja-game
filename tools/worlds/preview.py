@@ -50,6 +50,16 @@ def render(map_path: str, out: str, scale: float = 0.5, route=None, path_px=None
         surf.blit(img(t["type"], t["variant"]), (t["pos"][0] - x0 * ts, t["pos"][1] - y0 * ts))
     for t in tiles:
         surf.blit(img(t["type"], t["variant"]), ((t["pos"][0] - x0) * ts, (t["pos"][1] - y0) * ts))
+    if m.get("water"):
+        from scripts.water import WATER_COLOR, water_from_rows
+
+        water = pygame.Surface((ts, ts), pygame.SRCALPHA)
+        water.fill(WATER_COLOR + (120,))
+        for (tx, ty), flow in water_from_rows(m["water"]).items():
+            surf.blit(water, ((tx - x0) * ts, (ty - y0) * ts))
+            if flow:  # currents as their editor icon, small
+                icon = pygame.transform.scale(img("water", flow), (ts // 2, ts // 2))
+                surf.blit(icon, ((tx - x0) * ts + ts // 4, (ty - y0) * ts + ts // 4))
     font = pygame.font.Font(None, 16)
     for gx in range(x0 - x0 % 10, x1, 10):
         pygame.draw.line(surf, (255, 255, 255), ((gx - x0) * ts, 0), ((gx - x0) * ts, H), 1)

@@ -1,11 +1,11 @@
-"""Small level-building toolkit for the hand-designed worlds (levels 11-20).
+"""Small level-building toolkit for the hand-designed worlds (levels 11-25).
 
-A `Level` is a tile grid plus spawners, enemies, coins, decor and the
-intended route (waypoints for tools/worlds/route.py). The element helpers
-stamp the parametric building blocks the worlds are made of: wall-jump
-chimneys, zigzag shafts, box stairs, pillar runs, dash gaps, low-ceiling
-corridors and labyrinths. `save()` autotiles and writes the map JSON in the
-format `Tilemap.load` reads.
+A `Level` is a tile grid plus spawners, enemies, coins, decor, water and
+the intended route (waypoints for tools/worlds/route.py). The element
+helpers stamp the parametric building blocks the worlds are made of:
+wall-jump chimneys, zigzag shafts, box stairs, pillar runs, dash gaps,
+low-ceiling corridors and labyrinths. `save()` autotiles and writes the map
+JSON in the format `Tilemap.load` reads.
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ import os
 import random
 from collections import deque
 
+from scripts.water import water_to_rows
+from tools.worlds.physics import Terrain
 from tools.worlds.planner import Waypoint
 
 AUTOTILE_MAP = {
@@ -30,7 +32,21 @@ AUTOTILE_MAP = {
 }
 
 # Pixel sizes of tiles/large_decor/<variant>.png (offgrid decor sits on the ground)
-LARGE_DECOR_SIZE = {0: (31, 9), 1: (25, 12), 2: (33, 44), 3: (19, 22), 4: (21, 7), 5: (26, 10)}
+LARGE_DECOR_SIZE = {
+    0: (31, 9),
+    1: (25, 12),
+    2: (33, 44),
+    3: (19, 22),
+    4: (21, 7),
+    5: (26, 10),
+    6: (13, 42),
+    7: (26, 18),
+    8: (17, 22),
+    9: (19, 13),
+}
+
+# Water flows (scripts/water.py)
+STILL, RIGHT, LEFT, UP, DOWN = range(5)
 
 
 def autotile_variant(nb: set) -> int:
@@ -68,6 +84,7 @@ class Level:
         self.solid: dict[tuple[int, int], str] = {}
         self.objects: dict[tuple[int, int], tuple[str, int]] = {}  # coins, spawners, flag, decor
         self.offgrid: list[dict] = []
+        self.water_tiles: dict[tuple[int, int], int] = {}  # (x, y) -> flow
         self.route: list[Waypoint] = []
         self.spawn_tile: tuple[int, int] | None = None
 
@@ -85,6 +102,20 @@ class Level:
 
     def is_solid(self, x, y) -> bool:
         return (x, y) in self.solid
+
+    # --- water -----------------------------------------------------------
+    def water(self, x0, y0, x1, y1, flow: int = STILL):
+        """Flood tiles x0..x1, y0..y1 (inclusive). Rock inside it is flooded too:
+        it never holds a swimmer, but it is drawn as under water."""
+        for x in range(min(x0, x1), max(x0, x1) + 1):
+            for y in range(min(y0, y1), max(y0, y1) + 1):
+                self.water_tiles[(x, y)] = flow
+
+    def drain(self, x0, y0, x1, y1):
+        """Take the water out of tiles x0..x1, y0..y1: an air pocket."""
+        for x in range(min(x0, x1), max(x0, x1) + 1):
+            for y in range(min(y0, y1), max(y0, y1) + 1):
+                self.water_tiles.pop((x, y), None)
 
     # --- objects ---------------------------------------------------------
     def _obj(self, x, y, kind, variant=0):
@@ -145,10 +176,13 @@ class Level:
         }
         if self.background:
             meta["background"] = self.background
+        map_data = {"tilemap": tilemap, "tile_size": 16, "offgrid": self.offgrid}
+        if self.water_tiles:
+            map_data["water"] = water_to_rows(self.water_tiles)
         return {
             "meta_data": meta,
             "entities_data": {"players": [], "enemies": []},
-            "map_data": {"tilemap": tilemap, "tile_size": 16, "offgrid": self.offgrid},
+            "map_data": map_data,
         }
 
     def save(self, maps_dir: str = "data/maps") -> str:
@@ -157,8 +191,8 @@ class Level:
             json.dump(self.to_json(), f, separators=(",", ":"))
         return path
 
-    def solids(self) -> set:
-        return set(self.solid)
+    def solids(self) -> Terrain:
+        return Terrain(self.solid, dict(self.water_tiles))
 
     def stats(self) -> dict:
         xs = [x for x, _ in self.solid]

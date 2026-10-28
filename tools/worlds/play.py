@@ -334,6 +334,8 @@ class Bot:
             p.dashing,
             p.flip,
             p.last_movement[0],
+            p.breath,
+            p.swim_cooldown,
         )
         down = p.collisions["down"]
         u = self.updates
@@ -424,7 +426,7 @@ class Bot:
         options = []
         if s[ph.DASH] == 0:
             options.append([(m, False, True)] + [(m, False, False)] * 10)
-        if ph.can_jump(s):
+        if ph.can_jump(s, self.solids):
             options.append([(m, True, False)] + [(m, False, False)] * 14)
             options.append([(0, True, False)] + [(0, False, False)] * 14)
         options.append([(0, False, False)] * 12)
@@ -556,7 +558,7 @@ def bot_main(level: int, out: str, video: bool) -> int:
 
     # Precomputed route: state after every update, segment of every frame
     with open(os.path.join("data", "maps", f"{level}.json")) as f:
-        solids = ph.solids_from_map(json.load(f)["map_data"]["tilemap"])
+        solids = ph.terrain_from_map(json.load(f)["map_data"])
     s = ph.spawn_state(*data["spawn"])
     pre_states = [s]
     for m, j, d in plan:

@@ -72,6 +72,8 @@ def _key(s: tuple, down: bool) -> tuple:
         dash_bucket,
         s[ph.FLIP],
         s[ph.LASTM],
+        s[ph.BREATH] // 60,
+        s[ph.SWIM],
         down,
     )
 
@@ -108,7 +110,7 @@ def plan_segment(
         _f, _t, g, nid = heapq.heappop(heap)
         s, down, _parent, _act = nodes[nid]
         expanded += 1
-        jumps = (False, True) if ph.can_jump(s) else (False,)
+        jumps = (False, True) if ph.can_jump(s, solids) else (False,)
         dashes = (False, True) if (allow_dash and s[ph.DASH] == 0) else (False,)
         for m in (1, -1, 0):
             for jump in jumps:

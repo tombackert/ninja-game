@@ -34,16 +34,19 @@ def real_state(p) -> tuple:
         p.dashing,
         p.flip,
         p.last_movement[0],
+        p.breath,
+        p.swim_cooldown,
     )
 
 
 def check_map(game, map_id, frames: int, seed: int) -> int:
     game.load_level(map_id)
-    solids = ph.solids_from_map(game.tilemap.tilemap)
+    solids = ph.Terrain(ph.solids_from_map(game.tilemap.tilemap), game.tilemap.water)
     p = game.player
     s = real_state(p)
     rng = random.Random(seed)
     m, hold = 0, 0
+    wet = 0
     for f in range(frames):
         if hold <= 0:
             m = rng.choice((-1, 0, 1, 1, -1))
@@ -59,6 +62,7 @@ def check_map(game, map_id, frames: int, seed: int) -> int:
         game.movement = [m < 0, m > 0]
         game.step()
         s, _down, dead = ph.apply_frame(s, m, jump, dash, solids)
+        wet += p.water is not None
         r = real_state(p)
         if r != s:
             print(f"map {map_id} frame {f}: MISMATCH\n real    {r}\n replica {s}")
@@ -69,8 +73,9 @@ def check_map(game, map_id, frames: int, seed: int) -> int:
             p.pos = list(p.respawn_pos)
             p.velocity = [0, 0]
             p.air_time = 0
+            p.breath = ph.BREATH_FRAMES
             s = real_state(p)
-    print(f"map {map_id}: {frames} frames identical")
+    print(f"map {map_id}: {frames} frames identical" + (f" ({wet} of them in water)" if wet else ""))
     return 0
 
 

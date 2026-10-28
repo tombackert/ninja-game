@@ -38,9 +38,8 @@ TOLERANCE = 10  # px
 
 def load_map(map_id: int):
     with open(f"data/maps/{map_id}.json") as f:
-        tiles = list(json.load(f)["map_data"]["tilemap"].values())
-    solids = {(t["pos"][0], t["pos"][1]) for t in tiles if t["type"] in ph.PHYSICS_TILES}
-    return solids, tiles
+        map_data = json.load(f)["map_data"]
+    return ph.terrain_from_map(map_data), list(map_data["tilemap"].values())
 
 
 def route_from_replay(map_id: int, every: int = 45):
@@ -150,7 +149,7 @@ def piece_fail_rate(states, frames, a, b, solids, kill_y, rng, sigma, samples) -
         for i, (m, j, d) in enumerate(inputs):
             if j:
                 pending_jump = 6  # pressed again for a few frames if it had no effect
-            jump = pending_jump > 0 and ph.can_jump(s)
+            jump = pending_jump > 0 and ph.can_jump(s, solids)
             if jump:
                 pending_jump = 0
             elif pending_jump:
@@ -174,7 +173,7 @@ def profile(map_id: int, sigma: float, chunk: int, samples: int, resample: bool 
     for i, (m, j, d) in enumerate(frames):
         s = teleports.get(i, states[-1])
         states[-1] = s
-        if j and ph.can_jump(s):
+        if j and ph.can_jump(s, solids):
             if s[ph.WALL]:
                 walljumps += 1
             else:
