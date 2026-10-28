@@ -33,7 +33,8 @@ That's it: Python 3.10+ is the only requirement (pygame-ce is installed automati
 - **Ghost replays**: every run is recorded, so you can race a ghost of your best (or last) run
 - **Multiplayer**: host from the menu and friends join by IP, with server-authoritative UDP netcode, client-side prediction and interpolation ([details](docs/multiplayer.md))
 - **Store & accessories**: spend coins on 5 weapons (gun, rifle, ninja stars, sword, grapple hook), 4 gear items (shield, moon boots, coin magnet, lucky charm) and 6 skins
-- **21 hand-built levels** across sky, cave, desert and Mars worlds, with best times per level, plus a **level editor** to build your own
+- **26 hand-built levels** across sky, cave, desert, Mars and water worlds, with best times per level, plus a **level editor** to build your own
+- **Water world**: swim with strokes, ride currents and geysers, dodge drains and come up for air before your breath runs out (levels 21-25)
 - **Deterministic simulation**: a seeded RNG and a single `step()` drive live play, replays, netcode prediction and training alike
 - **Gym-style RL environment**: `reset()` / `step()`, feature observations and shaped rewards, headless
 - **Performance HUD** (F1): frame times, hitches and entity counts in real time
@@ -45,7 +46,7 @@ That's it: Python 3.10+ is the only requirement (pygame-ce is installed automati
 | Action | Single player | Multiplayer |
 |--------|---------------|-------------|
 | Move | A / D or ← / → | A / D or ← / → |
-| Jump (press again in the air for a double jump; against a wall for a wall-jump) | W / ↑ | W / ↑ |
+| Jump (press again in the air for a double jump; against a wall for a wall-jump; under water a swim stroke) | W / ↑ | W / ↑ |
 | Dash | Space / right mouse button | Space / X |
 | Shoot (needs a weapon from the store) | X / left mouse button | C |
 | Restart from checkpoint (costs a life) | R | |
@@ -102,6 +103,7 @@ ninja-editor        # or: python editor.py
 | Toggle grid snapping | G |
 | Auto-tile edges | T |
 | Multi-tile brush (Space + wheel sets the size) | M |
+| Water: pick the `water` group, Shift + wheel picks still water or a current (→ ← ↑ ↓) | Mouse wheel |
 | Save / save and quit | O / Esc |
 
 ## Installation details
@@ -195,13 +197,15 @@ python -m tools.bench --save     # record this run as the new baseline (BENCHMAR
 
 ### Building the worlds
 
-Levels 11-20 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
+Levels 11-25 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
 
 ```bash
 python -m tools.worlds.build 14 --preview out/   # write the map, plan its route, render an overview
 python -m tools.worlds.play 14 --video           # play it in the real game window: menu, keyboard, live enemies
 python -m tools.worlds.assess 9 14 --resample    # compare its difficulty with level 9
+python -m tools.worlds.check_physics --maps 21 22 --route  # the physics replica against the real game
 python tools/gen_world_tiles.py                  # redraw the sand and mars tiles, decor and skies
+python tools/gen_water_world.py                  # redraw the water world: tiles, water, decor, swim cycle, skies
 ```
 
 ### Rendering the trailer

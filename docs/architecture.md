@@ -196,7 +196,7 @@ The `Renderer` (`scripts/renderer.py`) ensures consistent draw order:
 1.  **Clear:** Wipe buffer.
 2.  **Background:** Parallax layers.
 3.  **Ghosts:** Rendered via `ReplayManager` (tinted, semi-transparent).
-4.  **World:** Tilemap, Entities, Particles (via UI helper).
+4.  **World:** Tilemap, Entities, Particles (via UI helper). On water levels the sea is drawn behind the tiles first (dense, darker with depth) and a light tint, the wave crest, currents and breath meters over them last.
 5.  **Effects (Pre):** Transitions.
 6.  **HUD:** UI overlays.
 7.  **PerfOverlay:** Optional debug metrics (F1).
@@ -309,12 +309,12 @@ class ServiceContainer:
 
 ### PhysicsEntity Base Class
 **Granular Physics Steps (for determinism):**
-1. `begin_update()` - Reset collision flags.
-2. `compute_frame_movement(movement)` - Calculate next position.
+1. `begin_update()` - Reset collision flags; `update()` then reads the water at the start position (`water_flow`).
+2. `compute_frame_movement(movement)` - Calculate next position (in water: slower, plus the current's push).
 3. `apply_horizontal_movement(tilemap, frame_movement)` - X-axis collision.
 4. `apply_vertical_movement(tilemap, frame_movement)` - Y-axis collision.
 5. `update_orientation(movement)` - Face direction.
-6. `apply_gravity()` - Gravity acceleration & velocity clamp.
+6. `apply_gravity()` - Gravity acceleration & velocity clamp (in water: drag and a slow sink).
 7. `finalize_update()` - Animation advance.
 
 ### Player Abilities
@@ -322,6 +322,10 @@ class ServiceContainer:
 - **Wall-slide:** Reduced fall speed when sliding on walls.
 - **Dash:** Burst movement with deceleration and invulnerability frames.
 - **Shoot:** Projectile spawning with cooldown.
+- **Swim (water world):** Under water a jump is a swim stroke (with a cooldown), at the surface a leap out. No fall death in water, but `breath` runs down while the eyes are under water and drowning costs the same respawn as a fall.
+
+### Water Layer (`scripts/water.py`)
+Water is a layer of its own beside the tile grid (`Tilemap.water`, `{(tx, ty): flow}`), so coins, enemies and decor can sit in it; maps store it as runs `[ty, tx0, tx1, flow]` under `map_data.water`. A flow is still water (0) or a current to the right, left, up or down (1-4, `WATER_CURRENTS`). Everything in water moves at `WATER_MOVE_SCALE`, and a current pushes it every frame. Dry levels take none of the water branches, so their physics is unchanged (`tools/worlds/check_physics.py` compares the real game with an exact replica frame by frame).
 
 ### Physics Constants (`scripts/constants.py`)
 - `GRAVITY_ACCEL = 0.1`
@@ -331,6 +335,9 @@ class ServiceContainer:
 - `DASH_DURATION_FRAMES = 60`
 - `DASH_SPEED = 8`
 - `PROJECTILE_SPEED = 3.5`
+- `WATER_GRAVITY = 0.05`, `WATER_DRAG = 0.94`, `WATER_MAX_SINK = 1.5`
+- `SWIM_STROKE_VELOCITY = -2.0`, `SWIM_STROKE_COOLDOWN = 12`
+- `BREATH_FRAMES = 720`
 
 ---
 ## 15. UI & Widget System
