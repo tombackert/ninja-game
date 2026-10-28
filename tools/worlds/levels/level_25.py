@@ -3,8 +3,8 @@
 The finale puts it all together: sea stacks over the open sea, a drain
 that drags the swimmer to the bottom of a trench, a long run along its
 floor where a current first carries and then pushes back (rocks to
-shelter behind, air domes in the roof), a geyser up the whole depth and
-a dry climb up a holed sea stack to the flag over the waves.
+shelter behind, air domes in the roof), a geyser up the whole depth, a
+dry climb up a holed sea stack and pillars across the summit to the flag.
 """
 
 from tools.worlds.builder import DOWN, LEFT, RIGHT, UP, Level, holed_chimney, pillar_run
@@ -56,6 +56,8 @@ def build() -> Level:
     for x in (64, 72, 80):
         lv.big_decor(x, DEEP - 1, 6)
     lv.wp(70, DEEP - 6, 73, DEEP - 1, label="carried")
+    for x in (68, 82):
+        lv.enemy(x, DEEP - 1)
     lv.carve(86, DEEP - 13, 90, DEEP - 9)  # second air dome
     lv.drain(86, DEEP - 13, 90, DEEP - 10)
     lv.wp(86, DEEP - 10, 90, DEEP - 9, label="second air")
@@ -87,11 +89,14 @@ def build() -> Level:
     lv.rect(125, SEA - 1, 134, BOTTOM)  # ledge at the surface
     lv.wp(125, SEA - 2, 128, SEA - 2, ground=True, label="ledge")
     lv.enemy(131, SEA - 2)
-    holed_chimney(lv, 135, 4, SEA - 22, SEA - 1, rests=[(1, SEA - 9), (-1, SEA - 15)], label="sea stack")
-    lv.rect(135, SEA - 1, 154, BOTTOM)
-    lv.rect(142, SEA - 22, 152, SEA - 21)  # the summit
+    holed_chimney(lv, 135, 4, SEA - 22, SEA - 1, rests=[(1, SEA - 12)], label="sea stack")
+    lv.rect(135, SEA - 1, 167, BOTTOM)
+    lv.rect(142, SEA - 22, 146, SEA - 21)  # the summit, then pillars over the drop
     lv.wp(142, SEA - 23, 145, SEA - 23, ground=True, label="summit")
-    lv.coins(143, SEA - 25, 149, 2)
-    lv.flag(150, SEA - 23)
-    lv.wp(150, SEA - 23, label="flag")
+    lv.enemy(145, SEA - 23)
+    pillar_run(lv, [(150, SEA - 24), (154, SEA - 21), (158, SEA - 25)], SEA - 18, label="summit pillar")
+    lv.rect(162, SEA - 22, 166, SEA - 21)
+    lv.coins(163, SEA - 25, 165, 2)
+    lv.flag(165, SEA - 23)
+    lv.wp(165, SEA - 23, label="flag")
     return lv

@@ -5,10 +5,11 @@ debris to hop on at the surface, a hatch in the main deck down into the
 flooded upper hold, air trapped behind the bulkhead beams, a hatch further
 down into the cargo hold between crates and treasure, back up into the
 half-flooded stern cabin and out of its door, and a wall-jump climb between
-the stern and a rock pillar up to the flag on the castle roof.
+the stern tower and a notched rock pillar up to the flag on the guarded
+tower top.
 """
 
-from tools.worlds.builder import Level, box, crate_chain
+from tools.worlds.builder import Level, box, crate_chain, perforate
 
 SEA = 16
 BOTTOM = 60
@@ -47,6 +48,7 @@ def build() -> Level:
     lv.wp(44, 18, 46, 21, label="deck hatch")
     lv.wp(44, 24, 46, 27, label="upper hold")
     lv.coins(40, 29, 52, 3)
+    lv.enemy(50, 30)
     # Room B, behind the first beam: air under the deck
     lv.drain(55, 24, 83, 25)
     lv.wp(56, 28, 60, 30, label="under the beam")
@@ -62,6 +64,7 @@ def build() -> Level:
     lv.coins(80, 35, 84, 2)
     lv.coins(95, 35, 99, 2)
     lv.enemy(97, 37)
+    lv.enemy(75, 37)
     lv.wp(96, 33, 99, 37, label="cargo hold")
 
     # Room C, behind the second beam: air again, then up into the stern cabin
@@ -69,6 +72,7 @@ def build() -> Level:
     lv.carve(104, 31, 106, 32)
     lv.wp(104, 31, 106, 32, label="hatch up")
     lv.wp(104, 25, 108, 26, label="room C air")
+    lv.enemy(114, 30)
 
     # --- The stern castle, its cabin half out of the water --------------------------------
     lv.rect(102, 10, 118, 21, "wreck")
@@ -82,13 +86,19 @@ def build() -> Level:
     lv.carve(117, 12, 118, SEA - 2)  # stern door
     lv.wp(117, 12, 118, SEA - 2, label="stern door")
 
-    # --- Climb between the stern and a rock pillar to the castle roof ----------------------
-    lv.rect(122, 2, 124, FLOOR)  # rock pillar; the stern is the other wall
-    lv.wp(119, 6, 121, 9, label="climb")
-    lv.coins(120, 11, 120)
-    lv.wp(104, 9, 108, 9, ground=True, label="castle roof")
-    lv.enemy(112, 9)
-    lv.coins(105, 7, 111, 2)
-    lv.flag(103, 9)
-    lv.wp(103, 9, label="flag")
+    # --- Climb between the stern tower and a notched rock pillar ---------------------------
+    lv.rect(108, -4, 118, 9, "wreck")  # stern tower on the castle
+    lv.rect(122, -8, 124, FLOOR)  # rock pillar; the stern is the other wall
+    perforate(lv, 122, -7, SEA - 2, solid=2, gap=1)  # notches break the wall slides
+    lv.wp(119, 2, 121, 5, label="climb")
+    lv.coins(120, 7, 120)
+    lv.coins(120, -1, 120)
+    lv.wp(119, -7, 121, -5, label="over the tower")
+    lv.wp(112, -5, 117, -5, ground=True, label="tower top")
+    lv.enemy(113, -5)
+    lv.enemy(110, -5)
+    lv.coins(109, -7, 116, 2)
+    lv.coins(103, 8, 106, 1)  # on the castle roof below
+    lv.flag(108, -5)
+    lv.wp(108, -5, label="flag")
     return lv

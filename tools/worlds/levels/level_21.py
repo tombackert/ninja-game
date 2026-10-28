@@ -92,6 +92,7 @@ def build() -> Level:
     chimney(lv, 181, 3, SEA - 1, 14)
     lv.rect(185, SEA - 1, 200, 49)
     lv.carve(182, SEA - 14, 184, SEA - 1)
+    lv.rect(184, SEA - 8, 184, SEA - 8)  # a rest halfway up: this is the intro level
     lv.wp(182, SEA - 4, 184, SEA - 2, label="chimney")
     lv.rect(186, SEA - 15, 196, SEA - 1)  # the rock
     lv.wp(186, SEA - 16, 188, SEA - 16, ground=True, label="lighthouse rock")

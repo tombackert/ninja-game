@@ -1,28 +1,31 @@
 """Level 24 - Undertow Caves (reef, deep water).
 
-Breath is what counts here: a dry cave down into a flooded labyrinth
-where only a few cells hold air under their roof, a half-flooded tunnel
-whose floor drains pull swimmers down into dead-end pits (hop or dash
-over them), and a geyser up a long shaft to the exit cave.
+Breath is what counts here: a dry cave with a pillar pit, down into a
+flooded labyrinth where only a few cells hold air under their roof, a
+half-flooded tunnel whose floor drains pull swimmers down into dead-end
+pits (hop or dash over them), a geyser up a long shaft to the exit cave
+and its last pit, and a notched shaft to climb up to the flag.
 """
 
-from tools.worlds.builder import DOWN, UP, Level, Maze, maze_path
+from tools.worlds.builder import DOWN, UP, Level, Maze, maze_path, perforate, pillar_run
 
 BOTTOM = 52
 
 
 def build() -> Level:
     lv = Level(24, "reef", background="background-deep.png", clouds=False)
-    lv.rect(0, 4, 168, BOTTOM)  # everything is inside the rock
+    lv.rect(0, 4, 176, BOTTOM)  # everything is inside the rock
 
     # --- Dry cave ------------------------------------------------------------------------
     lv.carve(1, 9, 40, 14)
     lv.spawn(3, 14)
     lv.decor(8, 14, 11)
-    for x in (16, 28):
-        lv.enemy(x, 14)
-    lv.coins(5, 12, 35, 3)
-    lv.big_decor(22, 14, 7)
+    lv.enemy(12, 14)
+    lv.carve(16, 15, 29, 44)  # dry pit in the cave floor
+    pillar_run(lv, [(19, 14), (22, 16), (25, 15)], 44, label="cave pillar")
+    lv.wp(30, 14, 32, 14, ground=True, label="past the pit")
+    lv.enemy(35, 14)
+    lv.coins(31, 12, 37, 3)
     lv.wp(36, 14, 40, 14, ground=True, label="cave end")
 
     # --- Down into the flooded labyrinth --------------------------------------------------
@@ -45,7 +48,7 @@ def build() -> Level:
             cx, cy = mz.cell_xy(c, r)
             lv.drain(cx, cy, cx + 2, cy)
             lv.coins(cx, cy + 2, cx + 2)
-    for c, r in ((2, 1), (4, 2)):
+    for c, r in ((1, 2), (2, 1), (3, 0), (4, 2), (5, 1)):
         cx, cy = mz.cell_xy(c, r)
         if lv.is_solid(cx + 1, cy + 3):
             lv.enemy(cx + 1, cy + 2)
@@ -60,10 +63,10 @@ def build() -> Level:
     lv.wp(t0, ey - 2, t0 + 3, ey + 2, label="tunnel")
     drains = (t0 + 8, t0 + 18, t0 + 28, t0 + 38)
     for i, x in enumerate(drains):
-        lv.carve(x, ey + 3, x + 2, ey + 12)  # pit under the drain
-        lv.water(x, ey, x + 2, ey + 12, DOWN)
-        lv.coins(x, ey - 2, x + 2)
-        lv.wp(x + 4, ey - 2, x + 6, ey + 2, label=f"past drain {i + 1}")
+        lv.carve(x, ey + 3, x + 3, ey + 12)  # pit under the drain
+        lv.water(x, ey, x + 3, ey + 12, DOWN)
+        lv.coins(x, ey - 2, x + 3)
+        lv.wp(x + 5, ey - 2, x + 7, ey + 2, label=f"past drain {i + 1}")
     lv.coins(t0 + 44, ey + 1, t0 + 50, 2)
     lv.wp(t1 - 4, ey - 2, t1 - 1, ey + 2, label="tunnel end")
 
@@ -75,9 +78,22 @@ def build() -> Level:
     lv.wp(gx, top, gx + 3, ey, label="geyser")
     lv.carve(gx + 4, exit_floor - 5, gx + 24, exit_floor - 1)  # exit cave
     lv.wp(gx + 4, exit_floor - 1, gx + 7, exit_floor - 1, ground=True, label="exit cave")
-    lv.enemy(gx + 14, exit_floor - 1)
-    lv.coins(gx + 8, exit_floor - 3, gx + 18, 2)
-    lv.decor(gx + 11, exit_floor - 1, 8)
-    lv.flag(gx + 22, exit_floor - 1)
-    lv.wp(gx + 22, exit_floor - 1, label="flag")
+    lv.carve(gx + 9, exit_floor, gx + 18, exit_floor + 12)  # last pit
+    pillar_run(lv, [(gx + 12, exit_floor), (gx + 15, exit_floor - 2)], exit_floor + 12, label="exit pillar")
+    lv.wp(gx + 19, exit_floor - 1, gx + 20, exit_floor - 1, ground=True, label="past the last pit")
+    lv.decor(gx + 7, exit_floor - 1, 8)
+    # A notched shaft up to the flag cave
+    lv.rect(gx - 2, exit_floor - 30, gx + 34, 4)
+    lv.carve(gx + 21, exit_floor - 22, gx + 23, exit_floor - 6)
+    for x in (gx + 20, gx + 24):
+        perforate(lv, x, exit_floor - 20, exit_floor - 6, solid=2, gap=1)
+    lv.wp(gx + 21, exit_floor - 13, gx + 23, exit_floor - 10, label="shaft")
+    lv.coins(gx + 22, exit_floor - 8, gx + 22)
+    lv.coins(gx + 22, exit_floor - 16, gx + 22)
+    lv.carve(gx + 21, exit_floor - 27, gx + 33, exit_floor - 23)  # flag cave
+    lv.wp(gx + 25, exit_floor - 23, gx + 27, exit_floor - 23, ground=True, label="flag cave")
+    lv.enemy(gx + 28, exit_floor - 23)
+    lv.coins(gx + 26, exit_floor - 25, gx + 30, 2)
+    lv.flag(gx + 32, exit_floor - 23)
+    lv.wp(gx + 32, exit_floor - 23, label="flag")
     return lv

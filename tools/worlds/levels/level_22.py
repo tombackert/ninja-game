@@ -2,12 +2,13 @@
 
 Currents: a kelp sea under rock islands, a long cave channel whose current
 carries the swimmer east with one air pocket halfway, a geyser that
-shoots up a shaft on to the plateau, a drain that pulls down into a
-flooded cave, a short swim against the current to the cave's air pocket
-and a last geyser up to the flag.
+shoots up a shaft on to the plateau, pillars across a dry pit in it, a
+drain that pulls down into a flooded cave, a short swim against the
+current to the cave's air pocket, a last geyser and a holed chimney up
+to the flag.
 """
 
-from tools.worlds.builder import DOWN, LEFT, RIGHT, UP, Level
+from tools.worlds.builder import DOWN, LEFT, RIGHT, UP, Level, holed_chimney, pillar_run
 
 SEA = 30
 BOTTOM = 80
@@ -30,6 +31,7 @@ def build() -> Level:
     lv.enemy(45, SEA - 2)
     lv.rect(57, SEA - 1, 60, 43)  # rock island 3
     lv.wp(27, SEA - 2, 30, SEA - 2, ground=True, label="island 1")
+    lv.enemy(29, SEA - 2)
     lv.wp(41, SEA - 2, 43, SEA - 2, ground=True, label="island 2")
     lv.wp(57, SEA - 2, 60, SEA - 2, ground=True, label="island 3")
     for x in (20, 24, 34, 38, 51, 54, 65):
@@ -58,15 +60,18 @@ def build() -> Level:
     lv.water(121, 25, 124, 39, UP)
     lv.wp(121, 30, 124, 34, label="geyser")
     lv.coins(122, 32, 123)
-    lv.wp(125, 23, 128, 23, ground=True, label="plateau")
+    lv.wp(125, 23, 127, 23, ground=True, label="plateau")
     lv.rect(125, 24, 160, BOTTOM)
     for x in (110, 116):
         lv.enemy(x, 23)
     lv.coins(100, 21, 118, 3)
-    for x in (133, 141):
-        lv.enemy(x, 23)
-    lv.big_decor(137, 23, 7)
-    lv.coins(129, 21, 145, 2)
+    # A dry pit in the plateau, no water to catch a miss
+    lv.carve(128, 24, 138, BOTTOM)
+    pillar_run(lv, [(131, 25), (134, 23), (137, 26)], BOTTOM, label="plateau pillar")
+    lv.wp(139, 23, 141, 23, ground=True, label="past the pit")
+    lv.enemy(143, 23)
+    lv.big_decor(141, 23, 7)
+    lv.coins(140, 21, 145, 2)
 
     # --- Drain into the flooded cave ------------------------------------------------------
     lv.rect(152, 14, 172, BOTTOM)  # cliff over the cave, too high to climb: the way is under it
@@ -91,11 +96,15 @@ def build() -> Level:
     lv.carve(173, 16, 176, 56)
     lv.water(173, 17, 176, 56, UP)
     lv.drain(173, 16, 176, 16)
-    lv.wp(173, 30, 176, 40, label="last geyser")
-    lv.rect(177, 16, 195, BOTTOM)  # flag rock
+    lv.wp(173, 19, 176, 24, label="last geyser")
+    lv.rect(177, 16, 197, BOTTOM)  # flag rock
     lv.wp(177, 15, 180, 15, ground=True, label="flag rock")
-    lv.coins(181, 13, 188, 2)
-    lv.decor(183, 15, 8)
-    lv.flag(190, 15)
-    lv.wp(190, 15, label="flag")
+    lv.coins(178, 13, 181, 3)
+    lv.decor(180, 15, 8)
+    holed_chimney(lv, 182, 3, 0, 16, rests=[(1, 8)], label="flag chimney")
+    lv.rect(189, 0, 197, 1)  # flag slab, two tiles off the chimney
+    lv.wp(189, -1, 191, -1, ground=True, label="flag slab")
+    lv.coins(190, -3, 194, 2)
+    lv.flag(195, -1)
+    lv.wp(195, -1, label="flag")
     return lv
