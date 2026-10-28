@@ -9,6 +9,7 @@ from scripts.entities import Enemy, Player
 from scripts.logger import get_logger
 from scripts.settings import settings
 from scripts.utils import Animation
+from scripts.water import WaterRenderer, water_from_rows, water_to_rows
 
 log = get_logger("tilemap")
 
@@ -35,8 +36,8 @@ NEIGHBOR_OFFSET = [
     (0, 1),
     (1, 1),
 ]
-PHYSICS_TILES = {"grass", "stone", "sand", "mars"}  # things an entity can colid with
-AUTOTILE_TILES = {"grass", "stone", "sand", "mars"}
+PHYSICS_TILES = {"grass", "stone", "sand", "mars", "reef", "wreck"}  # things an entity can colid with
+AUTOTILE_TILES = {"grass", "stone", "sand", "mars", "reef", "wreck"}
 
 
 class Tilemap:
@@ -46,6 +47,9 @@ class Tilemap:
         self.tile_size = tile_size
         self.tilemap = {}
         self.offgrid_tiles = []
+        # Water layer (see scripts/water.py): (tx, ty) -> flow
+        self.water = {}
+        self._water_renderer = None
         self.enemies = []
         self.players = []
         self.meta_data = {}
@@ -147,6 +151,8 @@ class Tilemap:
             "tile_size": self.tile_size,
             "offgrid": self.offgrid_tiles,
         }
+        if self.water:
+            tilemap_data["water"] = water_to_rows(self.water)
         # Persist version inside meta_data for forward detection
         meta_data["version"] = self.version
         game_state["meta_data"] = meta_data
@@ -198,6 +204,8 @@ class Tilemap:
             self.tilemap = map_data["tilemap"]
             self.tile_size = map_data["tile_size"]
             self.offgrid_tiles = map_data["offgrid"]
+            self.water = water_from_rows(map_data.get("water", []))
+            self._water_renderer = None
             self._extracted = []
             self.loaded_path = path
 
@@ -247,6 +255,10 @@ class Tilemap:
         if tile_loc in self.tilemap:
             if self.tilemap[tile_loc]["type"] in PHYSICS_TILES:
                 return self.tilemap[tile_loc]
+
+    def water_at(self, pos):
+        """Flow of the water at pixel `pos` (0 still, 1-4 a current), None if dry."""
+        return self.water.get((int(pos[0] // self.tile_size), int(pos[1] // self.tile_size)))
 
     def physics_rects_around(self, pos):
         return [
@@ -299,6 +311,19 @@ class Tilemap:
                                 tile["pos"][1] * self.tile_size - offset[1],
                             ),
                         )
+
+    def render_water(self, surf, offset=(0, 0), tick=0):
+        """Draw the water layer over everything drawn so far (entities too)."""
+        if not self.water:
+            return
+        if self._water_renderer is None:
+            self._water_renderer = WaterRenderer(
+                self.water,
+                self.game.assets,
+                lambda tx, ty: self.tilemap.get(f"{tx};{ty}", {}).get("type") in PHYSICS_TILES,
+                self.tile_size,
+            )
+        self._water_renderer.render(surf, offset, tick)
 
     def get_image(self, tile):
         asset = self.game.assets.get(tile["type"])
@@ -382,6 +407,8 @@ class Tilemap:
             t = tile.get("type")
             if t:
                 counts[t] = counts.get(t, 0) + 1
+        if self.water:
+            counts["water"] = len(self.water)
         try:
             from scripts.tilemap import PHYSICS_TILES  # local import safe
 

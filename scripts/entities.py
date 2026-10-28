@@ -6,6 +6,8 @@ from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
     AIR_JUMP_VELOCITY,
     AIR_TIME_FATAL,
+    BREATH_BUBBLE_FRAMES,
+    BREATH_FRAMES,
     DASH_DECEL_TRIGGER_FRAME,
     DASH_DURATION_FRAMES,
     DASH_MIN_ACTIVE_ABS,
@@ -21,9 +23,17 @@ from scripts.constants import (
     JUMP_VELOCITY,
     MAX_FALL_SPEED,
     SHIELD_REARM_FRAMES,
+    SWIM_STROKE_COOLDOWN,
+    SWIM_STROKE_VELOCITY,
     WALL_JUMP_HORIZONTAL_VEL,
     WALL_JUMP_VERTICAL_VEL,
     WALL_SLIDE_MAX_SPEED,
+    WATER_CURRENTS,
+    WATER_DASH_SPEED,
+    WATER_DRAG,
+    WATER_GRAVITY,
+    WATER_MAX_SINK,
+    WATER_MOVE_SCALE,
 )
 from scripts.effects_util import spawn_hit_sparks
 from scripts.particle import Particle
@@ -53,6 +63,8 @@ class PhysicsEntity:
         self.set_action("idle")
 
         self.last_movement = [0, 0]
+        # Flow of the water the entity is in this frame (None: dry), see water_flow()
+        self.water = None
 
     def rect(self):
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
@@ -74,9 +86,21 @@ class PhysicsEntity:
         """
         self.collisions = {"up": False, "down": False, "right": False, "left": False}
 
+    def water_flow(self, tilemap):
+        """Flow of the water at the hitbox center (0 still, 1-4 a current), None if dry."""
+        water = getattr(tilemap, "water", None)
+        if not water or not isinstance(water, dict):  # dry level (or a stand-in tilemap)
+            return None
+        r = self.rect()
+        return water.get((r.centerx // tilemap.tile_size, r.centery // tilemap.tile_size))
+
     def compute_frame_movement(self, movement):
         """Return tuple of (dx, dy) for this frame before collision response."""
-        return movement[0] + self.velocity[0], movement[1] + self.velocity[1]
+        if self.water is None:
+            return movement[0] + self.velocity[0], movement[1] + self.velocity[1]
+        # In water: slower, and a current carries the entity along
+        push = WATER_CURRENTS[self.water]
+        return movement[0] * WATER_MOVE_SCALE + self.velocity[0] + push[0], movement[1] + self.velocity[1] + push[1]
 
     def apply_horizontal_movement(self, tilemap, frame_movement):
         self.pos[0] += frame_movement[0]
@@ -114,7 +138,11 @@ class PhysicsEntity:
         self.last_movement = movement
 
     def apply_gravity(self):
-        self.velocity[1] = min(MAX_FALL_SPEED, self.velocity[1] + GRAVITY_ACCEL)
+        if self.water is None:
+            self.velocity[1] = min(MAX_FALL_SPEED, self.velocity[1] + GRAVITY_ACCEL)
+        else:
+            # Water drags: a slow sink, and a fall into it slows at once
+            self.velocity[1] = min(WATER_MAX_SINK, self.velocity[1] * WATER_DRAG + WATER_GRAVITY)
         if self.collisions["down"] or self.collisions["up"]:
             # Cancel vertical velocity if we contacted ceiling/floor this frame.
             self.velocity[1] = 0
@@ -126,7 +154,7 @@ class PhysicsEntity:
         """Composite update preserved for backward compatibility.
 
         Steps:
-          1. begin_update -> reset collisions
+          1. begin_update -> reset collisions; read the water at the start position
           2. compute_frame_movement
           3. apply_horizontal_movement
           4. apply_vertical_movement
@@ -135,6 +163,7 @@ class PhysicsEntity:
           7. finalize_update (animation advance)
         """
         self.begin_update()
+        self.water = self.water_flow(tilemap)
         frame_movement = self.compute_frame_movement(movement)
         self.apply_horizontal_movement(tilemap, frame_movement)
         self.apply_vertical_movement(tilemap, frame_movement)
@@ -279,6 +308,9 @@ class Player(PhysicsEntity):
         self.grapple_frames = 0  # frames spent in current pull (safety timeout)
         self.shield_ready = False  # armed shield charge absorbs next hit
         self.shield_rearm = 0  # frames until next charge arms
+        # Water world
+        self.breath = BREATH_FRAMES  # frames left before drowning, full while the head is dry
+        self.swim_cooldown = 0  # frames until the next swim stroke
 
     # --- New canonical attribute ---
     @property
@@ -330,7 +362,18 @@ class Player(PhysicsEntity):
         spawn_hit_sparks(self.game, self.rect().center)
         return True
 
+    def head_in_water(self, tilemap) -> bool:
+        """True if the player's eyes are under water (breath runs down)."""
+        water = getattr(tilemap, "water", None)
+        if not water or not isinstance(water, dict):  # dry level (or a stand-in tilemap)
+            return False
+        r = self.rect()
+        return (r.centerx // tilemap.tile_size, (r.top + 2) // tilemap.tile_size) in water
+
     def update(self, tilemap, movement=(0, 0)):
+        # Water at the start position, as PhysicsEntity.update reads it
+        head_wet = self.head_in_water(tilemap)
+
         # Grapple pull: steer velocity toward the anchor; gravity is
         # overwritten each frame while the pull is active.
         if self.grapple_point is not None:
@@ -344,6 +387,8 @@ class Player(PhysicsEntity):
             self.grapple_frames += 1
 
         super().update(tilemap, movement=movement)
+        if self.water is None and self.velocity[1] > 1 and self.water_flow(tilemap) is not None:
+            self._splash()
 
         # Grapple release: arrival, collision or safety timeout
         if self.grapple_point is not None:
@@ -362,6 +407,8 @@ class Player(PhysicsEntity):
             self.shoot_cooldown -= 1
         if self.slash_timer > 0:
             self.slash_timer -= 1
+        if self.swim_cooldown > 0:
+            self.swim_cooldown -= 1
 
         # Shield gear: arm a charge after the re-arm delay
         game_cm = getattr(self.game, "cm", None)
@@ -375,8 +422,21 @@ class Player(PhysicsEntity):
             self.shield_ready = False
 
         self.air_time += 1
+        if self.water is not None:
+            # Swimming: the water holds the player, no fall; under the surface
+            # the jumps recharge so the player can leap out once surfaced
+            self.air_time = 0
+            if head_wet:
+                self.jumps = 1
+                self.air_jumps = 1
+        if head_wet:
+            self.breath -= 1
+            if self.breath > 0 and self.breath % BREATH_BUBBLE_FRAMES == 0:
+                self._bubbles(1, (self.rect().centerx, self.rect().top + 2))
+        else:
+            self.breath = BREATH_FRAMES
 
-        if self.air_time > AIR_TIME_FATAL:
+        if self.air_time > AIR_TIME_FATAL or self.breath <= 0:
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
                 # Duck audio on death impact
@@ -402,7 +462,9 @@ class Player(PhysicsEntity):
             self.set_action("wall_slide")
 
         if not self.wall_slide:
-            if self.air_time > 4:
+            if self.water is not None and not self.collisions["down"]:
+                self.set_action("swim")
+            elif self.air_time > 4:
                 self.set_action("jump")
             elif movement[0] != 0:
                 self.set_action("run")
@@ -428,7 +490,9 @@ class Player(PhysicsEntity):
         if self.dashing < 0:
             self.dashing = min(0, self.dashing + 1)
         if abs(self.dashing) > DASH_MIN_ACTIVE_ABS:
-            self.velocity[0] = abs(self.dashing) / self.dashing * DASH_SPEED
+            self.velocity[0] = (
+                abs(self.dashing) / self.dashing * (DASH_SPEED if self.water is None else WATER_DASH_SPEED)
+            )
             if abs(self.dashing) == DASH_DECEL_TRIGGER_FRAME:
                 self.velocity[0] *= 0.1
             pvelocity = [
@@ -449,6 +513,49 @@ class Player(PhysicsEntity):
             self.velocity[0] = max(self.velocity[0] - HORIZONTAL_FRICTION, 0)
         else:
             self.velocity[0] = min(self.velocity[0] + HORIZONTAL_FRICTION, 0)
+
+    def _bubbles(self, count, pos):
+        rng = RNGService.get()
+        for _ in range(count):
+            self.game.particles.append(
+                Particle(
+                    self.game,
+                    "bubble",
+                    (pos[0] + rng.random() * 6 - 3, pos[1]),
+                    velocity=[rng.random() * 0.4 - 0.2, -0.4 - rng.random() * 0.4],
+                    frame=rng.randint(0, 6),
+                )
+            )
+
+    def _splash(self):
+        """Spray where the player plunges into water."""
+        rng = RNGService.get()
+        for _ in range(8):
+            angle = math.pi + rng.random() * math.pi  # upward half
+            speed = rng.random() * 1.2 + 0.6
+            self.game.particles.append(
+                Particle(
+                    self.game,
+                    "particle",
+                    self.rect().midtop,
+                    velocity=[math.cos(angle) * speed, math.sin(angle) * speed],
+                    frame=rng.randint(0, 7),
+                )
+            )
+
+    def render_breath(self, surf, offset=(0, 0)):
+        """Breath meter over the head while it runs down: one bubble per sixth."""
+        if self.breath >= BREATH_FRAMES or self.lives <= 0:
+            return
+        count = -(-self.breath * 6 // BREATH_FRAMES)  # ceil
+        icon = self.game.assets.get("breath-low" if count <= 2 else "breath")
+        if icon is None:
+            return
+        step = icon.get_width() + 1
+        x = self.rect().centerx - (6 * step - 1) // 2 - offset[0]
+        y = self.rect().top - icon.get_height() - 6 - offset[1]
+        for i in range(count):
+            surf.blit(icon, (x + i * step, y))
 
     # Held-weapon overlay: weapon display name -> (asset key, ownership attr)
     _HELD_WEAPON_ASSETS = {
@@ -546,6 +653,17 @@ class Player(PhysicsEntity):
             self.grapple_point = None
             self.velocity[1] = AIR_JUMP_VELOCITY
             self.air_time = 5
+            return True
+
+        tilemap = getattr(self.game, "tilemap", None)
+        if self.water_flow(tilemap) is not None and (self.head_in_water(tilemap) or not self.jumps):
+            # Under water (or out of jumps at the surface): a swim stroke.
+            # With the head above the surface the jump below leaps out.
+            if self.swim_cooldown:
+                return False
+            self.velocity[1] = SWIM_STROKE_VELOCITY
+            self.swim_cooldown = SWIM_STROKE_COOLDOWN
+            self._bubbles(2, self.rect().midbottom)
             return True
 
         if self.wall_slide:

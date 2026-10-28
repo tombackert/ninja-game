@@ -239,6 +239,8 @@ def copy_entity(e: EntitySnapshot) -> EntitySnapshot:
         walking=e.walking,
         coins=e.coins,
         ammo=e.ammo,
+        breath=e.breath,
+        swim_cooldown=e.swim_cooldown,
     )
 
 
@@ -283,6 +285,10 @@ def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
         d["coins"] = b.coins
     if a.ammo != b.ammo:
         d["ammo"] = b.ammo
+    if a.breath != b.breath:
+        d["breath"] = b.breath
+    if a.swim_cooldown != b.swim_cooldown:
+        d["swim_cooldown"] = b.swim_cooldown
     return d
 
 

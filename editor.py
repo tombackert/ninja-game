@@ -41,7 +41,16 @@ class Editor:
             "decor": load_images("tiles/decor"),
             "coin": load_images("tiles/collectables/coin"),
             "flag": load_images("tiles/collectables/flag"),
+            "reef": load_images("tiles/reef"),
+            "wreck": load_images("tiles/wreck"),
+            # Water layer brush: the variant is the flow (0 still, 1-4 a current)
+            "water": load_images("tiles/water"),
         }
+        self.water_icons = []
+        for img in self.assets["water"]:
+            icon = img.copy()
+            icon.set_alpha(150)
+            self.water_icons.append(icon)
 
         self.background = load_image("background.png")
 
@@ -91,6 +100,21 @@ class Editor:
 
         self.font = pygame.font.Font(None, 10)
 
+    def brush_tiles(self, tile_pos):
+        """Tiles under the brush: the one under the mouse, or the multi-tile square."""
+        if not self.multi_tile:
+            return [tuple(tile_pos)]
+        r = range(-self.m_offset, self.m_offset + 1)
+        return [(tile_pos[0] + x, tile_pos[1] + y) for x in r for y in r]
+
+    def render_water(self, render_scroll):
+        """The water layer as translucent flow icons (the game draws it animated)."""
+        ts = self.tilemap.tile_size
+        for tx, ty in self.tilemap.water:
+            x, y = tx * ts - render_scroll[0], ty * ts - render_scroll[1]
+            if -ts < x < self.BASE_W and -ts < y < self.BASE_H:
+                self.display.blit(self.water_icons[self.tilemap.water[(tx, ty)]], (x, y))
+
     def run(self):
         # Optional frame cap for automated testing / CI (set EDITOR_MAX_FRAMES)
         import os
@@ -108,6 +132,7 @@ class Editor:
             render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
 
             self.tilemap.render(self.display, offset=render_scroll)
+            self.render_water(render_scroll)
 
             current_tile_img = self.assets[self.tile_list[self.tile_group]][self.tile_variant].copy()
             current_tile_img.set_alpha(180)
@@ -146,7 +171,10 @@ class Editor:
             # Object placement
             if self.clicking:
                 if self.ongrid:
-                    if not self.multi_tile:
+                    if self.tile_list[self.tile_group] == "water":
+                        for pos in self.brush_tiles(tile_pos):
+                            self.tilemap.water[pos] = self.tile_variant
+                    elif not self.multi_tile:
                         tile_type = self.tile_list[self.tile_group]
                         variant = self.tile_variant
                         pos = tile_pos
@@ -250,7 +278,10 @@ class Editor:
                             print("-----------------")
 
             # Tile removal
-            if self.right_clicking:
+            if self.right_clicking and self.tile_list[self.tile_group] == "water":
+                for pos in self.brush_tiles(tile_pos):
+                    self.tilemap.water.pop(pos, None)
+            elif self.right_clicking:
                 tile_loc = str(tile_pos[0]) + ";" + str(tile_pos[1])
                 if tile_loc in self.tilemap.tilemap:
                     tile = self.tilemap.tilemap[tile_loc]

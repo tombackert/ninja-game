@@ -346,6 +346,14 @@ class UI:
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             game.display_2.blit(display_sillhouette, offset_o)
 
+        # Water layer over everything in it (after the silhouette, so it
+        # casts no outline), then the breath meters on top
+        if getattr(game.tilemap, "water", None):
+            game.tilemap.render_water(game.display, render_scroll, getattr(game, "tick", 0))
+            if not game.dead:
+                for player in game.players:
+                    player.render_breath(game.display, offset=render_scroll)
+
     # Particle update now handled above when particle_system present.
 
     @staticmethod

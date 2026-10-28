@@ -32,7 +32,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pygame
 
-from scripts.constants import AIR_TIME_FATAL, DASH_MIN_ACTIVE_ABS, PROJECTILE_SPEED
+from scripts.constants import AIR_TIME_FATAL, BREATH_FRAMES, DASH_MIN_ACTIVE_ABS, PROJECTILE_SPEED
 from scripts.entities import Enemy, Player
 from scripts.entity_id import EntityIDGenerator
 from scripts.projectile_system import ProjectileSystem
@@ -242,6 +242,8 @@ class HeadlessGame:
         player.air_time = 0
         player.dashing = 0
         player.jumps = 1
+        player.breath = BREATH_FRAMES
+        player.swim_cooldown = 0
 
     def _nearest_player(self, enemy: Enemy) -> Optional[Player]:
         """Find the player closest to an enemy (AI targeting)."""
@@ -259,7 +261,7 @@ class HeadlessGame:
         projectiles, collectables, deaths/respawns)."""
         self.tick += 1
 
-        # --- Players: one physics step per input + fatal fall handling ---
+        # --- Players: one physics step per input + fatal fall / drowning ---
         for player in self.players:
             steps = self._pending_steps.get(player.id)
             if steps is None:
@@ -268,7 +270,7 @@ class HeadlessGame:
                 for action in actions:
                     self._apply_action(player, action)
                 player.update(self.tilemap, movement)
-                if player.air_time > AIR_TIME_FATAL:
+                if player.air_time > AIR_TIME_FATAL or player.breath <= 0:  # fell or drowned
                     self._respawn(player, lose_life=True)
         self._pending_steps.clear()
         self._pending_inputs.clear()

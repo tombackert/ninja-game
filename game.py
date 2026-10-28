@@ -9,6 +9,7 @@ from scripts.constants import (
     CALM_CAMERA_DEADZONE_X,
     CALM_CAMERA_EASE_FRAMES,
     CALM_CAMERA_SNAP,
+    BREATH_FRAMES,
     CAMERA_EASE_FRAMES,
     LEAF_SPAWNER_CLOUD_COUNT,
     TRANSITION_START,
@@ -81,6 +82,11 @@ class Game:
             "stone": am.get_image_frames("tiles/stone"),
             "sand": am.get_image_frames("tiles/sand"),
             "mars": am.get_image_frames("tiles/mars"),
+            "reef": am.get_image_frames("tiles/reef"),
+            "wreck": am.get_image_frames("tiles/wreck"),
+            "water/surface": am.get_image_frames("water/surface"),
+            "water/current": am.get_image_frames("water/current"),
+            "water/bubbles": am.get_image_frames("water/bubbles"),
             "player": am.get_image("entities/player.png"),
             "background": am.get_image("background-big.png"),
             "clouds": am.get_image_frames("clouds"),
@@ -88,6 +94,9 @@ class Game:
             "enemy/run": am.get_animation("entities/enemy/run", img_dur=4),
             "particle/leaf": am.get_animation("particles/leaf", img_dur=20, loop=False),
             "particle/particle": am.get_animation("particles/particle", img_dur=6, loop=False),
+            "particle/bubble": am.get_animation("particles/bubble", img_dur=7, loop=False),
+            "breath": am.get_image("breath.png"),
+            "breath-low": am.get_image("breath-low.png"),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
             "gun": am.get_image("gun.png"),
@@ -106,6 +115,7 @@ class Game:
             self.assets[f"player/{skin_path}/jump"] = am.get_animation(f"{base}/jump")
             self.assets[f"player/{skin_path}/slide"] = am.get_animation(f"{base}/slide")
             self.assets[f"player/{skin_path}/wall_slide"] = am.get_animation(f"{base}/wall_slide")
+            self.assets[f"player/{skin_path}/swim"] = am.get_animation(f"{base}/swim", img_dur=8)
 
         # Audio service replaces direct sound dict (Issue 16)
         self.audio = AudioService.get()
@@ -201,6 +211,8 @@ class Game:
                 player.pos = list(player.respawn_pos)
                 player.air_time = 0
                 player.velocity = [0, 0]  # Reset velocity too for safety
+                player.breath = BREATH_FRAMES
+                player.swim_cooldown = 0
             for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
                 if spawner["variant"] == 1:
                     self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))

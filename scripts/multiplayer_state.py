@@ -766,6 +766,8 @@ class MultiplayerGameState(State):
         player.wall_slide = p_snap.wall_slide
         player.dashing = p_snap.dashing
         player.shoot_cooldown = p_snap.shoot_cooldown
+        player.breath = p_snap.breath
+        player.swim_cooldown = p_snap.swim_cooldown
         player.lives = p_snap.lives
         if player.action != p_snap.action:
             player.set_action(p_snap.action)

@@ -219,6 +219,8 @@ class ReplayGhost:
                 self.entity.jumps = p_snap.jumps
                 self.entity.wall_slide = p_snap.wall_slide
                 self.entity.dashing = p_snap.dashing
+                self.entity.breath = p_snap.breath
+                self.entity.swim_cooldown = p_snap.swim_cooldown
 
         # 2. Apply Inputs (Persistent State)
         inputs = self.input_map.get(self.tick, [])

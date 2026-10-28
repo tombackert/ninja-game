@@ -1,13 +1,14 @@
 from dataclasses import dataclass, field, asdict
 from typing import Any, List, Tuple, Dict
 
+from scripts.constants import BREATH_FRAMES
 from scripts.rng_service import RNGService
 
 
-def _int_attr(obj: Any, name: str) -> int:
-    """Read an optional int attribute; non-int values (mocks) become 0."""
-    value = getattr(obj, name, 0)
-    return value if isinstance(value, int) else 0
+def _int_attr(obj: Any, name: str, default: int = 0) -> int:
+    """Read an optional int attribute; non-int values (mocks) become `default`."""
+    value = getattr(obj, name, default)
+    return value if isinstance(value, int) else default
 
 
 @dataclass
@@ -28,6 +29,8 @@ class EntitySnapshot:
     walking: int = 0  # Enemy specific
     coins: int = 0  # Player specific (multiplayer score)
     ammo: int = 0  # Player specific (multiplayer)
+    breath: int = BREATH_FRAMES  # Player specific (water world)
+    swim_cooldown: int = 0  # Player specific (water world)
 
 
 @dataclass
@@ -88,6 +91,8 @@ class SnapshotService:
                 shoot_cooldown=p.shoot_cooldown,
                 coins=_int_attr(p, "mp_coins"),
                 ammo=_int_attr(p, "mp_ammo"),
+                breath=_int_attr(p, "breath", BREATH_FRAMES),
+                swim_cooldown=_int_attr(p, "swim_cooldown"),
             )
             players.append(player_snap)
 
@@ -165,6 +170,8 @@ class SnapshotService:
                 p.wall_slide = p_snap.wall_slide
                 p.dashing = p_snap.dashing
                 p.shoot_cooldown = p_snap.shoot_cooldown
+                p.breath = p_snap.breath
+                p.swim_cooldown = p_snap.swim_cooldown
 
         # Restore Enemies
         for i, e_snap in enumerate(snapshot.enemies):

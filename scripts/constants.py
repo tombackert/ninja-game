@@ -13,6 +13,19 @@ JUMP_VELOCITY = -3  # initial Y velocity for a jump
 WALL_JUMP_HORIZONTAL_VEL = 3.5  # horizontal push from wall jump
 WALL_JUMP_VERTICAL_VEL = -2.5  # vertical component of wall jump
 
+# Water (water world): the water layer slows and carries everything in it
+WATER_MOVE_SCALE = 0.7  # share of the run input that moves an entity in water
+WATER_GRAVITY = 0.05  # sinking acceleration per frame in water
+WATER_DRAG = 0.94  # share of vertical velocity kept per frame (sinks at most ~0.83 px/frame)
+WATER_MAX_SINK = 1.5  # vertical speed cap in water: a fall into water slows at once
+SWIM_STROKE_VELOCITY = -2.0  # upward velocity of a swim stroke (jump under water)
+SWIM_STROKE_COOLDOWN = 12  # frames between two strokes
+WATER_DASH_SPEED = 4  # dash speed in water (DASH_SPEED on land)
+BREATH_FRAMES = 720  # frames a swimmer's head can stay under water (12 s)
+BREATH_BUBBLE_FRAMES = 45  # a breathed-out bubble every this many frames under water
+# Flow of a water tile -> push per frame (px): 0 still, 1 right, 2 left, 3 up, 4 down
+WATER_CURRENTS = {0: (0, 0), 1: (0.5, 0), 2: (-0.5, 0), 3: (0, -1.5), 4: (0, 1.0)}
+
 # Dash
 DASH_DURATION_FRAMES = 60  # total dash frames magnitude (positive or negative)
 DASH_DECEL_TRIGGER_FRAME = 51  # frame at which abrupt slow-down occurs
