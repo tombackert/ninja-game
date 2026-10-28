@@ -77,10 +77,11 @@ def autotile_variant(nb: set) -> int:
 
 
 class Level:
-    def __init__(self, map_id: int, tile: str, background: str | None = None):
+    def __init__(self, map_id: int, tile: str, background: str | None = None, clouds: bool = True):
         self.map_id = map_id
         self.tile = tile  # default solid tile type
         self.background = background
+        self.clouds = clouds
         self.solid: dict[tuple[int, int], str] = {}
         self.objects: dict[tuple[int, int], tuple[str, int]] = {}  # coins, spawners, flag, decor
         self.offgrid: list[dict] = []
@@ -176,6 +177,8 @@ class Level:
         }
         if self.background:
             meta["background"] = self.background
+        if not self.clouds:
+            meta["clouds"] = False
         map_data = {"tilemap": tilemap, "tile_size": 16, "offgrid": self.offgrid}
         if self.water_tiles:
             map_data["water"] = water_to_rows(self.water_tiles)

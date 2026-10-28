@@ -174,6 +174,8 @@ class Game:
             # Worlds can bring their own sky (e.g. desert, Mars) via meta_data
             background = self.tilemap.meta_data.get("background", "background-big.png")
             self.assets["background"] = AssetManager.get().get_image(background)
+            # ... and leave the clouds out (e.g. under the sea)
+            self.show_clouds = self.tilemap.meta_data.get("clouds", True)
 
         # Extract flags
         self.flags = []

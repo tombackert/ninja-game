@@ -267,3 +267,16 @@ def test_water_is_drawn_behind_and_over_the_level_with_a_crest_only_under_open_a
     assert back.get_at((100, (SURFACE + 8) * 16 + 8)) == pygame.Color(*DEPTH_COLORS[-1], BACK_ALPHA)
     assert back.get_at((100, SURFACE * 16 + 8)) == pygame.Color(*DEPTH_COLORS[0], BACK_ALPHA)
     assert back.get_at((100, (SURFACE - 1) * 16)).a == 0
+
+
+def test_a_level_can_leave_out_the_clouds(g, tmp_path, monkeypatch):
+    g.load_level(22)
+    assert g.show_clouds is True  # under the lagoon sky
+    g.tilemap.meta_data["clouds"] = False
+    path = str(tmp_path / "deep.json")
+    g.tilemap.save(path)
+    monkeypatch.setattr(g.tilemap, "loaded_path", None)
+    real_load = g.tilemap.load
+    monkeypatch.setattr(g.tilemap, "load", lambda _p, **k: real_load(path, **k))
+    g.load_level(22)
+    assert g.show_clouds is False

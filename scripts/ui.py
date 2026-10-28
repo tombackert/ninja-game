@@ -301,7 +301,8 @@ class UI:
     @staticmethod
     def render_game_elements(game, render_scroll):
         # Clouds
-        game.clouds.render(game.display_2, offset=render_scroll)
+        if getattr(game, "show_clouds", True):
+            game.clouds.render(game.display_2, offset=render_scroll)
         # The sea behind the level (water world), over the sky and clouds
         if getattr(game.tilemap, "water", None):
             game.tilemap.render_water_back(game.display_2, render_scroll)
