@@ -28,7 +28,7 @@ from typing import Dict, List
 
 import pygame
 
-from scripts.utils import BASE_IMG_PATH, Animation
+from scripts.utils import BASE_IMG_PATH, Animation, frame_order
 
 IMG_ROOT = BASE_IMG_PATH  # 'data/images/'
 SFX_ROOT = "data/sfx/"
@@ -77,7 +77,7 @@ class AssetManager:
         if frames is None:
             full_dir = os.path.join(IMG_ROOT, rel_dir)
             frames = []
-            for img_name in sorted(os.listdir(full_dir)):
+            for img_name in sorted(os.listdir(full_dir), key=frame_order):
                 frames.append(self.get_image(os.path.join(rel_dir, img_name)))
             self._image_frames[rel_dir] = frames
         return frames

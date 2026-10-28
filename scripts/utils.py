@@ -1,4 +1,5 @@
 import os
+import re
 
 import pygame
 
@@ -11,8 +12,14 @@ def load_image(path):
     return img
 
 
+def frame_order(name):
+    """Sort key for animation frames and tile variants: numbers by value, so
+    "10.png" follows "9.png" (a plain string sort puts it after "1.png")."""
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", name)]
+
+
 def load_images(path):
-    return [load_image(path + "/" + img_name) for img_name in sorted(os.listdir(BASE_IMG_PATH + path))]
+    return [load_image(path + "/" + img_name) for img_name in sorted(os.listdir(BASE_IMG_PATH + path), key=frame_order)]
 
 
 class Animation:
