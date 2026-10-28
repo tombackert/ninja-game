@@ -23,7 +23,14 @@ from scripts.constants import (  # noqa: E402
 )
 from scripts.snapshot import SnapshotService  # noqa: E402
 from scripts.tilemap import Tilemap  # noqa: E402
-from scripts.water import DEPTH_ALPHA, WATER_COLOR, water_from_rows, water_to_rows  # noqa: E402
+from scripts.water import (  # noqa: E402
+    BACK_ALPHA,
+    DEPTH_ALPHA,
+    DEPTH_COLORS,
+    WATER_COLOR,
+    water_from_rows,
+    water_to_rows,
+)
 
 SURFACE = 10  # first water row of the pool
 FLOOR = 40
@@ -239,7 +246,7 @@ def test_server_respawns_a_drowned_player():
     assert player.breath == BREATH_FRAMES
 
 
-def test_water_is_drawn_over_the_level_with_a_crest_only_under_open_air(g):
+def test_water_is_drawn_behind_and_over_the_level_with_a_crest_only_under_open_air(g):
     pool(g)
     g.tilemap.tilemap["5;9"] = _solid(5, 9)  # a ceiling over one water tile
     surf = pygame.Surface((640, 360), pygame.SRCALPHA)
@@ -253,3 +260,10 @@ def test_water_is_drawn_over_the_level_with_a_crest_only_under_open_air(g):
     under_ceiling = [surf.get_at((x, SURFACE * 16 + 1)).a for x in range(80, 96)]
     assert set(under_ceiling) == {DEPTH_ALPHA[0]}
     assert surf.get_at((100, (SURFACE - 1) * 16)).a == 0  # air stays clear
+
+    back = pygame.Surface((640, 360), pygame.SRCALPHA)
+    back.fill((0, 0, 0, 0))
+    g.tilemap.render_water_back(back, (0, 0))
+    assert back.get_at((100, (SURFACE + 8) * 16 + 8)) == pygame.Color(*DEPTH_COLORS[-1], BACK_ALPHA)
+    assert back.get_at((100, SURFACE * 16 + 8)) == pygame.Color(*DEPTH_COLORS[0], BACK_ALPHA)
+    assert back.get_at((100, (SURFACE - 1) * 16)).a == 0

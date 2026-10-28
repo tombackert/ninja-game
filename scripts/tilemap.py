@@ -312,10 +312,7 @@ class Tilemap:
                             ),
                         )
 
-    def render_water(self, surf, offset=(0, 0), tick=0):
-        """Draw the water layer over everything drawn so far (entities too)."""
-        if not self.water:
-            return
+    def water_renderer(self):
         if self._water_renderer is None:
             self._water_renderer = WaterRenderer(
                 self.water,
@@ -323,7 +320,17 @@ class Tilemap:
                 lambda tx, ty: self.tilemap.get(f"{tx};{ty}", {}).get("type") in PHYSICS_TILES,
                 self.tile_size,
             )
-        self._water_renderer.render(surf, offset, tick)
+        return self._water_renderer
+
+    def render_water_back(self, surf, offset=(0, 0)):
+        """Draw the sea behind the level (before the tiles)."""
+        if self.water:
+            self.water_renderer().render_back(surf, offset)
+
+    def render_water(self, surf, offset=(0, 0), tick=0):
+        """Draw the water's tint, crest and currents over everything drawn so far."""
+        if self.water:
+            self.water_renderer().render(surf, offset, tick)
 
     def get_image(self, tile):
         asset = self.game.assets.get(tile["type"])

@@ -302,6 +302,9 @@ class UI:
     def render_game_elements(game, render_scroll):
         # Clouds
         game.clouds.render(game.display_2, offset=render_scroll)
+        # The sea behind the level (water world), over the sky and clouds
+        if getattr(game.tilemap, "water", None):
+            game.tilemap.render_water_back(game.display_2, render_scroll)
         game.tilemap.render(game.display, offset=render_scroll)
 
         # Enemies
@@ -346,7 +349,7 @@ class UI:
         for offset_o in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             game.display_2.blit(display_sillhouette, offset_o)
 
-        # Water layer over everything in it (after the silhouette, so it
+        # Water tint over everything in it (after the silhouette, so it
         # casts no outline), then the breath meters on top
         if getattr(game.tilemap, "water", None):
             game.tilemap.render_water(game.display, render_scroll, getattr(game, "tick", 0))
