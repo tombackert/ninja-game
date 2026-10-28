@@ -88,10 +88,9 @@ REEF = {
     "body": "B",
 }
 
-# Planks: seams every 5 rows, butt joints staggered between them
+# Planks: long boards, seams every 5 rows and a lighter grain on each
+# (butt joints repeated every tile made them look like bricks)
 _PLANK_SEAMS = [(3, 0, 15), (8, 0, 15), (13, 0, 15)]
-_PLANK_JOINTS = [(r, 5, 5) for r in range(0, 3)] + [(r, 11, 11) for r in range(4, 8)]
-_PLANK_JOINTS += [(r, 3, 3) for r in range(9, 13)] + [(r, 9, 9) for r in range(14, 16)]
 
 WRECK = {
     "palette": {
@@ -132,8 +131,10 @@ WRECK = {
         "BBLLU",
         "BBLLU",
     ],
-    "strata": _PLANK_SEAMS + _PLANK_JOINTS,
+    "strata": _PLANK_SEAMS,
     "strata_color": "D",
+    "grain": [(1, 2, 6), (1, 11, 13), (5, 7, 12), (6, 0, 2), (10, 1, 4), (11, 9, 14), (15, 4, 8)],
+    "grain_color": "L",
     "body": "B",
 }
 
@@ -145,7 +146,14 @@ def generate_tiles() -> None:
         out = os.path.join(TILE_DIR, name)
         os.makedirs(out, exist_ok=True)
         for v in range(9):
-            build_tile(spec, v).save(os.path.join(out, f"{v}.png"))
+            img = build_tile(spec, v)
+            px = img.load()
+            body = spec["palette"][spec["body"]]
+            for row, x0, x1 in spec.get("grain", []):  # only on the body, not the edges
+                for x in range(x0, x1 + 1):
+                    if px[x, row] == body:
+                        px[x, row] = spec["palette"][spec["grain_color"]]
+            img.save(os.path.join(out, f"{v}.png"))
         print(f"tile set '{name}' generated (9 variants)")
 
 
