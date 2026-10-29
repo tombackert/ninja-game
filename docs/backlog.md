@@ -37,6 +37,12 @@
 - Level-complete screen rescales its background every frame (as the pause screen did before 89764d0)
 - HUD timer text is a new string every frame: one text-cache miss per frame (~5,600 evictions per campaign); cheap (33 us) but it churns the 256-entry cache
 
+## Profiling Tools
+- py-spy for gameplay frames: samples from outside, no instrumentation overhead (`sudo py-spy record -o profile.svg --subprocesses -- python -m tools.bench`); start with Renderer.render (3.01 of 3.18 ms frame p50)
+- `tools.bench --profile` (cProfile) adds overhead to every call and skews the many small per-frame calls -> use it for call counts only
+- Instruments Time Profiler only if the hotspot is inside pygame-ce/SDL
+- LIKWID (HPSC lecture 3) for scripts/batch_sim.py on Linux: core scaling with likwid-topology/likwid-pin; IPC, cache misses and memory bandwidth with likwid-perfctr
+
 ## Water World Follow-ups (water-world branch)
 - Enemy bullets fly through water at full speed: slowing them there would make the water feel thicker (and tone down the gun under water)
 - No dive input: a swimmer only sinks (~3 tiles/s), so deep dives need drains in the level design
