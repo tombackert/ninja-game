@@ -15,7 +15,7 @@ import os
 import random
 from collections import deque
 
-from scripts.water import water_to_rows
+from scripts.water import water_leaks, water_to_rows
 from tools.worlds.physics import Terrain
 from tools.worlds.planner import Waypoint
 
@@ -113,7 +113,8 @@ class Level:
                 self.water_tiles[(x, y)] = flow
 
     def drain(self, x0, y0, x1, y1):
-        """Take the water out of tiles x0..x1, y0..y1: an air pocket."""
+        """Take the water out of tiles x0..x1, y0..y1: an air pocket. Air stays
+        only under rock with rock beside it, water under it (see `to_json`)."""
         for x in range(min(x0, x1), max(x0, x1) + 1):
             for y in range(min(y0, y1), max(y0, y1) + 1):
                 self.water_tiles.pop((x, y), None)
@@ -163,6 +164,9 @@ class Level:
         clash = sorted(set(self.objects) & set(self.solid))
         if clash:  # an object placed first, a solid stamped over it later
             raise ValueError(f"level {self.map_id}: objects inside solid tiles at {clash}")
+        leaks = water_leaks(self.water_tiles, self.is_solid)
+        if leaks:  # water with no rock to hold it, beside or under it
+            raise ValueError(f"level {self.map_id}: water would run out into {leaks[:12]}")
         tilemap = {}
         for (x, y), t in self.solid.items():
             nb = {o for o in ((1, 0), (-1, 0), (0, -1), (0, 1)) if self.solid.get((x + o[0], y + o[1])) == t}

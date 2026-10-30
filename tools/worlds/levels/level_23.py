@@ -22,6 +22,7 @@ def build() -> Level:
 
     # --- Start rock and the debris at the surface ------------------------------------
     lv.rect(0, 14, 10, BOTTOM)
+    lv.rect(141, SEA - 3, 144, BOTTOM)  # the cliff at the far end of the sea
     lv.spawn(3, 13)
     lv.decor(7, 13, 10)
     lv.coins(4, 11, 8, 2)
@@ -37,7 +38,7 @@ def build() -> Level:
     lv.rect(36, 22, 118, 39, "wreck")
     lv.carve(38, 24, 116, 30)  # upper hold
     lv.carve(38, 33, 116, 37)  # cargo hold
-    for x in (54, 84):  # bulkhead beams: air stays trapped behind them
+    for x in (54, 84, 108):  # bulkhead beams: air stays trapped behind them
         lv.rect(x, 24, x, 26, "wreck")
     lv.coins(40, 20, 52, 3)
     lv.enemy(60, 21)
@@ -67,11 +68,13 @@ def build() -> Level:
     lv.enemy(75, 37)
     lv.wp(96, 33, 99, 37, label="cargo hold")
 
-    # Room C, behind the second beam: air again, then up into the stern cabin
-    lv.drain(85, 24, 116, 25)
+    # Room C, between the second and third beam: air again (past the third beam
+    # the hatch up into the stern cabin lets it out), then up into the cabin
+    lv.drain(85, 24, 107, 25)
     lv.carve(104, 31, 106, 32)
     lv.wp(104, 31, 106, 32, label="hatch up")
-    lv.wp(104, 25, 108, 26, label="room C air")
+    lv.wp(103, 25, 107, 26, label="room C air")
+    lv.wp(109, 27, 112, 30, label="under the third beam")
     lv.enemy(114, 30)
 
     # --- The stern castle, its cabin half out of the water --------------------------------

@@ -325,7 +325,7 @@ class ServiceContainer:
 - **Swim (water world):** Under water a jump is a swim stroke (with a cooldown), at the surface a leap out. No fall death in water, but `breath` runs down while the eyes are under water and drowning costs the same respawn as a fall.
 
 ### Water Layer (`scripts/water.py`)
-Water is a layer of its own beside the tile grid (`Tilemap.water`, `{(tx, ty): flow}`), so coins, enemies and decor can sit in it; maps store it as runs `[ty, tx0, tx1, flow]` under `map_data.water`. A flow is still water (0) or a current to the right, left, up or down (1-4, `WATER_CURRENTS`). Everything in water moves at `WATER_MOVE_SCALE`, and a current pushes it every frame. Dry levels take none of the water branches, so their physics is unchanged (`tools/worlds/check_physics.py` compares the real game with an exact replica frame by frame).
+Water is a layer of its own beside the tile grid (`Tilemap.water`, `{(tx, ty): flow}`), so coins, enemies and decor can sit in it; maps store it as runs `[ty, tx0, tx1, flow]` under `map_data.water`. A flow is still water (0) or a current to the right, left, up or down (1-4, `WATER_CURRENTS`). Water is held like real water: rock or more water beside and under every water tile, so air only sits over water, as its surface or trapped under rock (`water_leaks`; the world builder refuses a level that breaks this and a test checks every map). Everything in water moves at `WATER_MOVE_SCALE`, and a current pushes it every frame. Dry levels take none of the water branches, so their physics is unchanged (`tools/worlds/check_physics.py` compares the real game with an exact replica frame by frame).
 
 ### Physics Constants (`scripts/constants.py`)
 - `GRAVITY_ACCEL = 0.1`

@@ -22,7 +22,7 @@ from scripts.constants import (  # noqa: E402
     WATER_GRAVITY,
 )
 from scripts.snapshot import SnapshotService  # noqa: E402
-from scripts.tilemap import Tilemap  # noqa: E402
+from scripts.tilemap import PHYSICS_TILES, Tilemap  # noqa: E402
 from scripts.water import (  # noqa: E402
     BACK_ALPHA,
     DEEP_ALPHA,
@@ -32,11 +32,13 @@ from scripts.water import (  # noqa: E402
     WATER_COLOR,
     depth_shade,
     water_from_rows,
+    water_leaks,
     water_to_rows,
 )
 
 SURFACE = 10  # first water row of the pool
 FLOOR = 40
+MAPS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "maps")
 
 
 def _solid(x, y):
@@ -80,6 +82,24 @@ def test_map_rows_round_trip():
     rows = water_to_rows(water)
     assert rows == [[5, 3, 4, 0], [5, 5, 6, 1], [6, 3, 3, 0], [6, 9, 9, 3]]
     assert water_from_rows(rows) == water
+
+
+def test_water_runs_out_where_no_rock_holds_it():
+    rock = {(0, y) for y in range(4)} | {(3, y) for y in range(4)} | {(x, 4) for x in range(4)}
+    pool = {(x, y): 0 for x in (1, 2) for y in (1, 2, 3)}  # a basin, filled from row 1
+    assert water_leaks(pool, lambda x, y: (x, y) in rock) == []
+    rock.discard((3, 1))  # a gap in the right wall
+    assert water_leaks(pool, lambda x, y: (x, y) in rock) == [(3, 1)]
+    del pool[(1, 2)]  # air under water: the water above would fall into it
+    assert (1, 2) in water_leaks(pool, lambda x, y: (x, y) in rock)
+
+
+@pytest.mark.parametrize("name", sorted(f for f in os.listdir(MAPS) if f.endswith(".json")))
+def test_the_water_of_every_level_is_held_by_rock(name):
+    with open(os.path.join(MAPS, name)) as f:
+        m = json.load(f)["map_data"]
+    solid = {tuple(t["pos"]) for t in m["tilemap"].values() if t["type"] in PHYSICS_TILES}
+    assert water_leaks(water_from_rows(m.get("water", [])), lambda x, y: (x, y) in solid) == []
 
 
 def test_map_file_keeps_the_water_layer(g, tmp_path):

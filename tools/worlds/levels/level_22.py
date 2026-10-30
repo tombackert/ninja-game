@@ -76,9 +76,9 @@ def build() -> Level:
     # --- Drain into the flooded cave ------------------------------------------------------
     lv.rect(152, 14, 172, BOTTOM)  # cliff over the cave, too high to climb: the way is under it
     lv.rect(173, 57, 176, BOTTOM)  # under the last geyser
-    lv.carve(148, 20, 151, 50)  # pool on the plateau, then the drain shaft
-    lv.water(148, 21, 151, 23)
-    lv.water(148, 24, 151, 50, DOWN)
+    lv.carve(148, 20, 151, 50)  # pool in the plateau, then the drain shaft
+    lv.water(148, 24, 151, 24)
+    lv.water(148, 25, 151, 50, DOWN)
     lv.wp(146, 23, 147, 23, ground=True, label="pool edge")
     lv.wp(148, 30, 151, 36, label="drain")
     lv.carve(140, 51, 175, 56)  # the flooded cave
@@ -88,15 +88,15 @@ def build() -> Level:
     # Against the current to the cave's air pocket
     lv.water(156, 51, 166, 56, LEFT)
     lv.wp(160, 51, 162, 56, label="against the current")
-    lv.carve(168, 47, 172, 50)  # air pocket over the cave's far end
-    lv.wp(168, 49, 172, 50, label="cave air")
+    lv.carve(168, 47, 171, 50)  # air pocket over the cave's far end, walled off from the geyser
+    lv.wp(168, 49, 171, 50, label="cave air")
     lv.coins(157, 53, 165, 2)
 
     # --- Last geyser up to the flag ----------------------------------------------------------
     lv.carve(173, 16, 176, 56)
     lv.water(173, 17, 176, 56, UP)
     lv.drain(173, 16, 176, 16)
-    lv.wp(173, 19, 176, 24, label="last geyser")
+    lv.wp(173, 51, 176, 56, label="last geyser")  # its foot: down from the air, under its wall
     lv.rect(177, 16, 197, BOTTOM)  # flag rock
     lv.wp(177, 15, 180, 15, ground=True, label="flag rock")
     lv.coins(178, 13, 181, 3)

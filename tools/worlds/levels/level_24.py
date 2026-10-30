@@ -1,7 +1,7 @@
 """Level 24 - Undertow Caves (reef, deep water).
 
 Breath is what counts here: a dry cave with a pillar pit, down into a
-flooded labyrinth where only a few cells hold air under their roof, a
+flooded labyrinth where only a few cells hold air in a dome over them, a
 half-flooded tunnel whose floor drains pull swimmers down into dead-end
 pits (hop or dash over them), a geyser up a long shaft to the exit cave
 and its last pit, and a notched shaft to climb up to the flag.
@@ -38,15 +38,38 @@ def build() -> Level:
     lv.water(45, 19, x1, y1)
     path = maze_path(mz.edges, (0, 0), (5, 3))
     mz.route((0, 0), (5, 3))
-    # Air under the roof of every third cell on the way, and in the dead ends
+
+    def dome(c, r, nxt=None):
+        """Air trapped in a dome in the rock over cell (c, r), or else over the
+        corridor on to the next cell `nxt`; none where a shaft leads up, the air
+        would rise out of it. Returns the dome's columns, None if there is none."""
+        cx, cy = mz.cell_xy(c, r)
+        if frozenset(((c, r - 1), (c, r))) not in mz.edges:
+            x0, x1 = cx, cx + 2
+        elif nxt and nxt[1] == r:  # the middle of the corridor: no shaft ever leads up from it
+            x0 = min(cx, mz.cell_xy(*nxt)[0]) + 4
+            x1 = x0 + 1
+        else:
+            return None
+        lv.carve(x0, cy - 2, x1, cy - 1)
+        lv.drain(x0, cy - 2, x1, cy - 1)
+        return x0, x1
+
+    # Air over every third cell on the way (or the next one it can stay over), and over the dead ends
+    due = False
     for i, (c, r) in enumerate(path):
-        if i % 3 == 2:
-            cx, cy = mz.cell_xy(c, r)
-            lv.drain(cx, cy, cx + 2, cy)
+        if due or i % 3 == 2:
+            cols = dome(c, r, path[i + 1] if i + 1 < len(path) else None)
+            due = cols is None
+            if cols:  # into the air after the cell: the route has to breathe there
+                cy = mz.cell_xy(c, r)[1]
+                lv.wp(cols[0], cy - 1, cols[1], cy - 1, label=f"air over {c},{r}")
+                at = next(k for k, w in enumerate(lv.route) if w.label == f"maze {c},{r}")
+                lv.route.insert(at + 1, lv.route.pop())
     for c, r in mz.dead_ends():
         if (c, r) not in path:
+            dome(c, r)
             cx, cy = mz.cell_xy(c, r)
-            lv.drain(cx, cy, cx + 2, cy)
             lv.coins(cx, cy + 2, cx + 2)
     for c, r in ((1, 2), (2, 1), (3, 0), (4, 2), (5, 1)):
         cx, cy = mz.cell_xy(c, r)
@@ -60,6 +83,8 @@ def build() -> Level:
     top = ey - 3  # three rows of air over the water
     lv.carve(t0, top, t1, ey + 2)
     lv.water(t0, ey, t1, ey + 2)
+    for x in (t0, t1):  # its air ends at rock, not at the water of the maze shaft and the geyser
+        lv.rect(x, top, x, ey - 1)
     lv.wp(t0, ey - 2, t0 + 3, ey + 2, label="tunnel")
     drains = (t0 + 8, t0 + 18, t0 + 28, t0 + 38)
     for i, x in enumerate(drains):

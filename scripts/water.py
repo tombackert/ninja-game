@@ -5,6 +5,9 @@ decor can sit in it: `Tilemap.water` maps a tile (tx, ty) to its flow, 0
 for still water or 1-4 for a current (right, left, up, down; the push per
 flow is WATER_CURRENTS in scripts/constants.py). Map files store it as
 runs of equal flow, `[ty, tx0, tx1, flow]`, under map_data["water"].
+Water has to be held like real water: rock or more water beside and
+under every water tile (`water_leaks` lists where it would run out), so
+air only ever sits over water, as its surface or trapped under rock.
 
 Entities read the layer in scripts/entities.py. `WaterRenderer` draws it
 as one body of water: its colour follows a single smooth gradient by
@@ -89,6 +92,19 @@ def water_to_rows(water: dict) -> list:
         else:
             rows.append([ty, tx, tx, flow])
     return rows
+
+
+def water_leaks(water: dict, is_solid) -> list:
+    """Air tiles the water would run into: beside or under a water tile
+    (rock in the water holds itself). Empty for a level whose water is held."""
+    leaks = set()
+    for tx, ty in water:
+        if is_solid(tx, ty):
+            continue
+        for n in ((tx - 1, ty), (tx + 1, ty), (tx, ty + 1)):
+            if n not in water and not is_solid(*n):
+                leaks.add(n)
+    return sorted(leaks, key=lambda t: (t[1], t[0]))
 
 
 def depth_shade(d_px: float, ts: int = 16) -> float:
@@ -545,4 +561,4 @@ class WaterRenderer:
             surf.fblits(draw)
 
 
-__all__ = ["WaterRenderer", "depth_shade", "find_pockets", "water_from_rows", "water_to_rows"]
+__all__ = ["WaterRenderer", "depth_shade", "find_pockets", "water_from_rows", "water_leaks", "water_to_rows"]
