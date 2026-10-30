@@ -2,8 +2,9 @@
 """Render the game trailer: an MP4 with sound and a GIF for the README.
 
 Usage (from the repo root):
-    python tools/trailer.py              # docs/media/trailer.mp4, trailer.gif, social-preview.png
+    python tools/trailer.py              # docs/media/trailer.mp4, trailer.gif, social-preview.png, levels.png
     python tools/trailer.py --sheet      # three stills per shot in one image, a quick check
+    python tools/trailer.py --levels     # only levels.png, the README's level matrix
     python tools/trailer.py --no-gif
 
 Needs ffmpeg on PATH. Nothing in data/ is written: settings changes stay
@@ -12,8 +13,10 @@ in memory and the runs are never recorded or saved.
 Every gameplay shot is a real run from tools/trailer_replays/, re-simulated
 headless through GameState.update() like live play: best runs copied from
 data/replays/, and for the desert and Mars worlds (levels 14, 18, 20) the
-runs of the route bot in the real game (tools/worlds/play.py). No run uses
-a weapon, so the weapon shots add the presses (Shot.fire). The camera
+runs of the route bot in the real game (tools/worlds/play.py). The water
+world and the other route-built levels play their route plans from
+tools/worlds/plans/ (Shot.run = "plan"). No run uses a weapon, so the
+weapon shots add the presses (Shot.fire). The camera
 frames 480x270 instead of the game's 640x360, a bit closer on the action,
 scaled 4x to 1920x1080 with the renderer's sub-pixel glide. Captions use
 the game's pixel font on the same pixel grid.
@@ -50,6 +53,8 @@ SCALE = 4  # -> 1920x1080
 FPS = 60
 GIF_W, GIF_FPS = 960, 20  # 20 = every third 60 Hz frame, even cadence
 SOCIAL_VIEW = (640, 320)  # GitHub social preview, scaled 2x to 1280x640
+GRID_VIEW, GRID_SCALE = (320, 180), 2  # a cell of the level matrix: small on the page, so framed closer
+GRID_GAP = 8
 
 INK = (22, 24, 48)  # outline / shadow colour of all trailer text
 ACCENT = (232, 110, 60)  # the menus' highlight orange
@@ -63,7 +68,7 @@ class Shot:
     start: int
     frames: int
     caption: str = ""
-    run: str = "best"  # replay that drives the player: "best" or "last"
+    run: str = "best"  # what drives the player: replay "best" or "last", or the route "plan"
     ghost: str | None = None  # replay raced as the ghost
     rival: str | None = None  # replay of a second ninja (the multiplayer shot)
     skin: int = 0
@@ -94,15 +99,31 @@ TIMELINE: list[Shot | Card] = [
     Shot(level=3, start=80, frames=40, caption="5 WEAPONS TO UNLOCK", weapon="Sword", fire=(94,)),
     Shot(level=4, start=3120, frames=50, caption="5 WEAPONS TO UNLOCK", weapon="Grapple Hook", fire=(3132,)),
     Shot(level=26, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
-    Shot(level=4, start=1570, frames=45, caption="21 HAND-BUILT LEVELS"),
-    Shot(level=6, start=825, frames=45, caption="21 HAND-BUILT LEVELS"),
-    Shot(level=5, start=2070, frames=45, caption="21 HAND-BUILT LEVELS"),
-    Shot(level=3, start=500, frames=45, caption="21 HAND-BUILT LEVELS"),
+    Shot(level=4, start=1570, frames=45, caption="25+ LEVELS"),
+    Shot(level=6, start=825, frames=45, caption="25+ LEVELS"),
+    Shot(level=5, start=2070, frames=45, caption="25+ LEVELS"),
     Shot(level=14, start=140, frames=45, caption="DIFFERENT WORLDS", seed=1),
     Shot(level=18, start=440, frames=45, caption="DIFFERENT WORLDS"),
     Shot(level=14, start=1640, frames=45, caption="DIFFERENT WORLDS", seed=1),
     Shot(level=20, start=150, frames=45, caption="DIFFERENT WORLDS"),
+    Shot(level=21, start=430, frames=50, caption="DIVE IN. HOLD YOUR BREATH.", run="plan"),
+    Shot(level=23, start=1045, frames=45, caption="DIVE IN. HOLD YOUR BREATH.", run="plan"),
+    Shot(level=25, start=1185, frames=55, caption="DIVE IN. HOLD YOUR BREATH.", run="plan"),
+    Shot(level=22, start=1180, frames=60, caption="DIVE IN. HOLD YOUR BREATH.", run="plan"),
     Card("end", 200),
+]
+
+
+def still(level: int, tick: int, run: str = "best", seed: int = 0) -> Shot:
+    return Shot(level=level, start=tick, frames=1, run=run, seed=seed)
+
+
+# The README's level matrix, row by row: three frames of real runs per world,
+# mixed so that no world sits next to itself and it looks like many levels.
+LEVEL_GRID: list[list[Shot]] = [
+    [still(0, 150), still(14, 300, seed=1), still(12, 450, "plan"), still(20, 300), still(25, 1232, "plan")],
+    [still(18, 2250), still(3, 300), still(21, 460, "plan"), still(16, 2850, "plan"), still(3, 2850)],
+    [still(12, 1500, "plan"), still(23, 1050, "plan"), still(16, 1650, "plan"), still(7, 150), still(15, 300, "plan")],
 ]
 
 
@@ -127,12 +148,41 @@ def boot():
     return pygame
 
 
+def plan_replay(level: int) -> dict:
+    """A level's route plan as replay data, its inputs as they are.
+
+    No snapshots: from a played run's, `Run` would take swim strokes for
+    jumps that failed and drop them.
+    """
+    from tools.worlds.route import load_plan
+
+    keys = {-1: "left", 1: "right"}
+    inputs, held = [], 0
+    for tick, (move, jump, dash) in enumerate(load_plan(level)["frame_list"]):
+        actions = []
+        if move != held:
+            if held:
+                actions.append("stop_" + keys[held])
+            if move:
+                actions.append(keys[move])
+            held = move
+        if jump:
+            actions.append("jump")
+        if dash:
+            actions.append("dash")
+        inputs.append({"tick": tick, "inputs": actions})
+    return {"inputs": inputs, "snapshots": {}}
+
+
 class Run:
     """A replay's inputs, rebuilt into what the player actually did."""
 
     def __init__(self, level: int, kind: str = "best"):
-        with open(os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
-            self.data = json.load(f)
+        if kind == "plan":
+            self.data = plan_replay(level)
+        else:
+            with open(os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
+                self.data = json.load(f)
         self.snaps = {int(t): s["players"][0] for t, s in self.data["snapshots"].items() if s.get("players")}
         self.events = self._events(self.data["inputs"])
         self.held = self._held(self.data["inputs"])
@@ -185,7 +235,9 @@ class Run:
         return [held.get(0, False), held.get(1, False)]
 
     def place(self, player) -> None:
-        """Put the player in the state the recording starts with."""
+        """Put the player in the state the recording starts with (a plan: the spawn)."""
+        if 0 not in self.snaps:
+            return
         s = self.snaps[0]
         player.pos = list(s["pos"])
         player.velocity = list(s["velocity"])
@@ -312,11 +364,12 @@ class Studio:
     def frame_camera(self, g) -> None:
         g.scroll = [g.player.rect().centerx - g.BASE_W / 2, g.player.rect().centery - g.BASE_H / 2]
 
-    def shot(self, shot: Shot):
-        """Yield the frames of a gameplay shot."""
+    def shot(self, shot: Shot, view=(VIEW_W, VIEW_H), out=None):
+        """Yield the frames of a gameplay shot, rendered into `out`."""
         from scripts.constants import TRANSITION_MAX
 
-        gs = self.stage(shot.level, shot.seed, shot.weapon)
+        out = out or self.out
+        gs = self.stage(shot.level, shot.seed, shot.weapon, view)
         g = gs.game
         run = Run(shot.level, shot.run)
         for t in shot.fire:
@@ -345,8 +398,8 @@ class Studio:
             if g.endpoint and g.transition >= TRANSITION_MAX:
                 raise SystemExit(f"shot on level {shot.level} runs past the level end")
             if live:
-                self.renderer.render(g, self.out)
-                yield self.out
+                self.renderer.render(g, out)
+                yield out
             else:
                 g.replay.render_ghost(scratch, (0, 0))  # keep ghost / rival in step
             if not live and i == shot.start - 1:
@@ -499,6 +552,20 @@ class Studio:
         out.blit(pygame.transform.scale_by(layer, 2), (0, 0))
         return out
 
+    def level_grid(self):
+        """The README's level matrix, LEVEL_GRID's rows on a dark ground."""
+        pygame = self.pg
+        w, h = GRID_VIEW[0] * GRID_SCALE, GRID_VIEW[1] * GRID_SCALE
+        rows, cols = len(LEVEL_GRID), len(LEVEL_GRID[0])
+        grid = pygame.Surface((cols * (w + GRID_GAP) - GRID_GAP, rows * (h + GRID_GAP) - GRID_GAP))
+        grid.fill(INK)
+        cell = pygame.Surface((w, h))
+        for r, row in enumerate(LEVEL_GRID):
+            for c, shot in enumerate(row):
+                for frame in self.shot(shot, GRID_VIEW, cell):
+                    grid.blit(frame, (c * (w + GRID_GAP), r * (h + GRID_GAP)))
+        return grid
+
 
 # --- audio ---------------------------------------------------------------
 RATE = 44100
@@ -558,6 +625,12 @@ def render(args) -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
     w, h = VIEW_W * SCALE, VIEW_H * SCALE
 
+    levels = os.path.join(OUT_DIR, "levels.png")
+    if args.levels:
+        pygame.image.save(studio.level_grid(), levels)
+        print(levels)
+        return
+
     if args.sheet:
         thumbs = []
         for item in TIMELINE:
@@ -608,6 +681,9 @@ def render(args) -> None:
         social = os.path.join(OUT_DIR, "social-preview.png")
         pygame.image.save(studio.social(), social)
         print(social)
+
+        pygame.image.save(studio.level_grid(), levels)
+        print(levels)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -615,6 +691,7 @@ def render(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--sheet", action="store_true", help="only render a contact sheet of the shots")
+    parser.add_argument("--levels", action="store_true", help="only render the README's level matrix")
     parser.add_argument("--no-gif", action="store_true", help="skip the README GIF")
     render(parser.parse_args())
 

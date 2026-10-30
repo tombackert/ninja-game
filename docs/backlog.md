@@ -47,7 +47,6 @@
 - Enemy bullets fly through water at full speed: slowing them there would make the water feel thicker (and tone down the gun under water)
 - No dive input: a swimmer only sinks (~3 tiles/s), so deep dives need drains in the level design
 - TrainingEnv / feature extractor know nothing about water (no in-water or breath features)
-- The trailer has no water world shot yet
 - Editor: entity tracking checks `tile_group == 2` for spawners, but group 2 has been `sand` since the desert world (spawners are group 4): placing sand variant 0/1 registers a player/enemy, spawners register none
 
 ## Architecture-Patch Backlog

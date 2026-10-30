@@ -18,6 +18,14 @@ def test_run_rebuilds_every_jump_and_dash_of_the_plan():
     assert _ticks(run, "dash") == {tick for tick, frame in enumerate(frames[1:]) if frame[2]}
 
 
+def test_plan_run_keeps_every_jump_and_dash_of_the_plan():
+    """The trailer's water shots play the route plan straight, from tick 0."""
+    run = load_run_class()(21, "plan")
+    frames = load_plan(21)["frame_list"]
+    assert _ticks(run, "jump") == {tick for tick, frame in enumerate(frames) if frame[1]}
+    assert _ticks(run, "dash") == {tick for tick, frame in enumerate(frames) if frame[2]}
+
+
 def test_water_metrics_stay_out_of_the_score():
     water = [m for m in METRICS if m.group == "water"]
     assert [m.key for m in water] == ["water.frame_p50_ms", "water.frame_p99_ms", "water.frames_over_budget"]
