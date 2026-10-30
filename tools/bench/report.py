@@ -68,6 +68,7 @@ ENTRY_LABEL = {"game.py": "game.py", "menu.py": "menu.py", "app.py": "app.py, st
 HEADLINE = [
     ("frame.p50_ms", "of the 16.7 ms a 60 FPS frame may take"),
     ("frame.p99_ms", ""),
+    ("water.frame_p50_ms", "level 25, the costliest water level"),
     ("startup.to_menu_ms", ""),
     ("level_start.first_ms", "menu -> Play, every asset loaded"),
     ("level_start.p50_ms", "next level, levels 1-6"),
@@ -280,6 +281,8 @@ def bars(name: str, title: str, subtitle: str, panels: list[tuple[str, dict[str,
 WATCH = [
     "frame.p50_ms",
     "frame.p99_ms",
+    "water.frame_p50_ms",
+    "water.frame_p99_ms",
     "startup.to_menu_ms",
     "level_start.first_ms",
     "level_start.p50_ms",
@@ -647,7 +650,8 @@ def write() -> None:
         " frame loop is app.py's without the frame pacer, so a frame's time is its cost (update + render + flip),"
         " headless at 1280x720. Every frame is labelled (play, level start, level finish, pause, menu ...).",
         "- **Isolated scenarios**: start and respawn of every level, level 1 with and without the F1 HUD, saving and"
-        " loading a replay, `TrainingEnv` steps per second.",
+        " loading a replay, level 25 (the water level that costs the most to draw) played to the finish once per"
+        " session, skipped by `--quick` and not part of the score, `TrainingEnv` steps per second.",
         "- **Sandbox**: each session runs in a fresh process on links to the working tree, without data/'s player"
         " files (best times, coins, replays, settings), so it starts like a fresh install and never changes yours.",
         "- **Sleep**: a machine that sleeps mid-run (on battery, macOS does so after a minute idle) stops perf_counter"

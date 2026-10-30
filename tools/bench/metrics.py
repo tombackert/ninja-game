@@ -26,6 +26,7 @@ class Metric:
 
 GROUPS = [
     ("play", "Gameplay (campaign: levels 0-6 played to the finish)"),
+    ("water", "Water world (level 25 played to the finish, outside the campaign)"),
     ("stalls", "Loading and stalls (what the player waits for)"),
     ("screens", "Screens"),
     ("features", "Features and tools"),
@@ -86,6 +87,31 @@ METRICS = [
         floor=1,
         group="play",
         help="As the F1 HUD counts them: a visibly dropped frame",
+    ),
+    # --- water --------------------------------------------------------------
+    Metric(
+        "water.frame_p50_ms",
+        "Water frame p50",
+        tolerance=0.08,
+        floor=0.15,
+        group="water",
+        help="Typical cost of a gameplay frame on the water level that costs the most to draw",
+    ),
+    Metric(
+        "water.frame_p99_ms",
+        "Water frame p99",
+        floor=0.3,
+        group="water",
+        help="1 in 100 gameplay frames on level 25 is slower than this",
+    ),
+    Metric(
+        "water.frames_over_budget",
+        "Water frames > 16.7 ms",
+        unit="",
+        tolerance=0.5,
+        floor=2,
+        group="water",
+        help="Frames of level 25 (stalls included) that would miss a 60 Hz refresh",
     ),
     # --- stalls -------------------------------------------------------------
     Metric(

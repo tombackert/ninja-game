@@ -20,7 +20,8 @@ are told apart from smooth gameplay.
 
 Isolated scenarios then cover what the campaign does not reach: the start
 and respawn of every level, the cost of the F1 performance HUD, saving and
-loading a replay, and the headless simulation the training env runs.
+loading a replay, level 25 of the water world (full runs only) and the
+headless simulation the training env runs.
 
 The game's frame loop is app.py's, without the frame pacer (frames run
 back to back, so a frame's time is its cost). Older versions of the game
@@ -63,6 +64,10 @@ MENU_FRAMES = 60  # the player looks at the menu for a second
 COMPLETE_FRAMES = 60  # ... and at each level-complete screen
 FINISH_SLACK = 300  # frames past the replay's end before a level counts as not finished
 LEVEL_REPEATS = 3  # starts and respawns per level in the level sweep (median)
+# The water level that costs the most to draw. Its run is the route plan's
+# inputs as they are, with the start snapshot only: from later snapshots `Run`
+# would take swim strokes for jumps that failed and drop them.
+WATER_LEVEL = 25
 # The machine slept when wall-clock time ran this much further than perf_counter
 # (which stops in sleep). Frames run slow for a while after a wake, so the
 # WAKE_FRAMES frames from there on are left out of the statistics.
@@ -364,6 +369,27 @@ class Session:
         self.metrics["replay.save_ms"] = pct(save, 0.5)
         self.metrics["replay.load_ms"] = pct(load, 0.5)
 
+    def water(self) -> None:
+        """The water level played to the finish, once, outside the campaign."""
+        label = f"L{WATER_LEVEL}"
+        selected = self.settings.selected_level
+        self.forget_runs(WATER_LEVEL)
+        self.seed(WATER_LEVEL)
+        self.settings.selected_level = WATER_LEVEL
+        self.sm.set(self.sm_mod.GameState())
+        n0 = len(self.frames)
+        self.step(kind="start", level=label)  # the player's first frame, the water renderer's build included
+        self.play(self.sm.current, WATER_LEVEL, "best", label=label)
+        frames = [f for f in self.frames[n0:] if not f.get("wake")]
+        del self.frames[n0:]  # not part of the campaign
+        self.settings.selected_level = selected  # what comes next builds a Game on it
+        assert self.fingerprint[label]["finished"], f"the run did not finish level {WATER_LEVEL}"
+        ms = [f["ms"] for f in frames if f["kind"] == "play"]
+        self.metrics["water.frame_p50_ms"] = pct(ms, 0.5)
+        self.metrics["water.frame_p99_ms"] = pct(ms, 0.99)
+        # Every frame the player sees on the level (stalls included), as frames.over_budget
+        self.metrics["water.frames_over_budget"] = sum(f["ms"] > BUDGET_MS for f in frames)
+
     def training(self) -> None:
         """Steps per second of the headless training env (random actions, level 0)."""
         from scripts.training_env import TrainingEnv
@@ -555,6 +581,8 @@ def main() -> None:
         s.summarize()  # adds the level sweep
         s.scenario("hud", s.hud)
         s.scenario("replay_files", s.replay_files)
+        if not args.quick:
+            s.scenario("water", s.water)
         s.scenario("training", s.training)  # last: the env opens a fullscreen display
     with open(out, "w") as f:
         json.dump(
