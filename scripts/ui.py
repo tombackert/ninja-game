@@ -305,8 +305,10 @@ class UI:
             game.clouds.render(game.display_2, offset=render_scroll)
         # The sea behind the level (water world), over the sky and clouds
         if getattr(game.tilemap, "water", None):
-            game.tilemap.render_water_back(game.display_2, render_scroll)
+            game.tilemap.render_water_back(game.display_2, render_scroll, getattr(game, "tick", 0))
         game.tilemap.render(game.display, offset=render_scroll)
+        if getattr(game.tilemap, "water", None):
+            game.tilemap.render_water_rock(game.display, render_scroll)
 
         # Enemies
         for enemy in game.enemies:

@@ -314,18 +314,23 @@ class Tilemap:
 
     def water_renderer(self):
         if self._water_renderer is None:
-            self._water_renderer = WaterRenderer(
-                self.water,
-                self.game.assets,
-                lambda tx, ty: self.tilemap.get(f"{tx};{ty}", {}).get("type") in PHYSICS_TILES,
-                self.tile_size,
-            )
+            self._water_renderer = WaterRenderer(self.water, self.game.assets, self.solid_type, self.tile_size)
         return self._water_renderer
 
-    def render_water_back(self, surf, offset=(0, 0)):
-        """Draw the sea behind the level (before the tiles)."""
+    def solid_type(self, tx, ty):
+        """Type of the solid tile at tile (tx, ty), None if nothing solid is there."""
+        t = self.tilemap.get(f"{tx};{ty}", {}).get("type")
+        return t if t in PHYSICS_TILES else None
+
+    def render_water_back(self, surf, offset=(0, 0), tick=0):
+        """Draw the sea and the air pockets' rock behind the level (before the tiles)."""
         if self.water:
-            self.water_renderer().render_back(surf, offset)
+            self.water_renderer().render_back(surf, offset, tick)
+
+    def render_water_rock(self, surf, offset=(0, 0)):
+        """Draw the air pockets' rounded rock (right after the tiles)."""
+        if self.water:
+            self.water_renderer().render_rock(surf, offset)
 
     def render_water(self, surf, offset=(0, 0), tick=0):
         """Draw the water's tint, crest and currents over everything drawn so far."""

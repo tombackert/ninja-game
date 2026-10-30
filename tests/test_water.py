@@ -25,9 +25,12 @@ from scripts.snapshot import SnapshotService  # noqa: E402
 from scripts.tilemap import Tilemap  # noqa: E402
 from scripts.water import (  # noqa: E402
     BACK_ALPHA,
-    DEPTH_ALPHA,
-    DEPTH_COLORS,
+    DEEP_ALPHA,
+    DEEP_COLOR,
+    SHALLOW_ALPHA,
+    SHALLOW_COLOR,
     WATER_COLOR,
+    depth_shade,
     water_from_rows,
     water_to_rows,
 )
@@ -91,6 +94,7 @@ def test_map_file_keeps_the_water_layer(g, tmp_path):
 
 
 def test_dry_maps_are_saved_without_a_water_layer(g, tmp_path):
+    g.tilemap.water = {}  # whichever level the local settings start the game on
     path = str(tmp_path / "dry.json")
     g.tilemap.save(path)
     with open(path) as f:
@@ -246,27 +250,92 @@ def test_server_respawns_a_drowned_player():
     assert player.breath == BREATH_FRAMES
 
 
-def test_water_is_drawn_behind_and_over_the_level_with_a_crest_only_under_open_air(g):
-    pool(g)
-    g.tilemap.tilemap["5;9"] = _solid(5, 9)  # a ceiling over one water tile
+def blank():
     surf = pygame.Surface((640, 360), pygame.SRCALPHA)
     surf.fill((0, 0, 0, 0))
+    return surf
+
+
+def test_water_is_one_body_drawn_behind_and_over_the_level_with_a_crest_only_under_open_air(g):
+    pool(g)
+    g.tilemap.tilemap["5;9"] = _solid(5, 9)  # a ceiling over one water tile
+    g.tilemap.tilemap["5;12"] = _solid(5, 12)  # and a rock in the water
+    del g.tilemap.water[(5, 12)]
+    surf = blank()
     g.tilemap.render_water(surf, (0, 0), tick=0)
-    deep = surf.get_at((100, (SURFACE + 8) * 16 + 8))
-    assert deep.a == DEPTH_ALPHA[-1] and abs(deep.b - WATER_COLOR[2]) <= 1
-    assert surf.get_at((100, SURFACE * 16 + 10)).a == DEPTH_ALPHA[0]
+    shallow, deep = surf.get_at((100, SURFACE * 16 + 10)), surf.get_at((100, (SURFACE + 10) * 16 + 8))
+    assert SHALLOW_ALPHA <= shallow.a < deep.a <= DEEP_ALPHA and abs(deep.b - WATER_COLOR[2]) <= 1
     crest_rows = [surf.get_at((x, SURFACE * 16 + 1)).a for x in range(16, 320)]
-    assert max(crest_rows) > DEPTH_ALPHA[0]  # the wave crest
-    under_ceiling = [surf.get_at((x, SURFACE * 16 + 1)).a for x in range(80, 96)]
-    assert set(under_ceiling) == {DEPTH_ALPHA[0]}
+    assert max(crest_rows) > shallow.a  # the wave crest
+    under_ceiling = {surf.get_at((x, SURFACE * 16 + 1)).a for x in range(80, 96)}
+    assert len(under_ceiling) == 1 and max(under_ceiling) < max(crest_rows)
     assert surf.get_at((100, (SURFACE - 1) * 16)).a == 0  # air stays clear
 
-    back = pygame.Surface((640, 360), pygame.SRCALPHA)
-    back.fill((0, 0, 0, 0))
+    back = blank()
     g.tilemap.render_water_back(back, (0, 0))
-    assert back.get_at((100, (SURFACE + 8) * 16 + 8)) == pygame.Color(*DEPTH_COLORS[-1], BACK_ALPHA)
-    assert back.get_at((100, SURFACE * 16 + 8)) == pygame.Color(*DEPTH_COLORS[0], BACK_ALPHA)
+    assert back.get_at((100, SURFACE * 16)) == pygame.Color(*SHALLOW_COLOR, BACK_ALPHA[0])
+    t = depth_shade(10 * 16 + 8)
+    expected = [round(a + (b - a) * t) for a, b in zip(SHALLOW_COLOR + BACK_ALPHA[:1], DEEP_COLOR + BACK_ALPHA[1:])]
+    assert back.get_at((100, (SURFACE + 10) * 16 + 8)) == pygame.Color(*expected)
     assert back.get_at((100, (SURFACE - 1) * 16)).a == 0
+    # One gradient for the whole level: the water under the rock looks like the water beside it
+    for y in range(13 * 16, 360, 7):
+        assert back.get_at((5 * 16 + 8, y)) == back.get_at((9 * 16 + 8, y))
+        assert surf.get_at((5 * 16 + 8, y)) == surf.get_at((9 * 16 + 8, y))
+
+
+def _streaks(g, flow, tick):
+    """Pixels the current adds to the still pool's look."""
+    tm = g.tilemap
+    tm.water = {t: 0 for t in tm.water}
+    tm._water_renderer = None
+    still = blank()
+    tm.render_water(still, (0, 0), tick)
+    for x in range(4, 16):
+        for y in range(14, 18):
+            tm.water[(x, y)] = flow
+    tm._water_renderer = None
+    moving = blank()
+    tm.render_water(moving, (0, 0), tick)
+    return {(x, y) for x in range(640) for y in range(360) if moving.get_at((x, y)) != still.get_at((x, y))}
+
+
+@pytest.mark.parametrize("flow", [1, 2, 3, 4])
+def test_a_current_shows_as_moving_streaks_that_fade_out_at_its_edges(g, flow):
+    pool(g)
+    first, later = _streaks(g, flow, 0), _streaks(g, flow, 30)
+    assert first and later and first != later  # they drift with the flow
+    for x, y in first | later:  # never past the current: the water around stays as it is
+        assert 4 * 16 <= x < 16 * 16 and 14 * 16 - 3 <= y < 18 * 16 + 3
+
+
+def test_air_trapped_under_rock_is_drawn_as_a_hollow_in_the_rock(g):
+    pool(g)
+    tm = g.tilemap
+    assert tm.water_renderer().pockets == []  # open air over a pool is no pocket
+    for x in range(1, 21):  # rock over the pool with a hollow of 4 x 2 tiles in it
+        for y in range(6, 10):
+            if not (8 <= x < 12 and y >= 8):
+                tm.tilemap[f"{x};{y}"] = _solid(x, y)
+    tm._water_renderer = None
+    renderer = tm.water_renderer()
+    assert [sorted(p.region) for p in renderer.pockets] == [sorted((x, y) for x in range(8, 12) for y in (8, 9))]
+
+    back = blank()
+    tm.render_water_back(back, (0, 0), tick=0)
+    wall = back.get_at((9 * 16 + 8, 8 * 16 + 8))
+    assert wall.a == 255 and max(wall[:3]) < 160  # the rock's back wall instead of the sky
+
+    def light(y):
+        return sum(sum(back.get_at((x, y))[:3]) for x in range(8 * 16 + 20, 12 * 16 - 20))
+
+    assert light(9 * 16 + 12) > light(8 * 16 + 4)  # lit from the water below
+
+    rock = blank()
+    tm.render_water_rock(rock, (0, 0))
+    assert rock.get_at((8 * 16, 8 * 16)).a == 255  # the top corners are rounded off
+    assert rock.get_at((12 * 16 - 1, 8 * 16)).a == 255
+    assert rock.get_at((9 * 16 + 8, 9 * 16 + 8)).a == 0  # the hollow stays open
 
 
 def test_a_level_can_leave_out_the_clouds(g, tmp_path, monkeypatch):

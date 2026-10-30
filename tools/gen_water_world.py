@@ -8,10 +8,11 @@ reproduces the same files):
 - `tiles/wreck`: mossy ship planks with nails (the sunken ship)
 - `tiles/water`: one icon per water flow (still, right, left, up, down)
   for the editor and the level previews
-- `water/surface`, `water/current`, `water/bubbles`: the animated overlays
-  the game draws over a level's water (wave crest, current streaks, the
-  bubble columns of up-currents)
-- `particles/bubble`: the bubbles a swimmer breathes out
+- `water/surface`: the animated wave crest the game draws where a
+  level's water meets open air (currents are drawn in code, see
+  scripts/water.py)
+- `particles/bubble`: the bubbles a swimmer breathes out, which also rise
+  in up-currents
 - `breath.png`, `breath-low.png`: the breath meter's bubble icons
 - `entities/player/<skin>/swim`: a 4-frame swim cycle for every skin,
   drawn for the default skin and recolored per skin the way the skins
@@ -190,7 +191,6 @@ COLORS = {
     "f": (226, 244, 255),  # foam
     "s": (160, 214, 244),  # crest
     "d": (98, 172, 222),  # crest shade
-    "a": (150, 206, 236),  # streak
     "b": (178, 226, 250),  # bubble rim
     "B": (238, 250, 255),  # bubble gleam
     "e": (232, 92, 84),  # low breath
@@ -406,53 +406,15 @@ def generate_decor() -> None:
 
 
 # --- Water ---------------------------------------------------------------------------
-# The game draws water as a translucent blue layer over the level (see
-# scripts/water.py); these overlays add the moving parts, each frame shifted
-# by 4 px so 4 frames make a seamless 16 px cycle.
+# The game draws water as one translucent body over the level (see
+# scripts/water.py); the crest adds its moving top, each frame shifted by
+# 4 px so 4 frames make a seamless 16 px cycle.
 
 SURFACE = [  # wave crest, 16 px period
     "...ff......fff..",
     "ffssffsf..ffssff",
     "ssddssdsssssddss",
     "d..d.dd.d..d.dd.",
-]
-
-CURRENT = [  # flow to the right: streaks of different lengths
-    "................",
-    "...aaaa.........",
-    "................",
-    "................",
-    "..........aaaaa.",
-    "................",
-    "................",
-    "aa..............",
-    "...........aaa..",
-    "................",
-    "....aaaaa.......",
-    "................",
-    "................",
-    ".............aaa",
-    "aaa.............",
-    "................",
-]
-
-BUBBLES = [  # up-current: rising bubbles, 16 px period
-    "................",
-    "....b...........",
-    "...bBb......b...",
-    "....b......bBb..",
-    "............b...",
-    "................",
-    "......b.........",
-    "................",
-    "..........bb....",
-    ".b.......bBBb...",
-    "bBb......bBBb...",
-    ".b........bb....",
-    "................",
-    ".....b..........",
-    "....bBb.........",
-    ".....b..........",
 ]
 
 
@@ -462,12 +424,11 @@ def _shift(grid: list[str], dx: int, dy: int) -> list[str]:
 
 
 def generate_water() -> None:
-    for sub, grid, step in (("surface", SURFACE, (4, 0)), ("current", CURRENT, (4, 0)), ("bubbles", BUBBLES, (0, -4))):
-        out = os.path.join(WATER_DIR, sub)
-        os.makedirs(out, exist_ok=True)
-        for f in range(4):
-            grid_image(_shift(grid, step[0] * f, step[1] * f)).save(os.path.join(out, f"{f}.png"))
-    print("water overlays generated (surface, current, bubbles: 4 frames each)")
+    out = os.path.join(WATER_DIR, "surface")
+    os.makedirs(out, exist_ok=True)
+    for f in range(4):
+        grid_image(_shift(SURFACE, 4 * f, 0)).save(os.path.join(out, f"{f}.png"))
+    print("water crest generated (4 frames)")
 
     # Icons per flow for the editor and previews: water body with a marker
     out = os.path.join(TILE_DIR, "water")
@@ -741,8 +702,7 @@ def make_preview(path: str, scale: int = 6) -> None:
         parts.append(Image.open(os.path.join(TILE_DIR, rel)))
     for v in range(5):
         parts.append(Image.open(os.path.join(TILE_DIR, "water", f"{v}.png")))
-    for sub in ("surface", "current", "bubbles"):
-        parts.append(Image.open(os.path.join(WATER_DIR, sub, "0.png")))
+    parts.append(Image.open(os.path.join(WATER_DIR, "surface", "0.png")))
     for i in range(6):
         parts.append(Image.open(os.path.join(IMG_DIR, "particles", "bubble", f"{i}.png")))
     parts.append(Image.open(os.path.join(IMG_DIR, "breath.png")))

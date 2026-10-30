@@ -196,7 +196,7 @@ The `Renderer` (`scripts/renderer.py`) ensures consistent draw order:
 1.  **Clear:** Wipe buffer.
 2.  **Background:** Parallax layers.
 3.  **Ghosts:** Rendered via `ReplayManager` (tinted, semi-transparent).
-4.  **World:** Tilemap, Entities, Particles (via UI helper). On water levels the sea is drawn behind the tiles first (dense, darker with depth) and a light tint, the wave crest, currents and breath meters over them last.
+4.  **World:** Tilemap, Entities, Particles (via UI helper). On water levels the water is drawn as one body (one smooth gradient by depth for the whole level): the sea and the air pockets' back walls behind the tiles first, the pockets' rounded rock right after the tiles (so it gets their outline), and a light tint, the wave crest, the drifting current streaks and breath meters over them last.
 5.  **Effects (Pre):** Transitions.
 6.  **HUD:** UI overlays.
 7.  **PerfOverlay:** Optional debug metrics (F1).

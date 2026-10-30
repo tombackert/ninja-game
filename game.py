@@ -85,8 +85,6 @@ class Game:
             "reef": am.get_image_frames("tiles/reef"),
             "wreck": am.get_image_frames("tiles/wreck"),
             "water/surface": am.get_image_frames("water/surface"),
-            "water/current": am.get_image_frames("water/current"),
-            "water/bubbles": am.get_image_frames("water/bubbles"),
             "player": am.get_image("entities/player.png"),
             "background": am.get_image("background-big.png"),
             "clouds": am.get_image_frames("clouds"),
