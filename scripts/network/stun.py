@@ -112,7 +112,7 @@ def resolve(servers: List[Tuple[str, int]]) -> Dict[str, List[Address]]:
             except OSError:
                 continue
             for info in infos[:1]:
-                out[key].append((info[4][0], info[4][1]))
+                out[key].append((str(info[4][0]), int(info[4][1])))
     return out
 
 
