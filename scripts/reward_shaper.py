@@ -45,11 +45,11 @@ class RewardShaper:
             reward += (current_snap.score - prev_snap.score) * self.config["coin_reward"]
 
         # Lives lost
-        # Assume player 0 is the agent
-        prev_lives = next((p.lives for p in prev_snap.players if p.id == 0), 0)
-        curr_lives = next((p.lives for p in current_snap.players if p.id == 0), 0)
+        agent_id = info.get("agent_id", 0)
+        prev_lives = next((p.lives for p in prev_snap.players if p.id == agent_id), 0)
+        curr_lives = next((p.lives for p in current_snap.players if p.id == agent_id), 0)
         if curr_lives < prev_lives:
-            reward += (curr_lives - prev_lives) * self.config["damage_penalty"]
+            reward += (prev_lives - curr_lives) * self.config["damage_penalty"]
 
         # Enemy kills
         if len(current_snap.enemies) < len(prev_snap.enemies):

@@ -1,3 +1,5 @@
+import pytest
+
 from scripts.training_env import TrainingEnv
 
 
@@ -40,3 +42,15 @@ def test_training_env_step():
     assert not done
     assert info["tick"] == 1
     assert reward == 0.01  # Default survival reward
+
+
+def test_losing_a_life_is_penalized_whatever_the_player_id():
+    env = TrainingEnv(seed=42, level_id=1)
+    env.reset()
+    assert env.game.player.id != 0  # the enemies of this level take the first ids
+
+    env.game.player.lives -= 1
+    _, reward, _, _ = env.step(0)
+
+    config = env.reward_shaper.config
+    assert reward == pytest.approx(config["survival_reward"] + config["damage_penalty"])

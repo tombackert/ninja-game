@@ -97,6 +97,7 @@ class TrainingEnv:
 
         # Prepare info dict for reward shaper
         info = {
+            "agent_id": p.id,
             "lives": p.lives,
             "coins": self.game.cm.coins,
             "tick": self.steps,
