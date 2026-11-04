@@ -26,6 +26,17 @@
 - Introduce new enemys (like bosses). First hardcode them, later train some
 - Optimize training aspect of the game and showcase it 
 - New dev strategy: let openai models optimize code on a separate branch, then let opus merge what is good. Similar to how a two person team would develope a game like this
+- Build all levels via the code way (now that we have it, this is the more elegant way) -> upgrade the editor so that it can also do what we now do via the code way (route planner etc.) (-> related to storage issue level 9+10 not compact)
+- Have 50+ levels
+- Optimize enemies: simple enemies should no longer shoot from so far away, range should go just past the frame edge. Add harder ones.
+- Game modes: clean up menu: Solo / Online / (against AI)
+- Build level map: like in Super Mario Bros
+- Optimize storage -> level 9+10 not compact, trailer / sound assets are in the git code history (will become a problem later)
+- Use editor from within the game -> editor should build compressed level files. Something like level to code to level. Where the level is optimized in code so that it afterwards exists in the storage-optimized form. (storage-optimized form must not mean that it needs more compute later to get back from the form into the wanted one. First understand why level 9 + 10 are so much bigger / uncompressed)
+- Enemy balance - when several enemies stand in a cluster, only a certain number shoot. Enemy checks whether one very close around it has already shot. Sight range of the enemies just outside the window
+- Improve swimming - diving head first (body rotation changes). Air after diving recharges slower than instantly.
+- The new water levels were trivial for Tobi. Must then become much harder later. Question: How can one design levels on which human players get stuck for a very long time? It seems that the search/evaluation does not yet find all possible human inputs when evaluating the levels. There is still optimization potential there!
+- The levels need to get some kind of preview/thumbnail or names so that they can be found again in the menu. Also, one could think about an improvement of the level menu itself - based on or inspo from Super Mario Bros worlds. Maybe a 2D map in which one can walk through the worlds map?
 
 ## Benchmark Findings (tools/bench, 2026-10-18; numbers in BENCHMARKS.md)
 - Camera glide (68c2a6d) costs +1.3 ms per gameplay frame (2.14 -> 3.44 ms, +61%; first frame of a level +115%), not the ~0.4 ms its commit states: profile Renderer._present (full-window alpha upscale and blit every frame)
