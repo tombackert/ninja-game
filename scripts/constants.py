@@ -84,6 +84,7 @@ RESPAWN_DEAD_THRESHOLD = 40  # frames until respawn when dead animation
 TRANSITION_MAX = 30  # max positive transition value
 TRANSITION_START = -30  # starting negative transition value
 AIR_TIME_FATAL = 420  # frames in air before considered 'dead'
+FALL_KILL_DEPTH = 4  # a fall kills once the player is this many tiles below the level's lowest solid tile
 
 # Camera
 CAMERA_EASE_FRAMES = 30  # each frame covers 1/N of the remaining distance ("classic")

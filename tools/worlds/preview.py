@@ -14,7 +14,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame  # noqa: E402
 
-TILE_DIRS = {"coin": "collectables/coin", "flag": "collectables/flag"}
+TILE_DIRS = {"coin": "collectables/coin", "flag": "collectables/flag", "checkpoint": "collectables/checkpoint"}
 
 
 def render(map_path: str, out: str, scale: float = 0.5, route=None, path_px=None) -> tuple:

@@ -3,6 +3,9 @@ import pygame
 from scripts.asset_manager import AssetManager
 from scripts.audio_service import AudioService
 from scripts.clouds import Clouds
+from scripts.checkpoints import celebrate as celebrate_checkpoint
+from scripts.checkpoints import find_checkpoints
+from scripts.checkpoints import touch as touch_checkpoint
 from scripts.collectableManager import CollectableManager
 from scripts.constants import (
     CALM_CAMERA_BAND_Y,
@@ -97,6 +100,7 @@ class Game:
             "breath-low": am.get_image("breath-low.png"),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
+            "checkpoint": am.get_image_frames("tiles/collectables/checkpoint"),
             "gun": am.get_image("gun.png"),
             "rifle": am.get_image("rifle.png"),
             "sword": am.get_image("sword.png"),
@@ -181,6 +185,9 @@ class Game:
         for tile in flag_tiles:
             flag_rect = pygame.Rect(tile["pos"][0], tile["pos"][1], 16, 16)
             self.flags.append(flag_rect)
+
+        # Checkpoints (their banners stay hoisted through a respawn: the tiles are kept)
+        self.checkpoints = find_checkpoints(self.tilemap)
 
         self.leaf_spawners = []
         for tree in self.tilemap.extract([("large_decor", 2)], keep=True):
@@ -319,6 +326,11 @@ class Game:
                     player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 else:
                     player.update(self.tilemap, (0, 0))
+            if not self.dead:  # a checkpoint is no use to a player who just died
+                for player in self.players:
+                    reached = touch_checkpoint(self.checkpoints, player)
+                    if reached is not None and player is self.player:
+                        celebrate_checkpoint(self, reached)
 
         self.particle_system.update()
         self.spawn_leaves()

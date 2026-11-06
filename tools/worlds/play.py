@@ -143,6 +143,7 @@ class Bot:
         self.held: set = set()
         self.updates = 0  # player updates since the last level (re)load
         self.loads = 0
+        self.reloaded = False  # a (re)load since the last decision: find our place on the route
         self.report = {
             "level": level,
             "completed": False,
@@ -339,6 +340,9 @@ class Bot:
         )
         down = p.collisions["down"]
         u = self.updates
+        if self.reloaded:
+            self.reloaded = False
+            self.rejoin(s)
         if self.predicted is not None and s != self.predicted:
             self.report["desyncs"] += 1
             self.queue = []
@@ -417,6 +421,19 @@ class Bot:
         if not self.queue and not self.on_track and self.queue_reaches:
             self.seg += 1
         return frame
+
+    def rejoin(self, s):
+        """After a respawn, which may be at a checkpoint: go on from the route
+        section the nearest point of the planned run lies in."""
+        from tools.worlds import physics as ph
+
+        i = min(
+            range(len(self.pre_states)),
+            key=lambda k: abs(self.pre_states[k][ph.X] - s[ph.X]) + abs(self.pre_states[k][ph.Y] - s[ph.Y]),
+        )
+        if i > 30:  # not the spawn: a checkpoint further on
+            self.seg = self.seg_of[min(i, len(self.seg_of) - 1)]
+            self.report["checkpoint_respawns"] = self.report.get("checkpoint_respawns", 0) + 1
 
     def reflex(self, s, hazard):
         """First quick evasion that no bullet in flight hits, or None."""
@@ -595,6 +612,7 @@ def bot_main(level: int, out: str, video: bool) -> int:
             bot.report["restarts"] += 1
         bot.loads += 1
         bot.updates = 0
+        bot.reloaded = True
 
     game_mod.Game.load_level = load_level
 

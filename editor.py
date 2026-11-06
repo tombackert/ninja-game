@@ -45,6 +45,9 @@ class Editor:
             "wreck": load_images("tiles/wreck"),
             # Water layer brush: the variant is the flow (0 still, 1-4 a current)
             "water": load_images("tiles/water"),
+            # Checkpoint banner, drawn from its tile down: place it one tile over
+            # the air tile above the ground (or offgrid, its foot on the ground)
+            "checkpoint": load_images("tiles/collectables/checkpoint")[:1],
         }
         self.water_icons = []
         for img in self.assets["water"]:

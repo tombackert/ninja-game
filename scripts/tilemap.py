@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pygame
 
+from scripts.constants import FALL_KILL_DEPTH
 from scripts.entities import Enemy, Player
 from scripts.logger import get_logger
 from scripts.settings import settings
@@ -50,6 +51,8 @@ class Tilemap:
         # Water layer (see scripts/water.py): (tx, ty) -> flow
         self.water = {}
         self._water_renderer = None
+        # A fall ends here (px, see kill_line): None until a map is loaded
+        self.kill_y = None
         self.enemies = []
         self.players = []
         self.meta_data = {}
@@ -208,6 +211,7 @@ class Tilemap:
             self._water_renderer = None
             self._extracted = []
             self.loaded_path = path
+            self.kill_y = self.kill_line()
 
             self.players = []
             self.enemies = []
@@ -311,6 +315,13 @@ class Tilemap:
                                 tile["pos"][1] * self.tile_size - offset[1],
                             ),
                         )
+
+    def kill_line(self):
+        """y (px) below which a falling player is dead: FALL_KILL_DEPTH tiles under
+        the level's lowest solid tile, where nothing can catch the fall any more.
+        None for a level without solid tiles."""
+        rows = [t["pos"][1] for t in self.tilemap.values() if t["type"] in PHYSICS_TILES]
+        return (max(rows) + FALL_KILL_DEPTH) * self.tile_size if rows else None
 
     def water_renderer(self):
         if self._water_renderer is None:

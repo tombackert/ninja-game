@@ -32,6 +32,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pygame
 
+from scripts.checkpoints import find_checkpoints
+from scripts.checkpoints import touch as touch_checkpoint
 from scripts.constants import AIR_TIME_FATAL, BREATH_FRAMES, DASH_MIN_ACTIVE_ABS, PROJECTILE_SPEED
 from scripts.entities import Enemy, Player
 from scripts.entity_id import EntityIDGenerator
@@ -156,6 +158,9 @@ class HeadlessGame:
                 self.collectables[next_cid] = {"kind": kind, "rect": rect}
                 next_cid += 1
 
+        # Checkpoints: each player respawns at the last one they reached
+        self.checkpoints = find_checkpoints(self.tilemap)
+
         # Projectile system (server-authoritative)
         self.projectiles = ProjectileSystem(self)
 
@@ -232,7 +237,7 @@ class HeadlessGame:
                 return
 
     def _respawn(self, player: Player, lose_life: bool) -> None:
-        """Reset a player to their spawn point."""
+        """Reset a player to their spawn point (or the last checkpoint they reached)."""
         if lose_life:
             player.lives -= 1
         if player.lives < 1:
@@ -270,8 +275,11 @@ class HeadlessGame:
                 for action in actions:
                     self._apply_action(player, action)
                 player.update(self.tilemap, movement)
-                if player.air_time > AIR_TIME_FATAL or player.breath <= 0:  # fell or drowned
+                # fell (out of the level or for too long) or drowned
+                if player.air_time > AIR_TIME_FATAL or player.breath <= 0 or player.fell_out(self.tilemap):
                     self._respawn(player, lose_life=True)
+                else:
+                    touch_checkpoint(self.checkpoints, player)
         self._pending_steps.clear()
         self._pending_inputs.clear()
         # The global death counter is meaningless with per-player respawn.

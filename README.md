@@ -30,6 +30,7 @@ That's it: Python 3.10+ is the only requirement (pygame-ce is installed automati
 ## Features
 
 - **Tight platforming**: double jump, wall-slide and wall-jump, and a dash that kills enemies on contact
+- **Checkpoints**: a banner halfway through a level; touch it and a fall sends you back there, not to the start
 - **Ghost replays**: every run is recorded, so you can race a ghost of your best (or last) run
 - **Multiplayer**: host from the menu and friends join by IP, with server-authoritative UDP netcode, client-side prediction and interpolation ([details](docs/multiplayer.md))
 - **Store & accessories**: spend coins on 5 weapons (gun, rifle, ninja stars, sword, grapple hook), 4 gear items (shield, moon boots, coin magnet, lucky charm) and 6 skins

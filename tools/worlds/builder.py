@@ -145,6 +145,16 @@ class Level:
     def flag(self, x, y):
         self._obj(x, y, "flag", 0)
 
+    def checkpoint(self, x, y):
+        """Checkpoint banner (scripts/checkpoints.py) standing on the ground under
+        air tile (x, y): a player who touches it respawns at (x, y). Offgrid, as
+        its banner is two tiles tall. One per level, halfway, where every route
+        passes (a world's finale may take a second); the player has P on top."""
+        for t in ((x, y), (x, y - 1)):
+            if t in self.solid:
+                raise ValueError(f"level {self.map_id}: checkpoint at {(x, y)} overlaps solid tile {t}")
+        self.offgrid.append({"type": "checkpoint", "variant": 0, "pos": [x * 16, (y - 1) * 16]})
+
     def decor(self, x, y, variant):
         self._obj(x, y, "decor", variant)
 

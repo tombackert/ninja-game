@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from scripts.constants import (
     AIR_TIME_FATAL,
+    FALL_KILL_DEPTH,
     BREATH_FRAMES,
     DASH_DECEL_TRIGGER_FRAME,
     DASH_DURATION_FRAMES,
@@ -53,11 +54,13 @@ _DRY: dict = {}
 
 
 class Terrain(set):
-    """Solid tiles {(tx, ty)} of a level, with its water layer as `.water`."""
+    """Solid tiles {(tx, ty)} of a level, with its water layer as `.water` and
+    the line a fall ends at as `.kill_y` (Tilemap.kill_line)."""
 
     def __init__(self, solids=(), water=None):
         super().__init__(solids)
         self.water = water or _DRY
+        self.kill_y = (max(ty for _, ty in self) + FALL_KILL_DEPTH) * TS if self else None
 
 
 def solids_from_map(tilemap: dict, water_rows=None) -> Terrain:
@@ -65,11 +68,8 @@ def solids_from_map(tilemap: dict, water_rows=None) -> Terrain:
     water layer from the map's `water` runs."""
     from scripts.water import water_from_rows
 
-    out = Terrain(water=water_from_rows(water_rows or []))
-    for tile in tilemap.values():
-        if tile["type"] in PHYSICS_TILES:
-            out.add((tile["pos"][0], tile["pos"][1]))
-    return out
+    solids = [(t["pos"][0], t["pos"][1]) for t in tilemap.values() if t["type"] in PHYSICS_TILES]
+    return Terrain(solids, water_from_rows(water_rows or []))
 
 
 def terrain_from_map(map_data: dict) -> Terrain:
@@ -222,7 +222,8 @@ def step(s: tuple, m: int, solids: set) -> tuple:
         if head_wet:
             jumps = 1
     breath = breath - 1 if head_wet else BREATH_FRAMES
-    dead = air > AIR_TIME_FATAL or breath <= 0
+    kill_y = getattr(solids, "kill_y", None)
+    dead = air > AIR_TIME_FATAL or breath <= 0 or (kill_y is not None and y > kill_y)
     if down:
         air = 0
         jumps = 1

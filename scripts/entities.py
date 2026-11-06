@@ -436,7 +436,7 @@ class Player(PhysicsEntity):
         else:
             self.breath = BREATH_FRAMES
 
-        if self.air_time > AIR_TIME_FATAL or self.breath <= 0:
+        if self.air_time > AIR_TIME_FATAL or self.breath <= 0 or self.fell_out(tilemap):
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
                 # Duck audio on death impact
@@ -645,6 +645,12 @@ class Player(PhysicsEntity):
             bubble,
             (self.rect().centerx - radius - offset[0], self.rect().centery - radius - offset[1]),
         )
+
+    def fell_out(self, tilemap) -> bool:
+        """Fallen below anything that could still catch the fall (Tilemap.kill_line):
+        dead at once instead of after AIR_TIME_FATAL frames in the air."""
+        kill_y = getattr(tilemap, "kill_y", None)
+        return kill_y is not None and self.pos[1] > kill_y
 
     def jump(self):
         # Jump input releases an active grapple with a small upward boost
