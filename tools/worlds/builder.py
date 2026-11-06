@@ -11,6 +11,7 @@ JSON in the format `Tilemap.load` reads.
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 from collections import deque
@@ -453,3 +454,14 @@ def holed_chimney(lv: Level, x_left: int, inner: int, y_top: int, floor: int, re
         lv.wp(x, row - 1, ground=True, label=f"{label} rest {row}")
         lv.coin(x_left + 1 + inner // 2, row - 3)
     lv.wp(x_left, y_top - 1, xr, y_top - 1, label=f"{label} top")
+
+
+def dunes(lv: Level, x0: int, x1: int, base: int, amp: float, period: float, bottom: int, phase=0.0, t=None):
+    """Rolling surface from x0 to x1 around row `base`, solid down to `bottom`.
+    Returns {x: surface row}."""
+    tops = {}
+    for x in range(x0, x1 + 1):
+        top = base - round(amp * (math.sin((x + phase) / period) + 0.5 * math.sin((x + phase) / (period * 0.37))))
+        lv.rect(x, top, x, bottom, t)
+        tops[x] = top
+    return tops
