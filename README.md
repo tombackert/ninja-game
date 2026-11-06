@@ -198,12 +198,16 @@ python -m tools.bench --save     # record this run as the new baseline (BENCHMAR
 
 ### Building the worlds
 
-Levels 11-25 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
+Levels 11 and up are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
 
 ```bash
 python -m tools.worlds.build 14 --preview out/   # write the map, plan its route, render an overview
+python -m tools.worlds.build 14 --assess         # ... and measure it right away: hard sections, time to clear
+python -m tools.worlds.stills 14 --out out/      # stills of the real game along the route: how it looks to a player
 python -m tools.worlds.play 14 --video           # play it in the real game window: menu, keyboard, live enemies
 python -m tools.worlds.assess 9 14 --resample    # compare its difficulty with level 9
+python -m tools.worlds.assess 14 --windows       # timing window per element, minutes and deaths to the first clear
+python -m tools.worlds.assess 14 --sections --playtime  # the previous metric: which sections make it hard, where players die
 python -m tools.worlds.check_physics --maps 21 22 --route  # the physics replica against the real game
 python tools/gen_world_tiles.py                  # redraw the sand and mars tiles, decor and skies
 python tools/gen_water_world.py                  # redraw the water world: tiles, water, decor, swim cycle, skies

@@ -5,8 +5,13 @@ write data/maps/<id>.json, plan the intended route with the exact physics
 replica (fails loudly at the first unreachable waypoint) and save the
 input plan to tools/worlds/plans/<id>.json for the real-game bot.
 
+With --assess, each level's difficulty is measured right after its route is
+planned: the timing windows of its elements and the calibrated time to the
+first clear (tools/worlds/windows), then the previous noise metric
+(tools/worlds/assess), which is the loop for balancing a level.
+
 Usage:
-    python -m tools.worlds.build [ids, default: all in tools/worlds/levels] [--preview DIR] [--no-plan]
+    python -m tools.worlds.build [ids, default: all in tools/worlds/levels] [--preview DIR] [--no-plan] [--assess]
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ def main() -> int:
     ap.add_argument("--preview", default=None, help="directory for overview PNGs")
     ap.add_argument("--no-plan", action="store_true")
     ap.add_argument("--scale", type=float, default=0.5)
+    ap.add_argument("--assess", action="store_true", help="measure difficulty and play time after planning")
     args = ap.parse_args()
 
     failures = 0
@@ -65,6 +71,15 @@ def main() -> int:
             )
             if res.ok:
                 save_plan(map_id, spawn_px, res.frames, lv.route, res.segments)
+                if args.assess:
+                    from tools.worlds.assess import print_details, profile
+                    from tools.worlds.windows import print_summary, profile_map
+
+                    print("  elements (most forgiving way, narrowest window in frames):")
+                    print_summary(profile_map(map_id, verbose=True))
+                    r = profile(map_id, 2.0, 24, 30, sections=True, times=True)
+                    print(f"  previous metric: {r['fails_per_run']} fails per run (assess, sigma 2)")
+                    print_details(r)
             else:
                 failures += 1
         if args.preview:
