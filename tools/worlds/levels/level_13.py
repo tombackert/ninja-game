@@ -48,7 +48,7 @@ def build() -> Level:
     lv.carve(1, 96, 4, 97)  # hole in floor 2
     lv.rect(5, 105, 5, 105)
     lv.wp(1, 113, 4, 117, ground=True, label="s2 chimney base")
-    lv.wp(1, 93, 4, 95, label="s2 hole")
+    lv.wp(1, 93, 4, 95, label="s2 hole", guide=True)
     for x in (8, 26, 44, 50, 56):  # clear of the hole at x 33..36
         lv.enemy(x, 117)
     lv.coins(13, 114, 19)
@@ -66,7 +66,7 @@ def build() -> Level:
     lv.rect(55, 76, 55, 90)  # chimney pillar, inner x 56..60
     lv.carve(56, 74, 60, 75)  # hole in floor 3
     lv.wp(56, 91, 60, 95, ground=True, label="s3 chimney base")
-    lv.wp(56, 71, 60, 73, label="s3 hole")
+    lv.wp(56, 71, 60, 73, label="s3 hole", guide=True)
     for x in (47, 50, 53):
         lv.enemy(x, 95)
     for x in (10, 12):  # clear of the hole at x 1..4
@@ -80,7 +80,7 @@ def build() -> Level:
     lv.rect(6, 54, 54, 56)  # rock up to floor 4
     mz.open_to(7, 2, "right")
     lv.wp(53, 71, 55, 73, ground=True, label="labyrinth entry")
-    mz.route((7, 2), (0, 0))
+    mz.route((7, 2), (0, 0), skip={(0, 0), (3, 0), (4, 0), (4, 1), (6, 1)})
     lv.carve(8, 52, 10, 58)  # shaft from cell (0,0) up through floor 4
     lv.wp(8, 49, 10, 51, label="s4 exit")
     for c, r in mz.dead_ends():
@@ -109,7 +109,7 @@ def build() -> Level:
     lv.rect(59, 32, 59, 39)
     lv.carve(54, 30, 58, 31)
     lv.wp(56, 48, 60, 51, ground=True, label="s5 chimney base")
-    lv.wp(54, 35, 58, 38, label="s5 zigzag")
+    lv.wp(54, 35, 58, 38, label="s5 zigzag", guide=True)
     lv.wp(54, 27, 58, 29, label="s5 hole")
 
     # --- Storey 6: floating crates to the roof chimney -----------------------

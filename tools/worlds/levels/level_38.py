@@ -84,13 +84,13 @@ def build() -> Level:
         lv.rect(17 + 4 * i, row, 17 + 4 * i + 1, row)
     for i in range(len(spec)):
         x = 17 + 4 * i
-        if i in hollows:
+        if i in hollows:  # the planner finds its own way into a hollow; the stop is over the trunk after it
             pocket(lv, x, top - 3, x + 6, top - 1)
-            lv.wp(x, top - 2, x + 2, top - 1, label=hollows[i])
             lv.wp(x + 3, top - 2, x + 3, top - 1, label=f"over trunk {i}")
             continue
         g0, g1 = spec[i][1][0]
-        lv.wp(x + 3, g0, x + 3, g1, label=f"trunk {i}")
+        if i != 4:  # a stop in each gap where a swimmer can rest (the planner passes trunk 4 on its own)
+            lv.wp(x + 3, g0, x + 3, g1, label=f"trunk {i}")
     for k, x in enumerate(range(18, x_end, 4)):
         lv.coin(x, top + 6 + (3 if k % 2 else -3))
     dress(lv, range(18, x_end, 2), top, (SEAWEED, ANEMONE, CORAL), seed=38)
@@ -102,8 +102,7 @@ def build() -> Level:
     lv.water(cx, top, cx + 3, floor - 1, UP)
     lv.rect(cx + 5, cliff, cx + 140, BOTTOM)  # the cliff east of the clearing
     lv.carve(cx, 0, cx + 140, cliff - 1)
-    lv.wp(cx, top - 3, cx + 3, top + 2, label="the clearing")
-    holed_chimney(lv, cx - 1, 4, cliff, top, rests=[(1, top - 8), (-1, top - 14)], label="trunks")
+    holed_chimney(lv, cx - 1, 4, cliff, top, rests=[(1, top - 8), (-1, top - 14)], label="trunks", top=False)
     lv.rect(cx + 4, cliff, cx + 4, floor - 1)
     lv.route = [w for w in lv.route if w.label != "trunks base"]
     lv.wp(cx + 5, cliff - 1, cx + 7, cliff - 1, ground=True, label="cliff top")
@@ -119,7 +118,6 @@ def build() -> Level:
     dfloor = dtop + 13
     lv.carve(sk, cliff, sk + 2, dtop - 5)
     basin(lv, sk, sk + 2, dtop - 4, dtop - 1, DOWN)
-    lv.wp(sk, dtop - 4, sk + 2, dtop - 1, label="the sinkhole")
     d0 = sk
     u = dtop
     dspec = [
@@ -144,13 +142,14 @@ def build() -> Level:
     lv.water(d0 + 16, dfloor - 3, xd - 1, dfloor - 1, LEFT)  # the undertow along the floor
     for i in range(len(dspec)):
         x = d0 + 4 * i
-        if i in (3, 7, 11):
+        if i in (3, 7, 11):  # as in the lanes above: no stop in the hollow, one over the trunk after it
             pocket(lv, x, dtop - 3, x + 6, dtop - 1)
-            lv.wp(x, dtop - 2, x + 2, dtop - 1, label=f"deep hollow {i}")
-            lv.wp(x + 3, dtop - 2, x + 3, dtop - 1, label=f"over deep trunk {i}")
+            if i != 3:
+                lv.wp(x + 3, dtop - 2, x + 3, dtop - 1, label=f"over deep trunk {i}")
             continue
         g0, g1 = dspec[i][1][0]
-        lv.wp(x + 3, g0, x + 3, g1, label=f"deep trunk {i}")
+        if i not in (2, 6, 9, 14):  # stops where a swimmer can rest in the gap; the planner passes the others
+            lv.wp(x + 3, g0, x + 3, g1, label=f"deep trunk {i}")
     for k, x in enumerate(range(d0 + 1, xd, 4)):
         lv.coin(x, dtop + 6 + (3 if k % 2 else -3))
     dress(lv, range(d0 + 1, xd, 2), dtop, (SEAWEED, ANEMONE, CORAL, STARFISH), seed=381)
@@ -161,7 +160,6 @@ def build() -> Level:
     lv.carve(sc, cave_floor, sc + 2, dfloor - 1)
     lv.water(sc, cave_floor, sc + 2, dfloor - 1, UP)
     lv.carve(sc, cave_floor - 8, sc + 14, cave_floor - 1)
-    lv.wp(sc, dtop, sc + 2, dtop + 4, label="last lane")
     lv.wp(sc + 3, cave_floor - 1, sc + 5, cave_floor - 1, ground=True, label="sea cave")
     lv.decor(sc + 7, cave_floor - 1, ANEMONE)
     lv.enemy(sc + 9, cave_floor - 1)
@@ -171,7 +169,14 @@ def build() -> Level:
     lv.rect(ch - 8, head, ch - 1, cave_floor - 9)
     lv.rect(ch + 6, head, ch + 30, cave_floor)
     holed_chimney(
-        lv, ch, 4, head + 2, cave_floor, rests=[(1, cave_floor - 9), (-1, cave_floor - 17)], label="cave chimney"
+        lv,
+        ch,
+        4,
+        head + 2,
+        cave_floor,
+        rests=[(1, cave_floor - 9), (-1, cave_floor - 17)],
+        label="cave chimney",
+        top=False,
     )
     lv.wp(ch + 6, head - 1, ch + 8, head - 1, ground=True, label="headland")
     lv.coins(ch + 2, cave_floor - 6, ch + 3)

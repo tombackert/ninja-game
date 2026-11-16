@@ -54,7 +54,7 @@ def build() -> Level:
     # --- The reef's edge: wreckage piled up ----------------------------------------------------------
     # --- Up the crack from the waterline on to the reef ------------------------------------------------------
     lv.carve(-40, SURF, -36, SURF + 12)
-    holed_chimney(lv, -41, 5, SURF, SURF + 13, rests=[(1, SURF + 5)], label="crack")
+    holed_chimney(lv, -41, 5, SURF, SURF + 13, rests=[(1, SURF + 5)], label="crack", top=False)
     lv.route = [w for w in lv.route if w.label != "crack base"]
     lv.carve(-44, SURF + 10, -41, SURF + 12)  # a hollow at its foot
     lv.rect(-46, SURF + 13, -36, SURF + 13)
@@ -69,7 +69,6 @@ def build() -> Level:
     lv.water(-21, SURF + 2, -16, SURF + 6)
     lv.rect(-18, SURF - 2, -18, SURF + 6, "wreck")  # a spar stuck in it
     lv.wp(-18, SURF - 3, ground=True, label="spar")
-    lv.wp(-16, SURF - 8, -16, SURF - 5, label="over the rift")
     lv.wp(-15, SURF - 1, -13, SURF - 1, ground=True, label="past the rift")
     lv.enemy(-11, SURF - 1)
     lv.rect(-9, SURF - 2, -6, SURF - 1, "wreck")  # an upturned boat
@@ -77,7 +76,6 @@ def build() -> Level:
     lv.wp(-8, SURF - 4, -7, SURF - 4, ground=True, label="upturned boat")
     lv.carve(-4, SURF, 0, SURF + 5)  # a second rift
     lv.water(-4, SURF + 2, 0, SURF + 5)
-    lv.wp(-2, SURF - 8, -1, SURF - 5, label="over the second rift")
     lv.wp(1, SURF - 1, 2, SURF - 1, ground=True, label="past the second rift")
     lv.coins(-27, SURF - 8, -15, 3)
     lv.decor(2, SURF - 1, STARFISH)
@@ -96,13 +94,11 @@ def build() -> Level:
     lv.rect(24, SURF - 2, 25, SURF - 1)
     lv.coins(16, SURF + 1, 20, 2)
     lv.wp(18, SURF, 20, SURF + 2, label="outer eddy")
-    lv.wp(21, SURF + 7, 23, SURF + 10, label="outer eddy east side")
     ex_a = SURF + 11  # out at the foot of its east side
     basin(lv, 24, 27, ex_a, ex_a + 1, LEFT)  # it flows back in: dash out against it
     lv.wp(24, ex_a, 27, ex_a + 1, label="out of the outer eddy")
     lv.wp(32, SURF + 17, 35, SURF + 19, label="second eddy bottom")
     lv.coins(31, SURF + 18, 36, 1)
-    lv.wp(37, SURF + 9, 39, SURF + 12, label="second eddy east side")
 
     # --- The capsized hull ----------------------------------------------------------------------------------
     hull_y = SURF - 4  # the row its water and decks are on (the keel above)
@@ -111,8 +107,6 @@ def build() -> Level:
     pocket(lv, h0 + 1, hull_y - 5, h1 - 1, hull_y - 1)
     basin(lv, 36, 39, hull_y, hull_y)
     basin(lv, 37, 38, hull_y + 1, SURF + 3)  # the shaft up from the second eddy
-    lv.wp(37, SURF + 4, 38, SURF + 6, label="second eddy top")
-    lv.wp(37, hull_y, 38, SURF + 1, label="the shaft")
     lv.wp(40, hull_y - 1, 42, hull_y - 1, ground=True, label="hull deck")
     lv.big_decor(32, hull_y - 1, CHEST)
     lv.coins(40, hull_y - 3, 43, 1)
@@ -161,9 +155,7 @@ def build() -> Level:
             lv.solid.pop((x, y), None)
             lv.water_tiles[(x, y)] = ring_flow(x, y, boxes[k], 3, k % 2 == 0)
     pocket(lv, j + 1, SURF + 2, j + 4, SURF + 4)
-    lv.wp(isl + 6, SURF + 1, d0 + 1, SURF + 4, label="the funnel")
     lv.wp(d0 + 3, SURF + 5, d0 + 6, SURF + 7, label="first eddy top")
-    lv.wp(d0 + 9, SURF + 15, d0 + 11, SURF + 19, label="where the first two mesh")
     lv.wp(d0 + 13, SURF + 22, d0 + 16, SURF + 24, label="second eddy bottom")
     lv.wp(j + 1, SURF + 3, j + 4, SURF + 4, label="the air over the second junction")
     lv.wp(d0 + 23, SURF + 5, d0 + 26, SURF + 7, label="third eddy top")
@@ -177,7 +169,6 @@ def build() -> Level:
     lv.water(d0 + 30, by, d0 + 31, by + 1, LEFT)  # it flows back into the eddy
     pocket(lv, bx, by - 5, bx + 9, by - 1)
     lv.rect(bx + 4, by, bx + 9, by + 1)
-    lv.wp(d0 + 27, by - 2, d0 + 29, by + 2, label="third eddy east side")
     lv.wp(bx + 5, by - 1, bx + 7, by - 1, ground=True, label="the bell")
     lv.checkpoint(bx + 6, by - 1)  # halfway
     lv.decor(bx + 8, by - 1, ANEMONE)
@@ -193,11 +184,9 @@ def build() -> Level:
     gy = SURF + 40  # the graveyard pool's surface
     pocket(lv, bx + 10, by - 3, bx + 20, by - 1)
     lv.wp(bx + 13, by, bx + 16, by + 2, label="the bell's eddy")
-    lv.wp(bx + 18, by + 6, bx + 20, by + 9, label="the bell's eddy east side")
     basin(lv, bx + 21, bx + 24, by + 10, by + 11, LEFT)  # out against its outflow
     lv.wp(bx + 22, by + 10, bx + 24, by + 11, label="out of the bell's eddy")
     lv.wp(bx + 28, by + 10, bx + 31, by + 12, label="lower eddy top")
-    lv.wp(bx + 32, by + 15, bx + 34, by + 19, label="lower eddy east side")
     basin(lv, bx + 35, cx0 - 1, by + 20, by + 21)
     lv.wp(bx + 35, by + 20, bx + 37, by + 21, label="out of the lower eddy")
     lv.coins(bx + 14, by + 1, bx + 18, 2)
@@ -210,7 +199,6 @@ def build() -> Level:
     basin(lv, e1 + 1, cx0 + 14, ey + 3, ey + 4)  # and on into the east side
     lv.wp(cx0 + 3, ey + 3, cx0 + 5, ey + 4, label="the gap into the eye")
     lv.wp(e0, ey - 2, e1, ey - 1, label="the eye")
-    lv.wp(cx0 + 15, ey + 6, cx0 + 17, ey + 9, label="great eddy east side")
     lv.coins(e0 + 1, ey - 2, e1 - 1, 2)
     lv.decor(e0 + 1, ey + 4, ANEMONE)
     lv.decor(e1 - 1, ey + 4, CORAL)

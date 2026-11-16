@@ -57,7 +57,7 @@ def build() -> Level:
     # --- Tube labyrinth --------------------------------------------------------
     mz = Maze(lv, 132, 20, 9, 5, seed=1909, dx=5, dy=5, cw=3, ch=3, border=0, extra_edges=4, start=(0, 0))
     lv.carve(130, 20, 132, 23)
-    mz.route((0, 0), (8, 4))
+    mz.route((0, 0), (8, 4), skip={(1, 0), (4, 0), (4, 1), (5, 0), (6, 1), (6, 2), (6, 3)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((0, 0), (8, 4)):
             x, y = mz.cell_xy(c, r)

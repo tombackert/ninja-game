@@ -34,7 +34,7 @@ def under(x: int) -> int:
     return 33 + round(springer + 0.8 * math.sin(x / 4.3))
 
 
-def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimney=False, rim=None) -> int:
+def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimney=False, rim=None, guides=()) -> int:
     """Down through a hole in the bridge at columns x..x+2 on to the foot of a
     hook, a hop to the next hook's foot (`gaps[0]` open columns before it), then
     under one hanging hook after the other on to the next foot, each `drop`
@@ -44,7 +44,12 @@ def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimn
     open below between the last hook's stem and a hanging wall. Either is climbed
     wall to wall (`rests`: (side, row) ledges) and left through the bridge
     again, or with `rim` (the east cliff's top row) on up between a needle and
-    the cliff. Returns the shaft's first column."""
+    the cliff. `guides`: the drops (by number) the planner needs a waypoint at,
+    under the foot it drops off. Returns the shaft's first column.
+
+    For the shortcut checker the crossing is an obstacle: from the stop before
+    the hole to the way out, nothing on the bridge's back may lead past the crag."""
+    before = lv.route[-1].label
     lv.carve(x, TOP, x + 2, under(x + 1))
     f0, f1 = hook(lv, x - 2, under(x - 2), FIRST, foot=4, east=True)
     lv.wp(f0, FIRST - 1, f1, FIRST - 1, ground=True, label=f"{name} landing")
@@ -54,8 +59,8 @@ def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimn
     hooks = len(gaps) if chimney else len(gaps) - 1
     for i, g in enumerate(gaps):
         sx += g
-        if h0 is not None:  # drop off the west end of the foot before, to swing under it
-            lv.wp(h0 - 1, row + 2, h0 - 1, row + 3, label=f"{name} drop {i}")
+        if h0 is not None and i in guides:  # drop off the west end of the foot before, to swing under it
+            lv.wp(h0 - 1, row + 2, h0 - 1, row + 3, label=f"{name} drop {i}", guide=True)
         row += drop
         if i == hooks:
             break
@@ -66,8 +71,8 @@ def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimn
     if chimney:
         cx = sx - 2
         lv.rect(cx + 3, under(cx + 3), cx + 3, row + 5)
-        lv.wp(h0 - 1, row + 2, h0 - 1, row + 3, label=f"{name} drop {hooks}")
-        lv.wp(cx, row - 3, cx + 2, row - 1, label=f"{name} chimney")
+        if hooks in guides:
+            lv.wp(h0 - 1, row + 2, h0 - 1, row + 3, label=f"{name} drop {hooks}", guide=True)
     else:
         lv.rect(sx - 2, row, sx + 5, row)
         lv.rect(sx, under(sx), sx + 1, row - 3)
@@ -83,10 +88,14 @@ def underpass(lv: Level, x: int, gaps, name: str, rests=(), drop: int = 3, chimn
         lv.coin(cx + 1, r - 3)
     if rim is None:
         lv.wp(cx - 1, TOP - 1, cx + 4, TOP - 1, ground=True, label=f"{name} out")
+        lv.obstacle(
+            f"{name} crag", x, TOP - 2, x + 2, TOP, before, f"{name} out", area=(x - 6, TOP - 16, cx + 6, TOP - 1)
+        )
     else:
         lv.rect(cx - 2, rim + 1, cx - 1, TOP - 1)  # the needle
         lv.rect(cx - 2, rim, cx - 2, rim)
         lv.wp(cx + 3, rim - 1, cx + 6, rim - 1, ground=True, label="east rim")
+        lv.obstacle(f"{name} crag", x, TOP - 2, x + 2, TOP, before, "east rim", area=(x - 6, rim - 6, cx + 8, TOP - 1))
     return cx
 
 
@@ -114,7 +123,7 @@ def build() -> Level:
     tooth(lv, 34, TOP, 5)
 
     # --- U1: two swings and a third into an open hanging chimney (the first highlight) --------
-    c = underpass(lv, 30, (1, 3, 3), "u1", rests=((1, 44), (-1, 37)), chimney=True)
+    c = underpass(lv, 30, (1, 3, 3), "u1", rests=((1, 44), (-1, 37)), chimney=True, guides=(3,))
 
     # --- T1 ------------------------------------------------------------------------------
     x = c + 5
@@ -157,7 +166,7 @@ def build() -> Level:
     tooth(lv, x + 30, TOP, 7, w=3)
 
     # --- U4: right after the banner, swings into an open chimney (the second highlight) ------
-    c = underpass(lv, x + 26, (1, 4, 3), "u4", rests=((1, 44), (-1, 37)), chimney=True)
+    c = underpass(lv, x + 26, (1, 4, 3), "u4", rests=((1, 44), (-1, 37)), chimney=True, guides=(2,))
 
     # --- T4 ------------------------------------------------------------------------------
     x = c + 5

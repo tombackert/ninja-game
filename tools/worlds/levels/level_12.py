@@ -61,7 +61,7 @@ def build() -> Level:
     mz = Maze(lv, 104, -1, 8, 6, seed=1203, dx=6, dy=6, cw=3, ch=3, border=0, extra_edges=4, start=(0, 0))
     lv.carve(99, -1, 103, 1)  # gallery from the zigzag top into cell (0,0)
     lv.wp(102, -1, 103, 1, ground=True, label="labyrinth gate")
-    mz.route((0, 0), (7, 5))
+    mz.route((0, 0), (7, 5), skip={(2, 0), (3, 1), (4, 1), (4, 2), (5, 2), (7, 4), (7, 5)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((0, 0), (7, 5)):
             x, y = mz.cell_xy(c, r)

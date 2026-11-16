@@ -116,7 +116,7 @@ def build() -> Level:
     lv.carve(shaft_x, apex_y, shaft_x + 2, low_y - 1)  # drop from the apex to the lowest gallery
     lv.wp(shaft_x, apex_y - 1, shaft_x + 2, apex_y - 1, label="pyramid apex")
     # climb back up through the galleries to the east door at the top
-    mz.route((4, 2), (9, 0))
+    mz.route((4, 2), (9, 0), skip={(4, 0), (4, 1), (6, 0), (6, 1), (7, 0), (7, 1)})
     ex, ey = mz.cell_xy(9, 0)
     lv.carve(ex + 3, ey, 196, ey + 2)  # east door, out on to step 2
     lv.wp(179, ey, 183, ey + 2, ground=True, label="east door")
@@ -165,7 +165,6 @@ def build() -> Level:
     lv.wp(248, g - 3, 251, g - 1, ground=True, label="obelisk chimney base")
     lv.wp(248, 38, 248, 38, ground=True, label="obelisk rest 1")
     lv.wp(251, 28, 251, 28, ground=True, label="obelisk rest 2")
-    lv.wp(247, mesa - 1, 252, mesa - 1, label="obelisk tops")
     lv.coins(249, 44, 250)
     lv.coins(249, 34, 250)
     lv.coins(249, 23, 250)

@@ -153,7 +153,7 @@ def shift(lv: Level, dx: int, dy: int = 0):
         o["pos"] = [o["pos"][0] + dx * 16, o["pos"][1] + dy * 16]
     if lv.spawn_tile:
         lv.spawn_tile = (lv.spawn_tile[0] + dx, lv.spawn_tile[1] + dy)
-    lv.route = [Waypoint(w.x0 + dx, w.y0 + dy, w.x1 + dx, w.y1 + dy, w.ground, w.label) for w in lv.route]
+    lv.route = [Waypoint(w.x0 + dx, w.y0 + dy, w.x1 + dx, w.y1 + dy, w.ground, w.label, w.guide) for w in lv.route]
 
 
 # --- rock shapes ------------------------------------------------------------------------

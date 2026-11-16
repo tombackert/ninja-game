@@ -54,7 +54,7 @@ def route_states(map_id, solids) -> list:
     """Replica state after every frame of the level's planned route."""
     from tools.worlds.route import load_plan
 
-    data = load_plan(int(map_id))
+    data = load_plan(map_id)
     states = [ph.spawn_state(*data["spawn"])]
     for m, j, d in data["frame_list"]:
         states.append(ph.apply_frame(states[-1], m, j, d, solids)[0])

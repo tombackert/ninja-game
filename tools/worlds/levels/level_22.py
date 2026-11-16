@@ -47,18 +47,15 @@ def build() -> Level:
     lv.carve(70, 36, 120, 39)
     lv.water(70, 36, 120, 39, RIGHT)
     lv.carve(64, SEA, 69, 39)  # the sea floor dips to the channel mouth
-    lv.wp(64, 34, 69, 39, label="channel mouth")
     lv.coins(72, 38, 90, 3)
     lv.wp(84, 36, 87, 39, label="channel")
     lv.carve(93, 33, 96, 35)  # air pocket in the channel roof
-    lv.wp(93, 34, 96, 35, label="air pocket")
     lv.coins(99, 38, 117, 3)
     lv.wp(108, 36, 111, 39, label="channel end")
 
     # --- Geyser up to the plateau -------------------------------------------------------
     lv.carve(121, 20, 124, 39)  # open to the sky: the water spouts out at the top
     lv.water(121, 25, 124, 39, UP)
-    lv.wp(121, 30, 124, 34, label="geyser")
     lv.coins(122, 32, 123)
     lv.wp(125, 23, 127, 23, ground=True, label="plateau")
     lv.rect(125, 24, 160, BOTTOM)
@@ -80,7 +77,6 @@ def build() -> Level:
     lv.water(148, 24, 151, 24)
     lv.water(148, 25, 151, 50, DOWN)
     lv.wp(146, 23, 147, 23, ground=True, label="pool edge")
-    lv.wp(148, 30, 151, 36, label="drain")
     lv.carve(140, 51, 175, 56)  # the flooded cave
     lv.water(140, 51, 175, 56)
     lv.wp(148, 52, 151, 56, label="cave floor")
@@ -89,14 +85,14 @@ def build() -> Level:
     lv.water(156, 51, 166, 56, LEFT)
     lv.wp(160, 51, 162, 56, label="against the current")
     lv.carve(168, 47, 171, 50)  # air pocket over the cave's far end, walled off from the geyser
-    lv.wp(168, 49, 171, 50, label="cave air")
+    lv.wp(168, 49, 171, 50, label="cave air", guide=True)
     lv.coins(157, 53, 165, 2)
 
     # --- Last geyser up to the flag ----------------------------------------------------------
     lv.carve(173, 16, 176, 56)
     lv.water(173, 17, 176, 56, UP)
     lv.drain(173, 16, 176, 16)
-    lv.wp(173, 51, 176, 56, label="last geyser")  # its foot: down from the air, under its wall
+    lv.wp(173, 51, 176, 56, label="last geyser", guide=True)  # its foot: down from the air, under its wall
     lv.rect(177, 16, 197, BOTTOM)  # flag rock
     lv.wp(177, 15, 180, 15, ground=True, label="flag rock")
     lv.coins(178, 13, 181, 3)

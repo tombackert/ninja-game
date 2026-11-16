@@ -89,6 +89,7 @@ class Level:
         self.water_tiles: dict[tuple[int, int], int] = {}  # (x, y) -> flow
         self.route: list[Waypoint] = []
         self.spawn_tile: tuple[int, int] | None = None
+        self.obstacles: list[dict] = []  # declared for the shortcut checker (tools/worlds/shortcuts.py)
 
     # --- terrain ---------------------------------------------------------
     def rect(self, x0, y0, x1, y1, t: str | None = None):
@@ -166,9 +167,23 @@ class Level:
             {"type": "large_decor", "variant": variant, "pos": [x * 16 + (16 - w) / 2, (y + 1) * 16 - h]}
         )
 
-    def wp(self, x0, y0, x1=None, y1=None, ground=False, label=""):
-        """Next route waypoint: the hitbox center must enter tiles x0..x1, y0..y1."""
-        self.route.append(Waypoint(x0, y0, x0 if x1 is None else x1, y0 if y1 is None else y1, ground, label))
+    def wp(self, x0, y0, x1=None, y1=None, ground=False, label="", guide=False):
+        """Next route waypoint: the hitbox center must enter tiles x0..x1, y0..y1.
+        `guide`: there only so the planner gets through, not a stop of the design."""
+        self.route.append(Waypoint(x0, y0, x0 if x1 is None else x1, y0 if y1 is None else y1, ground, label, guide))
+
+    def obstacle(
+        self, label: str, x0: int, y0: int, x1: int, y1: int, before: str, after: str, margin: int = 6, area=None
+    ):
+        """Declare an obstacle for the shortcut checker: the way from waypoint
+        `before` to waypoint `after` (labels) is meant to lead through tiles
+        x0..x1, y0..y1 and nowhere else. The checker blocks the designed route's
+        trail there and searches for another way within `area` (x0, y0, x1, y1;
+        by default the box widened by `margin` tiles): found (proven), none
+        (refuted), or the budget ran out (not proven)."""
+        self.obstacles.append(
+            {"label": label, "box": (x0, y0, x1, y1), "before": before, "after": after, "margin": margin, "area": area}
+        )
 
     # --- export ----------------------------------------------------------
     def to_json(self) -> dict:
@@ -375,12 +390,15 @@ class Maze:
         elif side == "down":
             self.lv.carve(cx, cy + self.ch, cx + self.cw - 1, y1)
 
-    def route(self, a, b, coins=True):
+    def route(self, a, b, coins=True, skip=()):
         """Add waypoints through the maze from cell a to cell b, with a coin
-        trail along the way."""
+        trail along the way. `skip`: cells that get no waypoint (the planner
+        finds its own way through them: cells a player only passes, where
+        letting go of the keys does not come to rest)."""
         for c, r in maze_path(self.edges, a, b):
             cx, cy = self.cell_xy(c, r)
-            self.lv.wp(cx, cy, cx + self.cw - 1, cy + self.ch - 1, label=f"maze {c},{r}")
+            if (c, r) not in skip:
+                self.lv.wp(cx, cy, cx + self.cw - 1, cy + self.ch - 1, label=f"maze {c},{r}")
             if coins and (cx + 1, cy) not in self.lv.objects:
                 self.lv.coin(cx + 1, cy)
 
@@ -400,11 +418,9 @@ def zigzag(lv: Level, x_left: int, y_bottom: int, sections: int, height: int, in
     x, y = x_left, y_bottom
     for i in range(sections):
         lv.carve(x, y - height + 1, x + inner - 1, y)
-        if i == 0:
-            lv.wp(x, y - height + 1, x + inner - 1, y - height + 3, label=f"{label} 0")
-        elif i % 2 == 1:  # shifted right: ledge on its right side
+        if i % 2 == 1:  # shifted right: ledge on its right side
             lv.wp(x + inner - offset, y, x + inner - 1, y, ground=True, label=f"{label} ledge {i}")
-        else:
+        elif i > 0:
             lv.wp(x, y, x + offset - 1, y, ground=True, label=f"{label} ledge {i}")
         y -= height
         x += offset if i % 2 == 0 else -offset
@@ -438,10 +454,14 @@ def crate_chain(lv: Level, crates, t=None, label="crate"):
         lv.wp(x, top - 1, x + w - 1, top - 1, ground=True, label=f"{label} {x}")
 
 
-def holed_chimney(lv: Level, x_left: int, inner: int, y_top: int, floor: int, rests=(), t=None, label="chimney"):
+def holed_chimney(
+    lv: Level, x_left: int, inner: int, y_top: int, floor: int, rests=(), t=None, label="chimney", top=True
+):
     """Wall-jump chimney between two 1-thick walls full of holes, standing on
     floor row `floor`. The left wall leaves a 3-row gap at the bottom to crawl
-    in. `rests` are (side, row) 1-tile ledges (side -1 = left wall)."""
+    in. `rests` are (side, row) 1-tile ledges (side -1 = left wall). `top`: a
+    waypoint over the walls' tops (leave it out where the next stop beyond the
+    top is all the planner needs)."""
     xr = x_left + inner + 1
     lv.rect(x_left, y_top, x_left, floor - 4, t)
     lv.rect(xr, y_top, xr, floor - 1, t)
@@ -453,7 +473,8 @@ def holed_chimney(lv: Level, x_left: int, inner: int, y_top: int, floor: int, re
         lv.rect(x, row, x, row, t)
         lv.wp(x, row - 1, ground=True, label=f"{label} rest {row}")
         lv.coin(x_left + 1 + inner // 2, row - 3)
-    lv.wp(x_left, y_top - 1, xr, y_top - 1, label=f"{label} top")
+    if top:
+        lv.wp(x_left, y_top - 1, xr, y_top - 1, label=f"{label} top")
 
 
 def dunes(lv: Level, x0: int, x1: int, base: int, amp: float, period: float, bottom: int, phase=0.0, t=None):

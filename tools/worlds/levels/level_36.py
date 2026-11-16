@@ -113,7 +113,8 @@ def build() -> Level:
     lv.rect(f0, flats, f0 + 35, BOTTOM)
     for i, (p0, p1, d) in enumerate(((6, 11, 3), (16, 22, 4), (27, 31, 5))):
         basin(lv, f0 + p0, f0 + p1, flats + 1, flats + d, air=1)
-        lv.wp(f0 + p0, flats + 1, f0 + p1, flats + d, label=f"flats pool {i}")
+        if i < 2:  # into the last pool the planner finds its own way
+            lv.wp(f0 + p0, flats + 1, f0 + p1, flats + d, label=f"flats pool {i}")
         lv.wp(f0 + p1 + 1, flats - 1, f0 + p1 + 3, flats - 1, ground=True, label=f"flats {i}")
         dress(lv, (f0 + p0 + 1, f0 + p1 - 1), flats, (SEAWEED, ANEMONE, CORAL), seed=36 + i)
         lv.coins(f0 + p0 + 1, flats - 2, f0 + p1 - 1, 2)
@@ -156,7 +157,7 @@ def build() -> Level:
     # --- The needle: wall to wall up between a sea needle and the terrace's face ---------------------------
     face = c1 + 12  # the face's column, five off the needle
     top_t = bank - 16
-    holed_chimney(lv, c1 + 6, 5, bank - 14, bank, rests=[(1, bank - 8)], label="needle")
+    holed_chimney(lv, c1 + 6, 5, bank - 14, bank, rests=[(1, bank - 8)], label="needle", top=False)
     lv.rect(face + 1, top_t, face + 4, BOTTOM)
     lv.wp(face + 1, top_t - 1, face + 3, top_t - 1, ground=True, label="terrace top")
     lv.coins(c1 + 8, bank - 5, c1 + 10)
@@ -186,7 +187,6 @@ def build() -> Level:
         if h > 0:
             lv.rect(x, cl_top - h, x, cl_top - 1)
     lv.water(dp, top + 1, dp + 2, top + 12)
-    lv.wp(dp, top + 6, dp + 2, top + 12, label="deep pool")
     cave_y = top + 9  # the cave under the cliff: rows cave_y..cave_y+3
     cv1 = dp + 24
     basin(lv, dp + 3, cv1, cave_y, cave_y + 3)
@@ -201,7 +201,6 @@ def build() -> Level:
     basin(lv, cv1 - 2, cv1, gw + 2, cave_y - 1)  # the rise from the cave
     basin(lv, g0, n0 - 1, gw, gw + 1)
     pocket(lv, g0, gw - 4, n0 - 1, gw - 1)
-    lv.wp(g0, gw - 1, cv1, gw + 1, label="grotto")
     ledge = gw - 1
     lv.wp(n0 + 1, ledge - 1, n0 + 3, ledge - 1, ground=True, label="grotto ledge")
     lv.decor(g0 + 1, gw + 1, ANEMONE)
@@ -226,13 +225,11 @@ def build() -> Level:
     lv.rect(hole - 1, rim, hole + 30, BOTTOM)
     lv.rect(hole + 4, up, hole + 30, rim - 1)
     basin(lv, hole, hole + 2, rim + 1, rim + 12, air=1)
-    lv.wp(hole, rim + 6, hole + 2, rim + 12, label="the hole")
     basin(lv, hole + 3, hole + 12, rim + 9, rim + 12)  # the cave
     bh = hole + 13  # the blowhole, two wide
     basin(lv, bh, bh + 1, up, rim + 12, UP)
     lv.carve(bh, up - 3, bh + 1, up - 1)
     lv.wp(hole + 7, rim + 9, hole + 9, rim + 12, label="blowhole cave")
-    lv.wp(bh, up + 2, bh + 1, rim + 4, label="the blowhole")
     lv.wp(bh + 2, up - 1, bh + 4, up - 1, ground=True, label="upper terrace")
     dress(lv, range(hole + 4, hole + 12, 3), rim + 9, (ANEMONE, SEAWEED, CORAL), seed=364)
     lv.coins(bh, up - 2, bh + 1)

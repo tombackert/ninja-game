@@ -84,7 +84,6 @@ def build() -> Level:
     hoodoo(lv, x + 6, x + 14, 41, (x + 8, x + 9), ped - 1)  # the east twin, its cap over the slot
     notch(lv, x + 4, 33, 50)
     notch(lv, x + 8, 44, ped - 2)
-    lv.wp(x + 5, 48, x + 7, 51, label="twin stems slot")
     lv.coins(x + 6, ped - 5, x + 6)
     lv.coins(x + 6, 46, x + 6)
     lv.coin(x + 5, 39)
@@ -152,7 +151,6 @@ def build() -> Level:
     hoodoo(lv, nx + 3, nx + 11, 18, (nx + 5, nx + 6), BOTTOM)  # the Chimney Rock, its cap over the slot
     notch(lv, nx + 5, 21, 42)
     lv.wp(nx, 38, nx + 1, 40, ground=True, label="the Needle's Eye")
-    lv.wp(nx + 2, 29, nx + 4, 31, label="Chimney Rock slot")
     lv.coins(nx + 3, 35, nx + 3)
     lv.coins(nx + 3, 24, nx + 3)
     lv.wp(nx + 4, 17, nx + 10, 17, ground=True, label="Chimney Rock")
@@ -198,7 +196,6 @@ def build() -> Level:
     hoodoo(lv, x + 8, x + 15, 23, (x + 10, x + 11), 35)  # the east pipe, its cap over the slot
     notch(lv, x + 6, 19, 35)
     notch(lv, x + 10, 26, 35)
-    lv.wp(x + 7, 30, x + 9, 33, label="organ pipes slot")
     lv.coins(x + 8, 31, x + 8)
     lv.coin(x + 7, 21)
     lv.wp(x + 10, 22, x + 15, 22, ground=True, label="east pipe")
@@ -229,8 +226,6 @@ def build() -> Level:
     hoodoo(lv, sx - 2, sx + 13, 4, (sx, sx + 1), BOTTOM, cap_h=3)
     notch(lv, sx, 8, 29)
     lv.wp(wx, 28, wx + 1, 30, ground=True, label="the Watchman's eye")
-    lv.wp(wx + 2, 19, sx - 1, 21, label="Sentinel slot")
-    lv.wp(wx + 2, 10, sx - 1, 12, label="Sentinel slot top")
     lv.coins(wx + 3, 25, wx + 3)
     lv.coins(wx + 3, 17, wx + 3)
     lv.coins(wx + 3, 8, wx + 3)

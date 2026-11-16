@@ -12,12 +12,15 @@ first clear (tools/worlds/windows), then the previous noise metric
 
 Usage:
     python -m tools.worlds.build [ids, default: all in tools/worlds/levels] [--preview DIR] [--no-plan] [--assess]
+        [--jobs N]
 """
 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib
+import io
 import os
 import sys
 
@@ -34,6 +37,65 @@ def build_level(map_id: int):
     return mod.build()
 
 
+def process_level(map_id: int, args) -> int:
+    """Build, save, plan (and optionally assess / preview) one level; prints its
+    report. Returns 1 if its route fails, else 0."""
+    lv = build_level(map_id)
+    path = lv.save()
+    st = lv.stats()
+    guides = sum(1 for w in lv.route if w.guide)
+    print(
+        f"level {map_id}: {path} size {st['size']} tiles {st['tiles']} enemies {st['enemies']} "
+        f"coins {st['coins']} waypoints {st['waypoints']} ({guides} guides)"
+    )
+    trail = None
+    res = None
+    failed = 0
+    if not args.no_plan:
+        solids = lv.solids()
+        spawn_px = (lv.spawn_tile[0] * 16, lv.spawn_tile[1] * 16)
+        kill_y = (max(y for _, y in solids) + 4) * 16
+        res = plan_route(solids, spawn_px, lv.route, kill_y)
+        trail = [spawn_px] + [
+            (s[ph.X], s[ph.Y]) for _i, s, _d, _dead in simulate(ph.spawn_state(*spawn_px), res.frames, solids)
+        ]
+        jumps = sum(1 for f in res.frames if f[1])
+        dashes = sum(1 for f in res.frames if f[2])
+        status = "OK" if res.ok else f"FAILED at waypoint {res.failed_at}"
+        print(
+            f"  route {status}: {len(res.frames)} frames ({len(res.frames) / 60:.1f} s), {jumps} jumps, "
+            f"{dashes} dashes, planned in {res.seconds:.1f} s"
+        )
+        print(f"  planner: {res.summary()}")
+        if res.ok:
+            save_plan(map_id, spawn_px, res.frames, lv.route, res.segments)
+            if args.assess:
+                from tools.worlds.assess import print_details, profile
+                from tools.worlds.windows import print_summary, profile_map
+
+                print("  elements (most forgiving way, narrowest window in frames):")
+                print_summary(profile_map(map_id, verbose=True))
+                r = profile(map_id, 2.0, 24, 30, sections=True, times=True)
+                print(f"  previous metric: {r['fails_per_run']} fails per run (assess, sigma 2)")
+                print_details(r)
+        else:
+            failed = 1
+    if args.preview:
+        os.makedirs(args.preview, exist_ok=True)
+        from tools.worlds.preview import render
+
+        render(path, os.path.join(args.preview, f"level_{map_id}.png"), args.scale, lv.route, trail)
+    return failed
+
+
+def _job(item) -> tuple:
+    map_id, args = item
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        failed = process_level(map_id, args)
+    return map_id, failed, buf.getvalue()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("levels", nargs="*", type=int, default=LEVELS)
@@ -41,52 +103,18 @@ def main() -> int:
     ap.add_argument("--no-plan", action="store_true")
     ap.add_argument("--scale", type=float, default=0.5)
     ap.add_argument("--assess", action="store_true", help="measure difficulty and play time after planning")
+    ap.add_argument("--jobs", type=int, default=1, help="levels built and planned at once (processes)")
     args = ap.parse_args()
 
+    if args.jobs <= 1 or len(args.levels) <= 1:
+        return 1 if sum(process_level(map_id, args) for map_id in args.levels) else 0
+    from concurrent.futures import ProcessPoolExecutor
+
     failures = 0
-    for map_id in args.levels:
-        lv = build_level(map_id)
-        path = lv.save()
-        st = lv.stats()
-        print(
-            f"level {map_id}: {path} size {st['size']} tiles {st['tiles']} enemies {st['enemies']} "
-            f"coins {st['coins']} waypoints {st['waypoints']}"
-        )
-        trail = None
-        res = None
-        if not args.no_plan:
-            solids = lv.solids()
-            spawn_px = (lv.spawn_tile[0] * 16, lv.spawn_tile[1] * 16)
-            kill_y = (max(y for _, y in solids) + 4) * 16
-            res = plan_route(solids, spawn_px, lv.route, kill_y)
-            trail = [spawn_px] + [
-                (s[ph.X], s[ph.Y]) for _i, s, _d, _dead in simulate(ph.spawn_state(*spawn_px), res.frames, solids)
-            ]
-            jumps = sum(1 for f in res.frames if f[1])
-            dashes = sum(1 for f in res.frames if f[2])
-            status = "OK" if res.ok else f"FAILED at waypoint {res.failed_at}"
-            print(
-                f"  route {status}: {len(res.frames)} frames ({len(res.frames) / 60:.1f} s), {jumps} jumps, "
-                f"{dashes} dashes, planned in {res.seconds:.1f} s"
-            )
-            if res.ok:
-                save_plan(map_id, spawn_px, res.frames, lv.route, res.segments)
-                if args.assess:
-                    from tools.worlds.assess import print_details, profile
-                    from tools.worlds.windows import print_summary, profile_map
-
-                    print("  elements (most forgiving way, narrowest window in frames):")
-                    print_summary(profile_map(map_id, verbose=True))
-                    r = profile(map_id, 2.0, 24, 30, sections=True, times=True)
-                    print(f"  previous metric: {r['fails_per_run']} fails per run (assess, sigma 2)")
-                    print_details(r)
-            else:
-                failures += 1
-        if args.preview:
-            os.makedirs(args.preview, exist_ok=True)
-            from tools.worlds.preview import render
-
-            render(path, os.path.join(args.preview, f"level_{map_id}.png"), args.scale, lv.route, trail)
+    with ProcessPoolExecutor(max_workers=min(args.jobs, len(args.levels))) as pool:
+        for _map_id, failed, text in pool.map(_job, [(m, args) for m in args.levels]):
+            print(text, end="", flush=True)
+            failures += failed
     return 1 if failures else 0
 
 

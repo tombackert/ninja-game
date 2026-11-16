@@ -26,7 +26,7 @@ def build() -> Level:
     for x in (12, 16, 22, 26, 32, 36, 42, 46):
         lv.enemy(x, GROUND - 1)
     lv.coins(6, GROUND - 3, 50, 4)
-    holed_chimney(lv, 58, 4, 118, GROUND, rests=[(1, 131), (-1, 124)], label="floor chimney")
+    holed_chimney(lv, 58, 4, 118, GROUND, rests=[(1, 131), (-1, 124)], label="floor chimney", top=False)
     lv.rect(66, 118, RIGHT - 1, 118)  # ledge L1, two tiles off the chimney
     lv.wp(66, 117, 68, 117, ground=True, label="L1")
 
@@ -75,7 +75,6 @@ def build() -> Level:
     lv.rect(46, 37, 46, 37)  # rest ledge
     lv.wp(46, 45, 49, 47, ground=True, label="summit chimney base")
     lv.wp(46, 36, ground=True, label="summit chimney rest")
-    lv.wp(45, 25, 50, 25, label="summit chimney top")
     lv.coins(47, 41, 48)
     lv.coins(47, 31, 48)
 

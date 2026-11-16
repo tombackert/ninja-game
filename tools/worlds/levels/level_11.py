@@ -89,7 +89,7 @@ def build() -> Level:
     lv.rect(139, entry_y, 141, entry_y + 1)
     mz.open_to(0, 4, "left")
     lv.wp(139, entry_y - 1, 141, entry_y - 1, ground=True, label="maze porch")
-    mz.route((0, 4), (8, 0))
+    mz.route((0, 4), (8, 0), skip={(0, 1), (0, 2), (1, 3), (2, 1), (3, 1), (4, 0), (6, 0), (7, 0)})
     mz.open_to(8, 0, "right")
     for c, r in mz.dead_ends():
         if (c, r) in ((0, 4), (8, 0)):

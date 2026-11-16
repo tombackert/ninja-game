@@ -48,7 +48,7 @@ def build() -> Level:
     # --- East balcony and a holed chimney up the outer wall ---------------------
     lv.enemy(105, 66)
     lv.coins(104, 64, 106)
-    holed_chimney(lv, 107, 3, 30, 67, rests=[(1, 56), (-1, 45)], label="outer wall chimney")
+    holed_chimney(lv, 107, 3, 30, 67, rests=[(1, 56), (-1, 45)], label="outer wall chimney", top=False)
 
     # --- Battlement walk (row 30) heading west: pits and merlons ---------------
     lv.wp(100, 29, 103, 29, ground=True, label="battlements east")

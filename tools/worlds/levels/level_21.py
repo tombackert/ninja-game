@@ -51,7 +51,6 @@ def build() -> Level:
     lv.coins(64, 50, 70, 2)
     lv.big_decor(78, 51, 7)
     lv.decor(73, 51, 8)
-    lv.wp(71, SEA, 74, SEA + 2, label="arch surface")
     # Far side: a low ledge to leap out on
     lv.rect(76, SEA - 1, 104, 51)
     lv.wp(76, SEA - 2, 79, SEA - 2, ground=True, label="arch ledge")
@@ -74,11 +73,9 @@ def build() -> Level:
     lv.rect(150, 56, 172, BOTTOM)
     lv.carve(152, 30, 154, SEA + 1)  # breathing hole
     lv.drain(152, 30, 154, SEA - 1)
-    lv.wp(134, SEA + 3, 138, 49, label="tunnel mouth")
     lv.coins(140, 47, 150, 2)
     lv.decor(144, 49, 9)
     lv.decor(149, 49, 11)
-    lv.wp(152, SEA - 2, 154, SEA, label="breathing hole")
     lv.coins(156, 47, 168, 2)
     lv.decor(160, 49, 8)
     lv.decor(166, 49, 9)
@@ -93,7 +90,6 @@ def build() -> Level:
     lv.rect(185, SEA - 1, 200, 49)
     lv.carve(182, SEA - 14, 184, SEA - 1)
     lv.rect(184, SEA - 8, 184, SEA - 8)  # a rest halfway up: this is the intro level
-    lv.wp(182, SEA - 4, 184, SEA - 2, label="chimney")
     lv.rect(186, SEA - 15, 196, SEA - 1)  # the rock
     lv.wp(186, SEA - 16, 188, SEA - 16, ground=True, label="lighthouse rock")
     lv.coins(183, SEA - 10, 183)

@@ -251,7 +251,6 @@ def build() -> Level:
     c0, c1 = w1 - 3, m + 6
     lv.carve(c0, ceil_c + 1, c1, BOTTOM)
     lv.carve(w1, proof, w1 + 2, ceil_c)  # the courtyard well
-    lv.wp(w1, proof - 1, w1 + 2, proof + 2, label="courtyard well")
     # (x, capital row, width): two or three rows under the springers, the vaults' crowns over the gaps
     cols = [
         (w1 - 1, ceil_c + 5, 5),
@@ -280,7 +279,6 @@ def build() -> Level:
     lv.carve(wl, proof, wl + 1, ceil_c)
     perforate(lv, wl - 1, proof + 1, ceil_c, solid=2, gap=1)  # worn steps in its walls
     perforate(lv, wl + 2, proof + 1, ceil_c - 1, solid=2, gap=1)
-    lv.wp(wl, ceil_c - 3, wl + 1, ceil_c - 1, label="narrow well")
     lv.coin(wl, ceil_c - 2)
     lv.coin(wl + 1, proof + 1)
     lv.decor(wl + 3, ceil_c + 2, 5)

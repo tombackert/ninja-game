@@ -101,8 +101,7 @@ def build() -> Level:
     cols = 10
     mz = Maze(lv, 217, 38, cols, 3, seed=1606, dx=5, dy=5, cw=3, ch=3, border=0, extra_edges=3, start=(0, 0))
     lv.carve(214, 33, 219, 37)
-    lv.wp(217, 38, 219, 40, label="labyrinth entrance")
-    mz.route((0, 0), (cols - 1, 2))
+    mz.route((0, 0), (cols - 1, 2), skip={(0, 0), (2, 0), (4, 0), (5, 1), (7, 1), (9, 1)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((0, 0), (cols - 1, 2)):
             x, y = mz.cell_xy(c, r)

@@ -73,7 +73,7 @@ def build() -> Level:
     sx, sy = mz.cell_xy(4, 0)
     lv.carve(sx, apex, sx + 2, sy - 1)
     lv.wp(sx, apex - 1, sx + 2, apex - 1, label="temple apex")
-    mz.route((4, 0), (7, 2))
+    mz.route((4, 0), (7, 2), skip={(7, 1)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((4, 0), (7, 2)):
             x, y = mz.cell_xy(c, r)
@@ -116,7 +116,7 @@ def build() -> Level:
     lv.decor(cliff + 7, top - 1, 2)
 
     # --- Holed chimney up to the high altar ------------------------------------------
-    holed_chimney(lv, cliff + 16, 3, top - 16, top, rests=[(1, top - 8)], label="altar chimney")
+    holed_chimney(lv, cliff + 16, 3, top - 16, top, rests=[(1, top - 8)], label="altar chimney", top=False)
     altar = top - 16
     lv.rect(cliff + 23, altar, cliff + 30, altar + 1)  # altar slab, two tiles off the chimney
     lv.wp(cliff + 23, altar - 1, cliff + 25, altar - 1, ground=True, label="altar")

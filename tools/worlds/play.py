@@ -78,6 +78,7 @@ def build_sandbox(root: str, level: int) -> None:
 def run_level(level: int, out_dir: str, attempts: int, video: bool) -> dict:
     env = dict(os.environ)
     env["PYTHONPATH"] = REPO
+    env["NINJA_DEATH_LOG"] = "0"  # the bot's deaths are no player's
     report: dict = {}
     for attempt in range(1, attempts + 1):
         sandbox = tempfile.mkdtemp(prefix=f"ninja_play_{level}_")
@@ -369,15 +370,15 @@ class Bot:
                 self.seg += 1
             if self.seg < len(self.route):
                 wp = self.route[self.seg]
-                res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, kill_y=self.kill_y, start_down=down)
+                kw = dict(kill_y=self.kill_y, start_down=down)
+                fixed = dict(field=True, water_key=True, wait=True)  # the route planner's fixed search
+                res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, **kw)
                 if not res.ok:
-                    res = plan_segment(
-                        s, wp, self.solids, weight=2.0, max_expand=20000, kill_y=self.kill_y, start_down=down
-                    )
+                    res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, **fixed, **kw)
+                if not res.ok:
+                    res = plan_segment(s, wp, self.solids, weight=2.0, max_expand=20000, **fixed, **kw)
                 if not res.ok:  # a precise move: think as hard as the route builder did
-                    res = plan_segment(
-                        s, wp, self.solids, weight=2.0, max_expand=120000, kill_y=self.kill_y, start_down=down
-                    )
+                    res = plan_segment(s, wp, self.solids, weight=2.0, max_expand=120000, **fixed, **kw)
                     self.report["hard_thinks"] += 1
                 self.report["replans"] += 1
                 self.queue = res.frames if res.ok else []
@@ -558,6 +559,7 @@ class Bot:
 
 def bot_main(level: int, out: str, video: bool) -> int:
     sys.path.insert(0, REPO)
+    os.environ["NINJA_DEATH_LOG"] = "0"  # app.main() must not log the bot's deaths
     import pygame
 
     import app

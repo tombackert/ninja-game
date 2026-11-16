@@ -31,13 +31,12 @@ def build() -> Level:
     # --- Down into the flooded labyrinth --------------------------------------------------
     lv.carve(41, 9, 44, 23)
     lv.water(41, 17, 44, 23)
-    lv.wp(41, 18, 44, 21, label="pool")
     mz = Maze(lv, 47, 19, 6, 4, seed=2404, dx=7, dy=6, cw=3, ch=3, border=0, extra_edges=2, start=(0, 0))
     x0, y0, x1, y1 = mz.bounds
     lv.carve(45, 19, 46, 21)  # from the pool into the first cell
     lv.water(45, 19, x1, y1)
     path = maze_path(mz.edges, (0, 0), (5, 3))
-    mz.route((0, 0), (5, 3))
+    mz.route((0, 0), (5, 3), skip={(1, 0), (3, 0), (3, 1), (3, 2), (4, 2)})
 
     def dome(c, r, nxt=None):
         """Air trapped in a dome in the rock over cell (c, r), or else over the
@@ -64,7 +63,9 @@ def build() -> Level:
             if cols:  # into the air after the cell: the route has to breathe there
                 cy = mz.cell_xy(c, r)[1]
                 lv.wp(cols[0], cy - 1, cols[1], cy - 1, label=f"air over {c},{r}")
-                at = next(k for k, w in enumerate(lv.route) if w.label == f"maze {c},{r}")
+                # after the cell's waypoint, or the last cell before it that has one
+                done = {f"maze {cc},{rr}" for cc, rr in path[: i + 1]}
+                at = max(k for k, w in enumerate(lv.route) if w.label in done)
                 lv.route.insert(at + 1, lv.route.pop())
     for c, r in mz.dead_ends():
         if (c, r) not in path:
@@ -100,7 +101,6 @@ def build() -> Level:
     exit_floor = top - 18
     lv.carve(gx, exit_floor - 1, gx + 3, ey + 2)
     lv.water(gx, exit_floor, gx + 3, ey + 2, UP)
-    lv.wp(gx, top, gx + 3, ey, label="geyser")
     lv.carve(gx + 4, exit_floor - 5, gx + 24, exit_floor - 1)  # exit cave
     lv.wp(gx + 4, exit_floor - 1, gx + 7, exit_floor - 1, ground=True, label="exit cave")
     lv.carve(gx + 9, exit_floor, gx + 18, exit_floor + 12)  # last pit
@@ -112,7 +112,6 @@ def build() -> Level:
     lv.carve(gx + 21, exit_floor - 22, gx + 23, exit_floor - 6)
     for x in (gx + 20, gx + 24):
         perforate(lv, x, exit_floor - 20, exit_floor - 6, solid=2, gap=1)
-    lv.wp(gx + 21, exit_floor - 13, gx + 23, exit_floor - 10, label="shaft")
     lv.coins(gx + 22, exit_floor - 8, gx + 22)
     lv.coins(gx + 22, exit_floor - 16, gx + 22)
     lv.carve(gx + 21, exit_floor - 27, gx + 33, exit_floor - 23)  # flag cave

@@ -40,13 +40,11 @@ def build() -> Level:
     # --- Down the drain to the bottom of the trench -----------------------------------------
     lv.rect(45, DEEP, 116, BOTTOM)  # trench floor
     lv.water(45, SEA, 48, DEEP - 6, DOWN)
-    lv.wp(45, SEA + 4, 48, SEA + 8, label="drain")
     lv.coins(46, SEA + 12, 47, 1)
     lv.rect(49, SEA - 20, 116, DEEP - 9)  # sea cliff over the trench: no way over or round it
     lv.wp(45, DEEP - 5, 50, DEEP - 1, label="trench bottom")
     lv.carve(51, DEEP - 12, 55, DEEP - 9)  # air dome under the wall
     lv.drain(51, DEEP - 12, 55, DEEP - 10)
-    lv.wp(51, DEEP - 10, 55, DEEP - 9, label="first air")
     lv.big_decor(53, DEEP - 1, 8)
     lv.decor(57, DEEP - 1, 11)
 
@@ -60,7 +58,7 @@ def build() -> Level:
         lv.enemy(x, DEEP - 1)
     lv.carve(86, DEEP - 13, 90, DEEP - 9)  # second air dome
     lv.drain(86, DEEP - 13, 90, DEEP - 10)
-    lv.wp(86, DEEP - 10, 90, DEEP - 9, label="second air")
+    lv.wp(86, DEEP - 10, 90, DEEP - 9, label="second air", guide=True)
     lv.water(91, DEEP - 8, 116, DEEP - 1, LEFT)
     # Rocks on the floor; in their lee, west of them, the water stands still
     for x in (96, 104, 112):
@@ -81,7 +79,6 @@ def build() -> Level:
     lv.carve(117, SEA - 1, 120, DEEP - 1)
     lv.water(117, SEA, 120, DEEP - 1, UP)
     lv.rect(121, SEA - 1, 124, DEEP - 1)
-    lv.wp(117, SEA + 10, 120, SEA + 20, label="geyser")
     lv.coins(118, SEA + 6, 119, 1)
 
     # --- Up the sea stack to the flag --------------------------------------------------------------
@@ -89,7 +86,7 @@ def build() -> Level:
     lv.rect(125, SEA - 1, 134, BOTTOM)  # ledge at the surface
     lv.wp(125, SEA - 2, 128, SEA - 2, ground=True, label="ledge")
     lv.enemy(131, SEA - 2)
-    holed_chimney(lv, 135, 4, SEA - 22, SEA - 1, rests=[(1, SEA - 12)], label="sea stack")
+    holed_chimney(lv, 135, 4, SEA - 22, SEA - 1, rests=[(1, SEA - 12)], label="sea stack", top=False)
     lv.rect(135, SEA - 1, 167, BOTTOM)
     lv.rect(142, SEA - 22, 146, SEA - 21)  # the summit, then pillars over the drop
     lv.wp(142, SEA - 23, 145, SEA - 23, ground=True, label="summit")

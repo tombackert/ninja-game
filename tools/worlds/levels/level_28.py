@@ -81,7 +81,6 @@ def build() -> Level:
     lv.carve(13, b0, 17, b0 + 9)
     lv.rect(13, b0 + 10, 17, b0 + 10)
     lv.carve(13, b0 + 11, 16, b0 + 12)
-    lv.wp(18, b0 + 2, 22, b0 + 9, label="into the bell")
     lv.wp(13, b0 + 12, 16, b0 + 12, ground=True, label="the swallows' cave")
     lv.decor(13, b0 + 12, 5)
     # the hanging stair under the cave: each ledge one further in
