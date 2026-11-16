@@ -120,7 +120,7 @@ def build() -> Level:
     lv.coins(6, TOP - 3, 26, 3)
     crags(lv, 0, [(19, 1, 2)])
     lv.wp(26, TOP - 1, 28, TOP - 1, ground=True, label="bridge")
-    tooth(lv, 34, TOP, 5)
+    tooth(lv, 34, TOP, 5, cap=4)
 
     # --- U1: two swings and a third into an open hanging chimney (the first highlight) --------
     c = underpass(lv, 30, (1, 3, 3), "u1", rests=((1, 44), (-1, 37)), chimney=True, guides=(3,))
@@ -134,7 +134,7 @@ def build() -> Level:
     lv.wp(x + 6, TOP - 1, x + 8, TOP - 1, ground=True, label="span 1 a")
     lv.wp(x + 14, TOP - 1, x + 16, TOP - 1, ground=True, label="span 1 b")
     lv.wp(x + 20, TOP - 1, x + 22, TOP - 1, ground=True, label="span 1 c")
-    tooth(lv, x + 27, TOP, 6, w=3)
+    tooth(lv, x + 27, TOP, 6, w=3, cap=4)
 
     # --- U2: one swing into a basket --------------------------------------------------------
     c = underpass(lv, x + 23, (1, 3), "u2", rests=((-1, 40), (1, 34)))
@@ -147,7 +147,7 @@ def build() -> Level:
     lv.coins(x, TOP - 4, x + 18, 2)
     lv.wp(x + 7, TOP - 1, x + 10, TOP - 1, ground=True, label="span 2 a")
     lv.wp(x + 15, TOP - 1, x + 17, TOP - 1, ground=True, label="span 2 b")
-    tooth(lv, x + 24, TOP, 6)
+    tooth(lv, x + 24, TOP, 6, cap=4)
 
     # --- U3: two swings into a basket -------------------------------------------------------
     c = underpass(lv, x + 20, (1, 3, 3), "u3", rests=((1, 43), (-1, 38), (1, 33)))
@@ -163,7 +163,7 @@ def build() -> Level:
     lv.coins(x + 4, TOP - 4, x + 24, 2)
     lv.wp(x + 16, TOP - 1, x + 19, TOP - 1, ground=True, label="crown")
     lv.wp(x + 23, TOP - 1, x + 25, TOP - 1, ground=True, label="crown east")
-    tooth(lv, x + 30, TOP, 7, w=3)
+    tooth(lv, x + 30, TOP, 7, w=3, cap=4)
 
     # --- U4: right after the banner, swings into an open chimney (the second highlight) ------
     c = underpass(lv, x + 26, (1, 4, 3), "u4", rests=((1, 44), (-1, 37)), chimney=True, guides=(2,))
@@ -177,7 +177,7 @@ def build() -> Level:
     lv.wp(x + 6, TOP - 1, x + 8, TOP - 1, ground=True, label="span 4 a")
     lv.wp(x + 14, TOP - 1, x + 16, TOP - 1, ground=True, label="span 4 b")
     lv.wp(x + 20, TOP - 1, x + 22, TOP - 1, ground=True, label="span 4 c")
-    tooth(lv, x + 27, TOP, 6, w=3)
+    tooth(lv, x + 27, TOP, 6, w=3, cap=4)
 
     # --- U5: one long swing into a basket ---------------------------------------------------
     c = underpass(lv, x + 23, (1, 4), "u5", rests=((1, 40), (-1, 34)))
@@ -192,7 +192,7 @@ def build() -> Level:
     lv.coins(x, TOP - 4, x6 - 5, 2)
     lv.wp(x + 7, TOP - 1, x + 10, TOP - 1, ground=True, label="span 5 a")
     lv.wp(x6 - 5, TOP - 1, x6 - 3, TOP - 1, ground=True, label="span 5 b")
-    tooth(lv, x6 + 4, TOP, 6)
+    tooth(lv, x6 + 4, TOP, 6, cap=4)
 
     # --- U6: two swings, then the long climb between the needle and the east cliff ----------
     rests = ((1, 43), (-1, 38), (1, 33), (-1, 28), (1, 23), (-1, 18))

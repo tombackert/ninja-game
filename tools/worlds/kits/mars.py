@@ -19,10 +19,16 @@ def arch(lv: Level, x0: int, x1: int, top: int, under, t=None) -> dict:
     return rows
 
 
-def tooth(lv: Level, x: int, base: int, h: int, w: int = 2, t=None):
-    """A crag standing on row `base` (its foot), `h` rows tall: too tall to jump."""
+def tooth(lv: Level, x: int, base: int, h: int, w: int = 2, t=None, cap: int = 0):
+    """A crag standing on row `base` (its foot), `h` rows tall: too tall to jump.
+    Height alone does not block (the dash wall climb takes any sheer face), so
+    with `cap` its two top rows overhang that many tiles to the west, the side
+    it is come at from: a wall jump off the face under the cap does not rise
+    past it."""
     lv.rect(x, base - h, x + w - 1, base - 1, t)
-    if w > 2:
+    if cap:
+        lv.rect(x - cap, base - h - 1, x + w - 1, base - h, t)
+    elif w > 2:
         lv.rect(x, base - h - 1, x + w - 2, base - h - 1, t)
 
 
