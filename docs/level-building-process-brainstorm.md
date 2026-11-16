@@ -1,7 +1,7 @@
 # Level Building Process: Brainstorm
 
 **Date:** 2026-11-06
-**Status:** Brainstorm, decided. The user decided D1-D3 on 2026-11-06 (section 6.0), and section 5.1 gives the order that follows from them. Nothing is implemented yet.
+**Status:** Brainstorm, decided. The user decided D1-D3 on 2026-11-06 (section 6.0), and section 5.1 gives the order that follows from them. Steps 1-7 are implemented: [level-building-process-results.md](level-building-process-results.md) has what was built and measured.
 
 The round of levels 26-38 stopped after 7 of 15 levels ([level-building-findings.md](level-building-findings.md)). Only one level reached its time target, and each level took many rounds of trial and error. This document rethinks how a level is planned, designed, rated, tested and put into the game, so that the remaining levels (29, 30, 32-35, 39, 40) are done in a few iterations each.
 
