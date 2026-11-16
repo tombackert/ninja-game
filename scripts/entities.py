@@ -35,6 +35,7 @@ from scripts.constants import (
     WATER_MAX_SINK,
     WATER_MOVE_SCALE,
 )
+from scripts.death_log import set_cause as set_death_cause
 from scripts.effects_util import spawn_hit_sparks
 from scripts.particle import Particle
 from scripts.policy_service import PolicyService
@@ -437,6 +438,12 @@ class Player(PhysicsEntity):
             self.breath = BREATH_FRAMES
 
         if self.air_time > AIR_TIME_FATAL or self.breath <= 0 or self.fell_out(tilemap):
+            if self.fell_out(tilemap):
+                set_death_cause(self.game, "fell_out", self)
+            elif self.breath <= 0:
+                set_death_cause(self.game, "breath", self)
+            else:
+                set_death_cause(self.game, "air_time", self)
             if not self.game.dead:
                 self.game.screenshake = max(16, self.game.screenshake)
                 # Duck audio on death impact

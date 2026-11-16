@@ -239,11 +239,22 @@ class MenuState(State):
 class GameState(State):
     name = "GameState"
 
-    def __init__(self) -> None:
+    def __init__(self, level=None) -> None:
         from game import Game
 
         # Underlying Game object (entities, systems, assets)
         self._game = Game(fullscreen=False)
+        if level is not None:
+            # A map outside the campaign, by name (data/maps/<name>.json; app.py --map):
+            # the menu and the settings only know numbered levels
+            self._game.level = level
+            self._game.load_level(level)
+        # Death log (scripts/death_log.py): only when app.main() switched it on
+        from scripts import death_log
+
+        log = death_log.current()
+        if log is not None:
+            log.bind(self._game)
         # Allow renderer to query state flags (performance HUD toggle) without tight coupling
         try:
             setattr(self._game, "state_ref", self)
@@ -288,6 +299,13 @@ class GameState(State):
 
     def on_exit(self, next_state: "State | None") -> None:  # pragma: no cover - simple persistence
         # Persist collectables & best times when leaving game state entirely (not just pausing).
+        try:
+            from scripts import death_log
+
+            if not self._game.endpoint:
+                death_log.record_quit(self._game)
+        except Exception:  # pragma: no cover - logging never blocks leaving
+            pass
         try:
             self._game.cm.save_collectables()
             # Commit any pending replay if we finished a level?
@@ -348,6 +366,7 @@ class GameState(State):
         g.timer.update(g.level)
 
         # --- Level completion (endpoint is set by Game.step's flag check) ---
+        from scripts import death_log
         from scripts.constants import (
             DEAD_ANIM_FADE_START,
             RESPAWN_DEAD_THRESHOLD,
@@ -364,6 +383,7 @@ class GameState(State):
 
                 if replay_mgr:
                     replay_mgr.commit_run(new_best=is_new_best)
+                death_log.record_clear(g)
 
                 # Identify next level
                 levels = list_levels()
@@ -373,7 +393,9 @@ class GameState(State):
                     current_level_index = 0
 
                 next_level = None
-                if current_level_index < len(levels) - 1:
+                if g.level not in levels:
+                    pass  # a named map outside the campaign: nothing comes after it, nothing unlocks
+                elif current_level_index < len(levels) - 1:
                     next_level = levels[current_level_index + 1]
                     # Unlock next level
                     from scripts.progress_tracker import get_progress_tracker
@@ -404,10 +426,13 @@ class GameState(State):
             g.update_camera()
 
         # --- Death / respawn handling ---
+        # Every death ends here, so the death log writes its line here, once
+        # per death; the places where a death starts only name the cause.
         # (Note: legacy attribute 'lifes' renamed to 'lives' internally; we access both defensively.)
         player_lives_attr = getattr(g.player, "lives", getattr(g.player, "lifes", 0))
         if player_lives_attr < 1:
             g.dead += 1
+            death_log.set_cause(g, "out_of_lives")  # unless R or a fall named one first
         if g.dead:
             g.dead += 1
             if g.dead >= DEAD_ANIM_FADE_START:
@@ -418,6 +443,7 @@ class GameState(State):
                         replay_mgr.abort_current_run()
                     except Exception:
                         pass
+                death_log.record_death(g, restart=False)
                 g.load_level(g.level, player_lives_attr, respawn=True)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
                 if replay_mgr:
@@ -425,6 +451,7 @@ class GameState(State):
                         replay_mgr.abort_current_run()
                     except Exception:
                         pass
+                death_log.record_death(g, restart=True)
                 g.load_level(g.level)
 
         # --- Input (legacy direct keyboard polling) ---
@@ -1102,8 +1129,11 @@ class LevelCompleteState(State):
                 if self.manager:
                     from scripts.settings import settings
 
-                    settings.selected_level = self.current_level
-                    self.manager.set(GameState())
+                    if isinstance(self.current_level, str):  # a named map: not a campaign level to select
+                        self.manager.set(GameState(level=self.current_level))
+                    else:
+                        settings.selected_level = self.current_level
+                        self.manager.set(GameState())
             elif choice_key == "level_complete.menu":
                 if self.manager:
                     self.manager.set(MenuState())

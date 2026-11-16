@@ -32,9 +32,14 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Server host for multiplayer")
     parser.add_argument("--port", type=int, default=7777, help="Server port for multiplayer")
     parser.add_argument("--name", default="Player", help="Player name for multiplayer")
+    parser.add_argument("--map", default=None, help="Start a named map outside the campaign (data/maps/<name>.json)")
     args = parser.parse_args()
 
     os.environ.setdefault("NINJA_GAME_TESTING", "0")
+    # A human plays: log deaths for the difficulty calibration (NINJA_DEATH_LOG=0 switches it off)
+    from scripts import death_log
+
+    death_log.enable()
     pygame.init()
     screen = pygame.display.set_mode((1280, 720))  # windowed for development
     pacer = FramePacer(60)
@@ -46,6 +51,8 @@ def main():
         from scripts.multiplayer_state import MultiplayerGameState
 
         sm.set(MultiplayerGameState(args.host, args.port, args.name))
+    elif args.map:
+        sm.set(GameState(level=args.map))
     else:
         sm.set(MenuState())
 

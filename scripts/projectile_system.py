@@ -47,6 +47,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import pygame
 
+from . import death_log
 from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
 from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
 from .entity_id import EntityIDGenerator
@@ -196,8 +197,10 @@ class ProjectileSystem:
                     if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
                         if proj in self._projectiles:
                             self._projectiles.remove(proj)
-                            if not self._try_absorb(player):
+                            absorbed = self._try_absorb(player)
+                            if not absorbed:
                                 player.lives -= 1
+                            death_log.record_hit(self.game, player, absorbed)
                             self.game.audio.play("hit")
                             self.game.screenshake = max(16, self.game.screenshake)
                             spawn_hit_sparks(self.game, player.rect().center)

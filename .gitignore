@@ -18,6 +18,10 @@ gemini*
 data/saves/
 data/replays/
 data/netlogs/
+data/deaths/
+
+# Tool output (level checks, their caches)
+out/
 data/online.json
 data/collectables.json
 data/best_times.json

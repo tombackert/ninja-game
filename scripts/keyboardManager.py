@@ -2,6 +2,8 @@ import sys
 
 import pygame
 
+from scripts import death_log
+
 
 class KeyboardManager:
     def __init__(self, game):
@@ -38,12 +40,14 @@ class KeyboardManager:
                 if event.key == pygame.K_x:
                     self.game.player.shoot()
                 if event.key == pygame.K_r:
+                    death_log.set_cause(self.game, "restart")
                     self.game.dead += 1
                     self.game.player.lives -= 1
                 if event.key == pygame.K_p:
                     if self.game.saves > 0:
                         self.game.saves -= 1
                         self.game.player.respawn_pos = list(self.game.player.pos)
+                        death_log.record_save(self.game)
             if event.type == pygame.KEYUP:
                 if event.key in (pygame.K_a, pygame.K_LEFT):
                     self.game.movement[0] = False
