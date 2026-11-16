@@ -1,7 +1,7 @@
 # Level Building Process: Results of Steps 1-7
 
-**Date:** 2026-11-16
-**Status:** Steps 1-7 of [level-building-process-brainstorm.md](level-building-process-brainstorm.md) (section 5.1) are implemented and tested. The calibration course is built but not yet played, so the refit of step 4 is still open. The pilot (step 8) has not started.
+**Date:** 2026-11-17
+**Status:** Steps 1-7 of [level-building-process-brainstorm.md](level-building-process-brainstorm.md) (section 5.1) are implemented and tested. The user played the calibration course once and levels 27, 28 and 31; the lapse rate is refitted from those deaths (section 6). The course needs more runs before it can say whether the window matters. The pilot (step 8) has not started.
 
 This document records what was built, what was measured against section 5.2 of the brainstorm, and what is still open.
 
@@ -14,17 +14,19 @@ This document records what was built, what was measured against section 5.2 of t
 | 1 Death log | `scripts/death_log.py`, written in the death block of `GameState.update` | done, tested |
 | 2 Planner fixes F1-F5 | `planner.py`, `route.py`; 22 levels re-planned from fewer waypoints | done; the planning time target is missed on 4 levels |
 | 3 Rate as players play | `windows.DASH_CLIMB = False`, trick elements flagged | done |
-| 4 Calibration course | `library.py`, `course.py`, map `calibration` (start with `python app.py --map calibration`) | built; **waits for the user's play**, then `course fit` |
+| 4 Calibration course | `library.py`, `course.py`, `playtests.py`, map `calibration` (start with `python app.py --map calibration`) | built and played once; the lapse is refitted, the window question is still open |
 | 5 Check command | `python -m tools.worlds.check N`, exact caches in `cache.py` | done, tested |
 | 6 Shortcut checker | `shortcuts.py`: climb scan, skip probes, obstacle probes; climb scan and obstacles run over 11-38 | done; the skip probes proved too slow to run over all levels |
-| 7 Composer | `compose.py`: prediction, parts, balance of length and difficulty | done; its numbers wait for the refit |
+| 7 Composer | `compose.py`: prediction, parts, balance of length and difficulty | done; its library numbers do not carry over exactly yet (5.1) |
 
 **Open:**
-- The user plays the calibration course. Then `python -m tools.worlds.course fit` refits sigma and lapse.
-- Level 31 can be crossed over its crags six times (section 7). It needs caps.
-- The other shortcut findings of section 7 need a decision per level: fix the geometry or allow the way.
-- Level 38's last element rates far harder than before (4.1). It needs one look.
-- The composer's library numbers do not carry over exactly into a built level (section 5).
+- **More runs of the calibration course.** One run gave 12 attempts and one death. About 10 more runs (220 attempts) are needed to see whether the window matters between 2 and 13 frames.
+- **Time per level is off by up to 4 times in either direction** (section 6), even where the deaths fit.
+- **The model does not see bullets.** With the lapse from the death log it predicts 2.8 lost minutes for the testers' session; 6.8 were seen, on levels with 20-30 enemies.
+- The climbs of section 8 that skip more than a rest need a decision per level: fix the geometry or allow the way.
+- Level 38's last element rates far harder than before (4.1). It is the model's known weakness at chimneys, not a change to the level.
+- The composer's library numbers do not carry over exactly into a built level (5.1).
+- The skip probes are too slow to run over all levels (section 8).
 
 ---
 
@@ -37,7 +39,7 @@ This document records what was built, what was measured against section 5.2 of t
 - Only a human's single-player play is logged. `app.main()` switches the log on, and `GameState` hands it to its `Game`. The route bot sets `NINJA_DEATH_LOG=0`. The benchmark, the trailer, the training runs and multiplayer never call `app.main()` or never reach the block.
 - `data/deaths/` is in `.gitignore`.
 
-**Side finding, not fixed:** the death block calls `replay_mgr.abort_current_run()`. `ReplayManager` has no such method, and the surrounding `try` swallows the error. It has no visible effect, because `load_level` restarts the recording anyway.
+**Side finding, fixed:** the death block called `replay_mgr.abort_current_run()`, which `ReplayManager` does not have; a `try` swallowed the error. The calls are gone: `load_level` starts the recording over anyway.
 
 ---
 
@@ -71,7 +73,7 @@ A guide candidate is an air waypoint where a player who lets go of the keys does
 
 - **The 13 guides:** level 13 (3), 22 (2), 23 (5), 25 (1), 31 (2: `u1 drop 3`, `u4 drop 2`).
   - In level 23, three of the five plan without the guide one by one, but the route then fails at "cabin ledge". All five stay.
-- **The 8 kept ones are possible shortcuts.** The planner found a shorter way that does not pass the waypoint: level 12 "tower base", 13 "s4 exit", 23 "room C air", 24 "air over 1,0" and "air over 3,0", 25 "third air", 37 "the air over the second junction" and "the eye". They are listed again in section 7.
+- **The 8 kept ones are possible shortcuts.** The planner found a shorter way that does not pass the waypoint: level 12 "tower base", 13 "s4 exit", 23 "room C air", 24 "air over 1,0" and "air over 3,0", 25 "third air", 37 "the air over the second junction" and "the eye". They are listed again in section 8.
 - Against 5.2 ("0 needed, at most 2"): met on 26-38 (2 guides in 7 levels, both in 31). The old water levels 22, 23 and 25 still need 8.
 
 ### 3.3 Planning and Verification
@@ -134,21 +136,21 @@ Verification of the 22 new plans:
 
 Expert profile, minutes to the first clear / deaths. The first two columns use the same profile (sigma 0.4, pace 1.2), so they show the trick alone. The last column uses the refitted profile of 4.2.
 
-| Level | With the trick | Without (as players play) | Trick elements | Refitted profile |
+| Level | With the trick | Without (as players play) | Trick elements | Current profile (4.2) |
 | --- | --- | --- | --- | --- |
-| 26 | 3.2 / 2.0 | 2.8 / 1.4 | none | 3.0 / 1.4 |
-| 27 | 3.1 / 0.3 | 3.3 / 1.3 | tall cap 0 | 3.5 / 1.9 |
-| 28 | 2.4 / 1.5 | 2.3 / 1.3 | none | 2.6 / 1.3 |
-| 31 | 4.4 / 4.6 | 4.4 / 5.1 | none | 4.7 / 6.2 |
-| 36 | 3.7 / 0.8 | 3.8 / 1.5 | needle rest 39 | 4.0 / 2.2 |
-| 37 | 3.9 / 2.2 | 3.2 / 0.4 | crack rest 27, first hull top | 3.4 / 0.4 |
-| 38 | 2.5 / 0.3 | 3.4 / 1.4 | cliff top | 6.1 / 5.8 |
+| 26 | 3.2 / 2.0 | 2.8 / 1.4 | none | 2.5 / 0.6 |
+| 27 | 3.1 / 0.3 | 3.3 / 1.3 | tall cap 0 | 2.7 / 1.2 |
+| 28 | 2.4 / 1.5 | 2.3 / 1.3 | none | 2.1 / 0.5 |
+| 31 | 4.4 / 4.6 | 4.4 / 5.1 | none | 3.4 / 2.7 |
+| 36 | 3.7 / 0.8 | 3.8 / 1.5 | needle rest 39 | 3.5 / 1.2 |
+| 37 | 3.9 / 2.2 | 3.2 / 0.4 | crack rest 27, first hull top | 2.9 / 0.2 |
+| 38 | 2.5 / 0.3 | 3.4 / 1.4 | cliff top | 3.9 / 2.7 |
 
 What this says:
 - **Five elements in 26-38 cannot be played without the trick** within the search's budget. They are flagged. A tester should try them: either the search misses a way, or the level asks for a technique 2 % of wall jumps use.
 - **The shifts are small and go both ways.** 27, 36 and 38 get harder without the trick, as expected. 26 and 37 get easier, which a perfect search could not produce: without the trick every way is also a way with it. The search is a heuristic with a node budget, and the deeper fallback search found more forgiving ways for some elements. So differences below about half a minute are search noise, not level difficulty.
-- **Level 38 is an outlier under the refitted profile** (6.1 minutes, average profile 49 minutes). Its last element, from the cave chimney's rest to the headland, now rates at 1 frame with 10 presses of 4 frames or less. The old route had a waypoint at the chimney's top. Most likely the search misses the forgiving way there. It needs one look before 38 is judged.
-- All seven levels stay below the 4-6 minute target, as before.
+- **Level 38 is an outlier under the current profile** (3.9 minutes and 2.7 deaths; average profile 18 minutes). Its last element, from the cave chimney's upper rest to the headland, rates at 1 frame with 10 presses of 4 frames or less. It is the top stretch of a wall-jump chimney, climbed without the trick. The model rates chimneys tighter than players find them (difficulty doc, section 10), and a larger sigma makes that worse. The level did not change there.
+- All seven levels stay below the 4-6 minute target, and further below it with the lapse of 4.2.
 
 ### 4.2 Re-calibration on the Testers' Session
 
@@ -161,16 +163,18 @@ What this says:
 | **expert, without the trick** | **0.6** | **0.08** | **1.25** | 8.2 / 8; 6.8 / 6.8 |
 | average (1.5x the expert, assumed) | 0.9 | 0.12 | 1.26 | one playtest |
 
-`windows.PROFILES` now holds the third row. With sigma 0.6 the chance to miss a press is:
+**The lapse from the death log.** The session fit cannot tell a death from a bullet apart from a missed press. The death log can. `python -m tools.worlds.playtests` fits the lapse to the deaths of the developer's first clears (section 6): 0.04, with a 95 % range of 0.005 to 0.075. None of those deaths came from a bullet.
+
+`windows.PROFILES` now holds sigma 0.6, pace 1.25 and lapse 0.04 for the expert, and 1.5 times the error and lapse for the average profile (0.9 and 0.06), which stays an assumption. The chance to miss a press is then:
 
 | Window (frames) | 1 | 2 | 3 | 4 | 6 | 8 | 13 | 20 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| expert | 45 % | 16 % | 8.2 % | 6.8 % | 6.1 % | 5.4 % | 3.8 % | 1.6 % |
-| average | 62 % | 35 % | 19 % | 12 % | 9.2 % | 8.2 % | 5.8 % | 2.4 % |
+| expert | 43 % | 13 % | 4.7 % | 3.4 % | 3.0 % | 2.7 % | 1.9 % | 0.8 % |
+| average | 60 % | 31 % | 14 % | 7.5 % | 4.6 % | 4.1 % | 2.9 % | 1.2 % |
 
-- The lapse did not move. Between 4 and 13 frames the model still says the window hardly matters (7-4 % misses).
-- Below 4 frames the refit is steeper than before: a 2-frame press now misses 16 %, not 8.5 %.
-- This is still a fit to 13 session totals. Sigma moved from 0.3 to 0.6 with the same data and a changed search, which shows how weakly the totals pin it. The calibration course is the real test.
+- **Against the testers' session** (levels 13-25, 20-30 enemies each) this profile predicts 10.3 clean first tries (8 seen) and 2.8 minutes lost (6.8 seen). The lapse of 0.08 fitted that session exactly, because it stood in for the bullets. For levels with few enemies, 0.04 is the better number; for levels with many, the model needs a term for bullets.
+- **The window now matters more below 4 frames:** a 2-frame press misses 13 %, a 4-frame press 3.4 %. Between 4 and 13 frames the model still expects little difference (3.4 % to 1.9 %). The data cannot confirm or refute that yet (5.2).
+- Sigma is still only pinned by 13 session totals. It moved from 0.3 to 0.6 with the same data and a changed search.
 
 ---
 
@@ -182,13 +186,15 @@ What this says:
 - `python -m tools.worlds.course fit` counts deaths and passes per element from the log and refits sigma and lapse by maximum likelihood. It fits the families separately too, and a likelihood-ratio test says whether they need parameters of their own. Its table per window class answers the question of decision D2: does the window matter between 2 and 13 frames?
 - The fit is tested on synthetic data: it recovers the sigma and lapse the data was drawn from.
 
-**The course as built** (`python -m tools.worlds.course measure`, then `build`):
+### 5.1 The Course as Built
+
+**Measured and built** (`python -m tools.worlds.course measure`, then `build`):
 
 - The library measured 52 points in 2 minutes 40 seconds on 7 cores. 11 elements were picked.
 - The route through the course takes 63 s. The replica matches the game on it for 20,000 frames.
 - `course fit` rates the course itself and attributes each death by its place, so it does not depend on which banners a player touched.
 
-| Element | Library, alone (narrowest window) | In the course | Expected deaths per attempt (expert / average) |
+| Element | Library, alone (narrowest window) | In the course | Expected deaths per attempt (expert / average, at the lapse of 0.08) |
 | --- | --- | --- | --- |
 | gap 3 | 13 | 13 | 0.00 / 0.00 |
 | gap 2 | 8 | 13 | 0.18 / 0.26 |
@@ -207,13 +213,42 @@ What this says:
 - **The course grades less finely than planned.** It has windows of 3, 4, 7, 8 and 13 frames, seven of them at 13. It still tests the model's main claim: the model expects 5-22 % deaths per attempt on elements that all count as "free or nearly free", and 0 % on the first gap. About 20 attempts per element (220 in all) separate those rates.
 - Chimney misses mostly slide back to the ledge instead of falling, so chimneys add few deaths to count.
 
+### 5.2 The First Run
+
+The user played the course once on 2026-11-16: 12 attempts over the 11 elements, no fall, one restart with R (at the first hook), 6.3 minutes in all.
+
+- **This is too little to answer the window question.** With one death in 12 attempts every window class has an interval from 0 to about 30 %. About 220 attempts are needed (section 5.1).
+- **The time is the surprise.** The model expects 1.4 minutes for the course; it took 6.3. The stretch with the four hooks alone took 5.7 minutes without a death. Misses there did not kill, so the death log shows none of them, and the model has no time for learning an element seen for the first time.
+- `course fit` attributes each line by its place, so a banner that was jumped past does not shift the counts.
+
 **Limits:**
 - There is no timed swim in the course. A swimmer only dies of breath, so a miss in water is not a death and the tier-1 log cannot count it.
 - Tier 2 of the death log (recordings of failed attempts) is not built. It is the next step only if these counts turn out too coarse.
 
 ---
 
-## 6. Step 5: Check Command
+## 6. Playtests Against the Model
+
+`python -m tools.worlds.playtests` takes each level's first clear from the death log and sets it against the model. The developer played on 2026-11-16, without the manual checkpoint P:
+
+| Level | Seen: minutes | Deaths | Expected, lapse 0.08 | Expected, lapse 0.04 (current) |
+| --- | --- | --- | --- | --- |
+| calibration | 6.3 | 1 (R) | 1.6 min / 1.3 deaths | 1.4 / 0.6 |
+| 27 | 1.9 | 0 | 5.2 / 1.9 | 3.6 / 1.2 |
+| 28 | 1.4 | 1 | 2.8 / 1.5 | 2.2 / 0.6 |
+| 31 | 4.5 | 3 | 5.9 / 7.5 | 4.0 / 3.0 |
+| **All four** | **14.2** | **5** | **15.6 / 12.2** | **11.2 / 5.3** |
+
+- **Deaths:** with the lapse of 0.08 the model expected 12.2 deaths, and 33 with the old average profile. 5 were seen. The lapse that fits is 0.04 (95 %: 0.005-0.075).
+- **The developer plays at the expert's numbers.** The average profile was an assumption of 1.5 times the expert's errors from one playtest. These four contradict it for this player.
+- **Time per level does not fit.** The totals are close (11.2 against 14.2 minutes), but only because the errors cancel: the course took 4.5 times the prediction, level 27 half of it. Against 5.2 of the brainstorm ("within about 20 % per level") the model fails on three of four.
+- Level 31's deaths were all falls under the bridge, at the hooks. The player went the designed way.
+- Levels 26 and 36 were entered and left without a clear. They are left out.
+- Four playtests of one player pin one number. Sigma, the pace and the window question need the course.
+
+---
+
+## 7. Step 5: Check Command
 
 `python -m tools.worlds.check N` builds and saves the level, plans the route, checks the physics along it, the banner, the shortcuts and the breath, and rates it. It prints at most 16 lines; details go to `out/check/N/`.
 
@@ -236,7 +271,7 @@ details    out/check/9004/report.json, out/check/9004/elements.txt
 
 ---
 
-## 7. Step 6: Shortcut Checker
+## 8. Step 6: Shortcut Checker
 
 `python -m tools.worlds.shortcuts N` runs three probes. Each finding is proven, refuted or not proven.
 
@@ -267,7 +302,7 @@ details    out/check/9004/report.json, out/check/9004/elements.txt
 | 37 | 4 | 1 | 2 |
 | 38 | 9 | 0 | 1 |
 
-- **Level 31: all six crag crossings are proven open.** With the trail down through the hole blocked, the planner gets over each crag on the bridge's back with the dash wall climb, in 4-11 s instead of the 8-18 s under the bridge. The level's whole idea, "the crossing goes underneath", can be skipped six times. Under decision D1 = A the crags need overhanging caps (or a ceiling), then one re-check.
+- **Level 31: all six crag crossings were proven open, and are closed now.** With the trail down through the hole blocked, the planner got over each crag on the bridge's back with the dash wall climb, in 4-11 s instead of the 8-18 s under the bridge (1,500 to 48,000 search nodes). Each crag now has a cap: its two top rows overhang four tiles to the west (`kits.mars.tooth(cap=4)`). With the caps the planner finds no way over any of the six within 60,000 nodes. That is "not proven", not "refuted": only a ceiling could be refuted, because the search space above the bridge is open. The route under the bridge is unchanged; the replica matches the game on the new map, and the route bot cleared it on the first attempt.
 - **35 climbs are proven shorter in 13 levels**, most of them by about 2 s. Most are walls of chimneys and zigzags the route climbs anyway, rest by rest: the trick takes the wall in one go. They skip rests, not sections. The larger ones deserve a look: level 13 (a 7-row wall, 3.5 s instead of 10.3 s), 15 (a 12-row wall), 20 (7 rows, 2.8 s instead of 6.2 s), 37 (a 14-row wall near the end, 5.0 s instead of 8.6 s).
 - "Not proven" means the probe's 15,000 nodes ran out. A wall of 66 rows in level 13 is in that group.
 - Only level 31 declares obstacles so far. The suspect spots of 27 and 28 in the findings (section 5 there) need declarations to be answered; the climb scan found no proven climb in either.
@@ -276,7 +311,7 @@ details    out/check/9004/report.json, out/check/9004/elements.txt
 
 ---
 
-## 8. Step 7: Composer
+## 9. Step 7: Composer
 
 `python -m tools.worlds.compose outline.json` reads a level outline (elements with parameters, walks, banners), takes each element's numbers from the library and combines them with `windows.first_clear`, the same function the check uses.
 
@@ -287,11 +322,11 @@ It prints, per profile:
 
 `balance` prices the distance to a target in both currencies: seconds of played-safe length at this difficulty, or exposed 8-frame presses per half at this length. `stamp` builds an outline into a level; the calibration course is built this way. The check prints a "vs composer" line when `tools/worlds/outlines/N.json` exists.
 
-The composer's numbers are only as good as the model's parameters. They are worth composing from once the course has been played and the model refitted.
+The composer's numbers are only as good as the model. Two things stand in the way of composing a level from them today: library numbers shift when an element is built into a level (5.1), and the model's time per level is off by a wide margin (section 6).
 
 ---
 
-## 9. Why the First Attempt Stalled
+## 10. Why the First Attempt Stalled
 
 The first attempt at these steps (2026-11-06) did not finish. The causes, for the next round of work:
 

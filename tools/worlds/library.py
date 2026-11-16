@@ -20,7 +20,7 @@ parameter point: narrowest window, played-safe seconds, the presses with
 their windows and fatal shares, presses of 4 frames or less, exposed presses,
 dashes and trick element (the dash wall climb), and the program itself.
 `grid(kind, points)` measures many points at once; results are cached in
-tools/worlds/library/<kind>.json under the model's version.
+tools/worlds/library_data/<kind>.json under a hash of the model's code.
 
     python -m tools.worlds.library gap --grid gap=7,8,9 dh=-1,0,1,2 --jobs 7
     python -m tools.worlds.library chimney --grid width=1,2,3 height=6,9 --jobs 7
@@ -44,7 +44,7 @@ EXIT = 6  # exit ledge length
 LEDGE = 3  # ledge thickness (rows)
 SPAWN_BACK = 3  # the spawn stands this many tiles before the entry ledge's edge
 
-LIB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "library")
+LIB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "library_data")
 
 
 @dataclass

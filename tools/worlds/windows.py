@@ -53,17 +53,21 @@ LENGTH_COST = 1e-4  # log-chance a frame of extra length is worth
 # windows measured here), chance that a press is a blunder instead (anywhere
 # within CAP frames either way), pace (play time over the most forgiving
 # programs' time) and seconds of hesitation before a press of PAUSE_WINDOW
-# frames or less. "expert" is fitted (tools/worlds/calibrate.py) to the main
-# tester's session of 2026-11-03 (levels 13-25: 8 of 13 cleared without a
-# death before, 6.8 min lost to failed attempts, runs 1.25x the programs'
-# time); "average" (the developer, level 26 on 2026-11-05) has 1.5x the
-# expert's error and lapses, as one playtest cannot fit it. Refitted on
-# 2026-11-16 with the rating playing without the dash wall climb (sigma was
-# 0.4, pace 1.2): docs/level-building-process-results.md. The calibration
-# course (tools/worlds/course.py) is the next refit.
+# frames or less.
+# - sigma and pace of "expert" are fitted (tools/worlds/calibrate.py) to the
+#   main tester's session of 2026-11-03 (levels 13-25), with the rating playing
+#   without the dash wall climb.
+# - The lapse comes from the death log (tools/worlds/playtests.py): the
+#   developer's first clears of the calibration course and levels 27, 28 and 31
+#   on 2026-11-16, 5 deaths, none from a bullet. It fits 0.04 (95 %: 0.005 to
+#   0.075). The session fit gave 0.08, but it could not tell deaths from
+#   bullets apart from missed presses, and levels 13-25 have many enemies.
+# - "average" has 1.5x the expert's error and lapses: an assumption for a
+#   weaker player, not a fit. The developer plays at the expert's numbers.
+# See docs/level-building-process-results.md.
 PROFILES = {
-    "expert": {"sigma": 0.6, "pace": 1.25, "pause": 0.0, "lapse": 0.08},
-    "average": {"sigma": 0.9, "pace": 1.26, "pause": 0.0, "lapse": 0.12},
+    "expert": {"sigma": 0.6, "pace": 1.25, "pause": 0.0, "lapse": 0.04},
+    "average": {"sigma": 0.9, "pace": 1.26, "pause": 0.0, "lapse": 0.06},
 }
 
 # The rating plays as players play: its search for the most forgiving way

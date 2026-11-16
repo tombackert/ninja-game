@@ -1,7 +1,7 @@
 # Difficulty Rating Brainstorm
 
 **Date:** 2026-11-05
-**Status:** Implemented (`tools/worlds/windows.py`, `tools/worlds/calibrate.py`, `python -m tools.worlds.assess --windows / --calibrate`, `build --assess`); calibrated on 16 playtests
+**Status:** Implemented. The profiles in section 7.3 are superseded: the rating now plays without the dash wall climb, and sigma, pace and lapse were refitted on 2026-11-16 ([level-building-process-results.md](level-building-process-results.md), section 4.2). Implemented (`tools/worlds/windows.py`, `tools/worlds/calibrate.py`, `python -m tools.worlds.assess --windows / --calibrate`, `build --assess`); calibrated on 16 playtests
 
 The level tools rate how hard a level is before anybody plays it, so new levels can be balanced in the build loop. The rating in use (`assess --playtime`) turned out far too pessimistic against real runs. This document records the evidence, the diagnosis, the options, the method that replaced it (timing windows per element, calibrated on real runs), the calibration, the window profiles of levels 11-38 and the targets for the next levels. No new levels are built until this exists.
 

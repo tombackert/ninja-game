@@ -438,19 +438,10 @@ class GameState(State):
             if g.dead >= DEAD_ANIM_FADE_START:
                 g.transition = min(TRANSITION_MAX, g.transition + 1)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr >= 1:
-                if replay_mgr:
-                    try:
-                        replay_mgr.abort_current_run()
-                    except Exception:
-                        pass
+                # (load_level starts the replay recording over: nothing to abort here)
                 death_log.record_death(g, restart=False)
                 g.load_level(g.level, player_lives_attr, respawn=True)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
-                if replay_mgr:
-                    try:
-                        replay_mgr.abort_current_run()
-                    except Exception:
-                        pass
                 death_log.record_death(g, restart=True)
                 g.load_level(g.level)
 

@@ -225,3 +225,15 @@ def test_the_place_decides_when_a_banner_was_jumped_past():
     ]
     cs = CO.counts(lines, 3, map_hash="m", banner_xs=xs)
     assert [(c.deaths, c.passes) for c in cs] == [(1, 1), (1, 1), (0, 1)]
+
+
+def test_a_capped_crag_has_no_face_to_climb_over():
+    from tools.worlds.kits.mars import tooth
+
+    plain, capped = Level(951, "mars"), Level(952, "mars")
+    for lv, cap in ((plain, 0), (capped, 4)):
+        lv.rect(0, 28, 40, 30)
+        tooth(lv, 20, 28, 6, cap=cap)
+    assert any(f[0] == 20 and f[1] == -1 for f in SC.climbable_faces(plain.solids()))
+    assert not any(f[1] == -1 and 16 <= f[0] <= 20 for f in SC.climbable_faces(capped.solids()))
+    assert (16, 21) in capped.solid and (16, 22) in capped.solid  # two rows thick, four tiles out

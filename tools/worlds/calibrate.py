@@ -514,10 +514,47 @@ def calibrate(levels=range(11, 27), workers: int | None = None, data: dict | Non
                 ],
             }
         )
-    return {"profiles": fitted, "fits": fits, "rows": rows, "players": PLAYERS}
+    return {
+        "profiles": fitted,
+        "fits": fits,
+        "rows": rows,
+        "players": PLAYERS,
+        "current": session_check(data, obs, "expert", PROFILES["expert"]),
+    }
+
+
+def session_check(data: dict, obs: list, player: str, profile: dict) -> dict:
+    """What a given profile predicts for the player's session, against what was
+    seen: clean first tries and minutes lost to failed attempts (as `fit_precision`
+    counts them)."""
+    from tools.worlds.windows import first_clear
+
+    rows = [o for o in obs if o.player == player and o.first_try is not None and not o.break_ and o.level in data]
+    first = lost = 0.0
+    for o in rows:
+        fc = first_clear(data[o.level]["elements"], profile, _cuts(data[o.level]))
+        first += fc["first_try"]
+        lost += fc["minutes"] - fc["clean_run_minutes"]
+    return {
+        "profile": dict(profile),
+        "levels": len(rows),
+        "first_tries": [round(first, 1), sum(1 for o in rows if o.first_try)],
+        "minutes_lost": [
+            round(lost, 1),
+            round(sum(max(0.0, (o.gap_s or o.run_s) - o.run_s - OVERHEAD_S) for o in rows) / 60, 1),
+        ],
+    }
 
 
 def print_calibration(cal: dict) -> None:
+    cur = cal.get("current")
+    if cur:
+        p = cur["profile"]
+        print(
+            f"windows.PROFILES expert as it is (sigma {p['sigma']}, lapse {p['lapse']}): clean first tries "
+            f"{cur['first_tries'][0]} predicted / {cur['first_tries'][1]} seen, minutes lost "
+            f"{cur['minutes_lost'][0]} / {cur['minutes_lost'][1]}"
+        )
     for name, p in cal["profiles"].items():
         fit = cal["fits"].get(name, {})
         extra = ""
