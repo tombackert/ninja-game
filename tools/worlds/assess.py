@@ -45,7 +45,8 @@ Usage:
     python -m tools.worlds.assess 8 9 10 11 12 13 14 15 [--sigma 2] [--json out.json]
     python -m tools.worlds.assess 26 --sections --playtime
     python -m tools.worlds.assess 26 --windows
-    python -m tools.worlds.assess --calibrate [levels]
+    python -m tools.worlds.assess 26 27 28 --windows --jobs 8 [--dash-climb]
+    python -m tools.worlds.assess --calibrate [levels] [--jobs 8]
 """
 
 from __future__ import annotations
@@ -511,6 +512,21 @@ def print_details(r: dict) -> None:
         )
 
 
+def _windows_job(item) -> tuple:
+    """Worker: one level's window profile, with its element lines as text."""
+    import contextlib
+    import io
+
+    from tools.worlds.windows import profile_map
+
+    lvl, climb = item
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        print(f"level {lvl}: elements (most forgiving way, narrowest window in frames):")
+        timing = profile_map(lvl, verbose=True, dash_climb=climb)
+    return lvl, buf.getvalue(), timing
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("levels", nargs="*", type=int)
@@ -527,11 +543,16 @@ def main() -> int:
         "--calibrate", action="store_true", help="fit the skill profiles to the playtests in data/ (read only)"
     )
     ap.add_argument("--json", default=None)
+    ap.add_argument("--jobs", type=int, default=1, help="levels rated at once (--windows, --calibrate)")
+    ap.add_argument(
+        "--dash-climb", action="store_true", help="let the rating's search use the dash wall climb (for comparison)"
+    )
     args = ap.parse_args()
+    climb = True if args.dash_climb else None
     if args.calibrate:
         from tools.worlds.calibrate import calibrate, print_calibration
 
-        cal = calibrate(args.levels or range(11, 27))
+        cal = calibrate(args.levels or range(11, 27), workers=args.jobs if args.jobs > 1 else None, dash_climb=climb)
         print_calibration(cal)
         if args.json:
             with open(args.json, "w") as f:
@@ -540,13 +561,24 @@ def main() -> int:
     if not args.levels:
         ap.error("level ids are needed (or --calibrate)")
     rows = []
+    timings = {}
+    if args.windows and args.jobs > 1 and len(args.levels) > 1:
+        from concurrent.futures import ProcessPoolExecutor
+
+        with ProcessPoolExecutor(min(args.jobs, len(args.levels))) as pool:
+            for lvl, text, timing in pool.map(_windows_job, [(lvl, climb) for lvl in args.levels]):
+                print(text, end="", flush=True)
+                timings[lvl] = timing
     for lvl in args.levels:
         r = profile(lvl, args.sigma, args.chunk, args.samples, args.resample, args.sections, args.playtime)
         if args.windows:
-            from tools.worlds.windows import profile_map
+            if lvl in timings:
+                r["timing"] = timings[lvl]
+            else:
+                from tools.worlds.windows import profile_map
 
-            print(f"level {lvl}: elements (most forgiving way, narrowest window in frames):", flush=True)
-            r["timing"] = profile_map(lvl, verbose=True)
+                print(f"level {lvl}: elements (most forgiving way, narrowest window in frames):", flush=True)
+                r["timing"] = profile_map(lvl, verbose=True, dash_climb=climb)
         rows.append(r)
         print(json.dumps(r), flush=True)
     if args.windows:

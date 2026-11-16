@@ -340,7 +340,7 @@ def observations(levels=range(11, 27)) -> list[Observation]:
 # --- fitting the skill profiles ------------------------------------------------------
 
 
-def _analyse(level: int) -> dict:
+def _analyse(level: int, dash_climb=None) -> dict:
     """Worker: a level's elements, and the playtest run cut into the same elements."""
     from tools.worlds.assess import _map_data, checkpoint_boxes, load_map
     from tools.worlds.route import load_plan
@@ -348,7 +348,9 @@ def _analyse(level: int) -> dict:
 
     solids, _tiles = load_map(level)
     plan = load_plan(level)
-    els = analyse_route(solids, plan["spawn"], plan["waypoints"], plan["frame_list"], plan["segments"])
+    els = analyse_route(
+        solids, plan["spawn"], plan["waypoints"], plan["frame_list"], plan["segments"], dash_climb=dash_climb
+    )
     spans = [(e.first, e.last) for e in els]
     humans = []
     if os.path.exists(replay_path(level)):
@@ -363,15 +365,16 @@ def _analyse(level: int) -> dict:
     }
 
 
-def analyse_levels(levels, workers: int | None = None) -> dict:
+def analyse_levels(levels, workers: int | None = None, dash_climb=None) -> dict:
     """`_analyse` for many levels, in parallel."""
     from concurrent.futures import ProcessPoolExecutor
+    from functools import partial
 
     levels = list(levels)
     if len(levels) == 1 or workers == 1:
-        return {lv: _analyse(lv) for lv in levels}
+        return {lv: _analyse(lv, dash_climb) for lv in levels}
     with ProcessPoolExecutor(max_workers=workers or min(len(levels), os.cpu_count() or 1)) as pool:
-        return {r["level"]: r for r in pool.map(_analyse, levels)}
+        return {r["level"]: r for r in pool.map(partial(_analyse, dash_climb=dash_climb), levels)}
 
 
 SIGMAS = [round(0.2 + 0.1 * i, 1) for i in range(19)]  # 0.2 .. 2.0 frames
@@ -448,13 +451,13 @@ def fit_pace(data: dict, obs: list, player: str) -> dict:
     return {"pace": round(run / model, 2) if model else 1.0, "pause_fit": round(pause, 2)}
 
 
-def calibrate(levels=range(11, 27), workers: int | None = None, data: dict | None = None) -> dict:
+def calibrate(levels=range(11, 27), workers: int | None = None, data: dict | None = None, dash_climb=None) -> dict:
     """Fit the profiles to the playtests and compare predictions with them
     (`data`: analyse_levels output, if already at hand)."""
     from tools.worlds.windows import PROFILES, first_clear, window_profile
 
     obs = observations(levels)
-    data = data or analyse_levels([o.level for o in obs], workers)
+    data = data or analyse_levels([o.level for o in obs], workers, dash_climb)
     fitted, fits = {}, {}
     expert_pace = fit_pace(data, obs, "expert")
     fits["expert"] = {**expert_pace, **fit_precision(data, obs, "expert", {"pace": expert_pace["pace"]})}

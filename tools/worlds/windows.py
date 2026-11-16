@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 
 from scripts.constants import RESPAWN_DEAD_THRESHOLD
 from tools.worlds import physics as ph
-from tools.worlds.planner import Waypoint, plan_segment
+from tools.worlds.planner import Waypoint, can_land, dash_climbs, plan_segment
 
 CAP = 12  # frames a press is shifted at most either way: a window of 2 * CAP + 1 is "free"
 FREE = 2 * CAP + 1
@@ -55,14 +55,25 @@ LENGTH_COST = 1e-4  # log-chance a frame of extra length is worth
 # programs' time) and seconds of hesitation before a press of PAUSE_WINDOW
 # frames or less. "expert" is fitted (tools/worlds/calibrate.py) to the main
 # tester's session of 2026-11-03 (levels 13-25: 8 of 13 cleared without a
-# death before, 6.8 min lost to failed attempts, runs 1.2x the programs'
+# death before, 6.8 min lost to failed attempts, runs 1.25x the programs'
 # time); "average" (the developer, level 26 on 2026-11-05) has 1.5x the
-# expert's error and lapses, as one playtest cannot fit it. See
-# docs/difficulty-rating-brainstorm.md.
+# expert's error and lapses, as one playtest cannot fit it. Refitted on
+# 2026-11-16 with the rating playing without the dash wall climb (sigma was
+# 0.4, pace 1.2): docs/level-building-process-results.md. The calibration
+# course (tools/worlds/course.py) is the next refit.
 PROFILES = {
-    "expert": {"sigma": 0.4, "pace": 1.2, "pause": 0.0, "lapse": 0.08},
-    "average": {"sigma": 0.6, "pace": 1.26, "pause": 0.0, "lapse": 0.12},
+    "expert": {"sigma": 0.6, "pace": 1.25, "pause": 0.0, "lapse": 0.08},
+    "average": {"sigma": 0.9, "pace": 1.26, "pause": 0.0, "lapse": 0.12},
 }
+
+# The rating plays as players play: its search for the most forgiving way
+# leaves out the dash wall climb (a wall jump while a dash is active), which
+# the route plans use for half their wall jumps and the testers for 1.8 %
+# (docs/level-building-process-brainstorm.md, 4.2). An element that cannot be
+# played without it is rated with it and flagged as a trick element. The press
+# windows themselves are measured with the game's full physics: a mistimed
+# press does what it does in the game.
+DASH_CLIMB = False
 
 # Planner settings the candidates of an element come from: (weight, macro
 # durations, dash allowed). Coarse macros give the simple programs people
@@ -443,23 +454,48 @@ def walks(start: tuple, toward: int, solids) -> list[tuple[list, tuple]]:
     return uniq
 
 
-def plan_through(start: tuple, goals: list, solids, cfg: tuple, max_expand: int) -> tuple[list | None, int]:
+def plan_through(
+    start: tuple, goals: list, solids, cfg: tuple, max_expand: int, dash_climb: bool = True
+) -> tuple[list | None, int]:
     """The route planner chained through `goals` with one setting (CONFIGS):
-    (frames or None, search nodes spent)."""
+    (frames or None, search nodes spent). A goal the plain search cannot reach is
+    tried once more with the distance field (planner F1), as the route does."""
     weight, durations, dash = cfg
     frames: list = []
     spent = 0
     s = start
     for goal in goals:
-        res = plan_segment(
-            s, goal, solids, weight=weight, durations=durations, allow_dash=dash, max_expand=max_expand - spent
-        )
+        budget = max_expand - spent
+        kw = dict(weight=weight, durations=durations, allow_dash=dash, no_dash_climb=not dash_climb)
+        res = plan_segment(s, goal, solids, max_expand=budget, **kw)
         spent += res.expanded
+        if not res.ok and budget > 0:
+            res = plan_segment(s, goal, solids, max_expand=budget, field=True, **kw)
+            spent += res.expanded
         if not res.ok:
             return None, spent
         frames += res.frames
         s = res.end
     return frames, spent
+
+
+def deep_plan(start: tuple, goals: list, solids, dash_climb: bool = False) -> list | None:
+    """The route's first two tries (route.TRIES: the plain and the field search at
+    weight 5, 20,000 nodes each) chained through `goals`: a way when the
+    element's searches found none. The weight-2 try (120,000 nodes) is left out:
+    it made a level's rating take many times as long for a rare extra find."""
+    from tools.worlds.route import TRIES, _Segment
+
+    tries = [(name, {**kw, "no_dash_climb": not dash_climb}) for name, kw in TRIES[:2]]
+    frames: list = []
+    s = start
+    for goal in goals:
+        res = _Segment(s, goal, solids, getattr(solids, "kill_y", None), tries).next()
+        if res is None:
+            return None
+        frames += res.frames
+        s = res.end
+    return frames
 
 
 @dataclass
@@ -489,14 +525,24 @@ def _apex_shift(start: tuple, frames: list, ev: Event, solids, reach: int = 24) 
 
 
 def most_forgiving(
-    start: tuple, goals: list, solids, *, seeds: tuple = (), nodes: int = SEARCH_NODES, rounds: int = 3
+    start: tuple,
+    goals: list,
+    solids,
+    *,
+    seeds: tuple = (),
+    nodes: int = SEARCH_NODES,
+    rounds: int = 3,
+    dash_climb: bool | None = None,
 ) -> Choice | None:
     """The input program through `goals` from `start` whose presses leave the most
     room (`score`): planner programs with every setting, from where the player
     stands and from spots on the ledge walked to first, then improved by moving
     its tightest presses a few frames (a dash to the top of its jump) and
     planning the rest anew. Spends at most `nodes` planner search nodes. `seeds`
-    are programs to start from (the designed route's, an earlier search's)."""
+    are programs to start from (the designed route's, an earlier search's).
+    Without `dash_climb` (default: DASH_CLIMB) no program may use the dash wall
+    climb."""
+    climb = DASH_CLIMB if dash_climb is None else dash_climb
     best: Choice | None = None
     tried: set = set()
     spent = 0
@@ -510,6 +556,8 @@ def most_forgiving(
         if key in tried:
             return False
         tried.add(key)
+        if not climb and dash_climbs(start, frames, solids):
+            return False
         floor = None if best is None else best.score + LENGTH_COST * len(frames)
         ws = press_windows(start, frames, goals, solids, floor=floor)
         if ws is None:
@@ -527,7 +575,7 @@ def most_forgiving(
         budget = min(budget, nodes - spent)
         if budget <= 0:
             return None
-        frames, used = plan_through(s, gs, solids, cfg, budget)
+        frames, used = plan_through(s, gs, solids, cfg, budget, climb)
         spent += used
         return frames
 
@@ -605,6 +653,7 @@ class Element:
     fatal: list  # per press: share of its misses no quick correction saves
     plan_frames: int  # frames the designed (fastest) route takes for it
     start: tuple = ()  # the state it is played from
+    trick: bool = False  # only played through with the dash wall climb (rated with it)
 
     @property
     def narrowest(self) -> int:
@@ -624,27 +673,7 @@ def saved(s: tuple, solids, floor: float | None = None, frames: int = 240) -> bo
     With `floor` (px), only a landing no lower than that counts: deeper down is a
     pit the element cannot be gone on from (a restart, as good as a death). A
     swimmer still alive in the water at the end is saved too: it can swim on."""
-    water = getattr(solids, "water", None)
-    for m in (-1, 0, 1):
-        for jump_at in (None, 0, 8, 16):
-            cur, at = s, jump_at
-            dead = False
-            for f in range(frames):
-                mm = m if f >= REACT else cur[ph.LASTM]
-                jump = at is not None and f >= REACT + at and ph.can_jump(cur, solids)
-                if jump:
-                    at = None
-                cur, down, dead = ph.apply_frame(cur, mm, jump, False, solids)
-                if dead:
-                    break
-                if down:
-                    if floor is None or cur[ph.Y] + ph.PH <= floor:
-                        return True
-                    dead = True
-                    break
-            if not dead and water and ph.water_at(cur[ph.X], cur[ph.Y], water)[0] is not None:
-                return True
-    return False
+    return can_land(s, solids, floor=floor, frames=frames)
 
 
 def landing_floor(start: tuple, goals: list) -> float:
@@ -666,9 +695,58 @@ def fatal_shares(windows: list, solids, floor: float | None = None) -> list[floa
     return [mean if f is None else f for f in per]
 
 
-def analyse_route(solids, spawn_px: tuple, route: list, plan_frames: list, segments: list, verbose=False) -> list:
+def _choose(s, settled, states, pa, pb, plan_frames, goals, seeds, solids, climb) -> tuple:
+    """The most forgiving way through an element: from where the element before
+    left off, else from where the designed route starts it. Without `climb`, a
+    deeper search (`deep_plan`) seeds the search when the usual one finds no way
+    without the dash wall climb, and only then is the trick allowed (trick
+    element). Returns (choice, start, settled, trick)."""
+    starts = [(s, settled, seeds)]
+    if not _same(s, states[pa]):
+        starts.append((states[pa], False, [plan_frames[pa:pb]]))
+    for mode in ("plain", "deep", "trick") if not climb else ("plain",):
+        for st, stl, sd in starts:
+            if mode == "deep":
+                deep = deep_plan(st, goals, solids)
+                if deep is None:
+                    continue
+                sd = [deep]
+            choice = most_forgiving(st, goals, solids, seeds=sd, dash_climb=climb or mode == "trick")
+            if choice is not None:
+                return choice, st, stl, mode == "trick"
+    return None, s, settled, False
+
+
+def _rate_element(s, settled, states, pa, pb, plan_frames, goals, seeds, solids, climb) -> tuple:
+    """The most forgiving program of an element with its press windows and fatal
+    shares: (frames, windows, fatal, start, settled, trick)."""
+    choice, s, settled, trick = _choose(s, settled, states, pa, pb, plan_frames, goals, seeds, solids, climb)
+    if choice is None:
+        return None
+    if narrowest(choice.windows) < HARD:  # a hard one: look harder before calling it hard
+        choice = most_forgiving(
+            s, goals, solids, seeds=[choice.frames], nodes=3 * SEARCH_NODES, rounds=6, dash_climb=climb or trick
+        )
+    ws = press_windows(s, choice.frames, goals, solids)
+    return choice.frames, ws, fatal_shares(ws, solids, landing_floor(s, goals)), s, settled, trick
+
+
+def analyse_route(
+    solids,
+    spawn_px: tuple,
+    route: list,
+    plan_frames: list,
+    segments: list,
+    verbose=False,
+    dash_climb=None,
+    cache=None,
+) -> list:
     """Elements of a route with their most forgiving programs. `plan_frames` and
-    `segments` ((start, n) per waypoint) are the designed route's plan."""
+    `segments` ((start, n) per waypoint) are the designed route's plan.
+    `dash_climb` (default DASH_CLIMB): whether the search may use the dash wall
+    climb; without it, elements that need it are flagged (`Element.trick`).
+    `cache`: a tools.worlds.cache.Store for the elements' ratings."""
+    climb = DASH_CLIMB if dash_climb is None else dash_climb
     from tools.worlds.assess import section_name
     from tools.worlds.route import LEAD_IN
 
@@ -687,35 +765,46 @@ def analyse_route(solids, spawn_px: tuple, route: list, plan_frames: list, segme
         pa, pb = segments[a][0], segments[b][0] + segments[b][1]
         seeds = [plan_frames[pa:pb]] if _same(s, states[pa]) else []
         t0 = time.time()
-        choice = most_forgiving(s, goals, solids, seeds=seeds)
-        if choice is None:  # from where the element before left off it cannot be done: as designed
-            s, settled = states[pa], False
-            choice = most_forgiving(s, goals, solids, seeds=[plan_frames[pa:pb]])
-        if choice is None:
+        args = (s, settled, states, pa, pb, plan_frames, goals, seeds, solids, climb)
+        rated = None
+        if cache is not None:
+            from tools.worlds.cache import Probe, input_key
+
+            boxes = [(g.x0, g.y0, g.x1, g.y1, g.ground) for g in goals]
+            key = input_key("element", s, settled, states[pa], plan_frames[pa:pb], seeds, boxes, climb)
+            rated = cache.get(key, solids)
+            if rated is None:
+                with Probe() as probe:
+                    rated = _rate_element(*args)
+                if rated is not None:
+                    cache.put(key, solids, probe.box(), rated)
+        else:
+            rated = _rate_element(*args)
+        if rated is None:
             raise RuntimeError(f"element {element_label(route, a, b)!r} cannot be played")
-        if narrowest(choice.windows) < HARD:  # a hard one: look harder before calling it hard
-            choice = most_forgiving(s, goals, solids, seeds=[choice.frames], nodes=3 * SEARCH_NODES, rounds=6)
-        ws = press_windows(s, choice.frames, goals, solids)
+        frames, ws, fatal, s, settled, trick = rated
         el = Element(
             element_label(route, a, b),
             section_name(route[b].label),
             a,
             b,
             settled,
-            choice.frames,
+            frames,
             ws,
-            fatal_shares(ws, solids, landing_floor(s, goals)),
+            fatal,
             pb - pa,
             s,
+            trick,
         )
         out.append(el)
         if verbose:
             print(
                 f"  {el.label[:44]:44s} {el.seconds:5.1f} s (route {el.plan_frames / 60:4.1f} s) "
-                f"narrowest {el.narrowest:2d}  presses {sorted(w.width for w in ws)[:6]}  ({time.time() - t0:.1f} s)",
+                f"narrowest {el.narrowest:2d}  presses {sorted(w.width for w in ws)[:6]}  ({time.time() - t0:.1f} s)"
+                f"{'  TRICK: needs the dash wall climb' if trick else ''}",
                 flush=True,
             )
-        end = play(s, choice.frames, goals, solids).end
+        end = play(s, frames, goals, solids).end
         rest = settle(end, route[b], solids) if stable[b] else None
         s, settled = (rest, True) if rest is not None else (end, False)
     return out
@@ -867,6 +956,7 @@ def summary(level, elements: list, route_frames: int, boxes=(), solids=None, pro
         "hardest": [[e.label, e.narrowest, round(max(e.fatal, default=0.0), 2)] for e in hardest],
         "sections": [[k, min(v), len(v)] for k, v in sorted(by_section.items(), key=lambda kv: min(kv[1]))],
         "checkpoints": cuts,
+        "trick_elements": [e.label for e in elements if e.trick],
         "first_clear": {name: first_clear(elements, prof, cuts) for name, prof in profiles.items()},
         "element_list": [
             [e.label, e.narrowest, round(e.seconds, 2), [w.width for w in e.windows], [round(f, 2) for f in e.fatal]]
@@ -875,24 +965,26 @@ def summary(level, elements: list, route_frames: int, boxes=(), solids=None, pro
     }
 
 
-def analyse_map(map_id: int, verbose: bool = False) -> tuple:
+def analyse_map(map_id: int, verbose: bool = False, dash_climb=None) -> tuple:
     """(elements, designed route frames, checkpoint banner boxes, terrain) of a saved level."""
     from tools.worlds.assess import _map_data, checkpoint_boxes, load_map
     from tools.worlds.route import load_plan
 
     solids, _tiles = load_map(map_id)
     plan = load_plan(map_id)
-    els = analyse_route(solids, plan["spawn"], plan["waypoints"], plan["frame_list"], plan["segments"], verbose)
+    els = analyse_route(
+        solids, plan["spawn"], plan["waypoints"], plan["frame_list"], plan["segments"], verbose, dash_climb
+    )
     return els, len(plan["frame_list"]), checkpoint_boxes(_map_data(map_id)), solids
 
 
-def profile_map(map_id: int, verbose: bool = False, profiles=None) -> dict:
+def profile_map(map_id: int, verbose: bool = False, profiles=None, dash_climb=None) -> dict:
     """Window profile and first-clear estimates of a saved level (with a designed route)."""
-    els, n, boxes, solids = analyse_map(map_id, verbose)
+    els, n, boxes, solids = analyse_map(map_id, verbose, dash_climb)
     return summary(map_id, els, n, boxes, solids, profiles)
 
 
-def profile_built(lv, verbose: bool = False, profiles=None) -> dict | None:
+def profile_built(lv, verbose: bool = False, profiles=None, dash_climb=None) -> dict | None:
     """The same for a tools.worlds.builder.Level that only exists in memory
     (None if its route cannot be planned)."""
     from tools.worlds.assess import checkpoint_boxes
@@ -904,7 +996,7 @@ def profile_built(lv, verbose: bool = False, profiles=None) -> dict | None:
     if not res.ok:
         return None
     segments = [(start, n) for _label, start, n, _exp in res.segments]
-    els = analyse_route(solids, spawn, lv.route, res.frames, segments, verbose)
+    els = analyse_route(solids, spawn, lv.route, res.frames, segments, verbose, dash_climb)
     boxes = checkpoint_boxes({"tilemap": {}, "offgrid": lv.offgrid})
     return summary(lv.map_id, els, len(res.frames), boxes, solids, profiles)
 
@@ -919,6 +1011,8 @@ def print_summary(r: dict) -> None:
     )
     hard = ", ".join(f"{label} {n}" for label, n, _f in r["hardest"] if n < FREE)
     print(f"  level {r['level']} hardest elements (narrowest window, frames): {hard or '-'}")
+    if r.get("trick_elements"):
+        print(f"  level {r['level']} trick elements (need the dash wall climb): {', '.join(r['trick_elements'])}")
     for name, fc in r["first_clear"].items():
         print(
             f"  level {r['level']} {name}: ~{fc['minutes']} min to the first clear, ~{fc['deaths']} deaths, "
