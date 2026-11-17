@@ -177,11 +177,11 @@ def plan_replay(level: int) -> dict:
 class Run:
     """A replay's inputs, rebuilt into what the player actually did."""
 
-    def __init__(self, level: int, kind: str = "best"):
+    def __init__(self, level: int, kind: str = "best", path: str | None = None):
         if kind == "plan":
             self.data = plan_replay(level)
         else:
-            with open(os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
+            with open(path or os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
                 self.data = json.load(f)
         self.snaps = {int(t): s["players"][0] for t, s in self.data["snapshots"].items() if s.get("players")}
         self.events = self._events(self.data["inputs"])

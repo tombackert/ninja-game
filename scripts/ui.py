@@ -472,8 +472,9 @@ class UI:
     def render_game_ui_element(display, text, x, y, align="left"):
         font = UI.get_font(8)
         if align == "right":
-            text_surface = font.render(text, True, UI.GAME_UI_COLOR)
-            x = x - text_surface.get_width()
+            x = x - font.size(text)[0]
+        elif align == "center":
+            x = x - font.size(text)[0] // 2
         return UI.draw_text_with_outline(
             surface=display,
             font=font,

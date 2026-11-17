@@ -259,12 +259,13 @@ class Renderer:
 
     def _render_hud(self, game, surface, game_counts=None) -> Optional[pygame.Rect]:
         """Draw the HUD text onto `surface`; return the area drawn on."""
+        from scripts.level_info import level_name
         from scripts.ui import UI
 
         drawn = [
             UI.render_game_ui_element(surface, f"{game.timer.text}", game.BASE_W - 70, 5),
             UI.render_game_ui_element(surface, f"{game.timer.best_time_text}", game.BASE_W - 70, 15),
-            UI.render_game_ui_element(surface, f"Level: {game.level}", game.BASE_W // 2 - 40, 5),
+            UI.render_game_ui_element(surface, level_name(game.level), game.BASE_W // 2, 5, align="center"),
         ]
         if getattr(game, "player", None):
             lives = getattr(game.player, "lives", getattr(game.player, "lifes", 0))

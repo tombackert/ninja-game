@@ -1,0 +1,60 @@
+{
+ "_comment": "Level names and chapters shown in the menu; keep in step with docs/campaign.md. Map files stay numbered (data/maps/<id>.json).",
+ "chapters": [
+  {"name": "Sky Islands", "levels": [
+   {"id": 0, "name": "First Steps", "setting": "A small island in the clouds, where the journey starts"},
+   {"id": 1, "name": "Island Hop", "setting": "Islands drift apart over the void"},
+   {"id": 2, "name": "Broken Bridge", "setting": "A chain of islands where a stone bridge once ran"},
+   {"id": 3, "name": "The Cliff", "setting": "A stone cliff hanging under the islands"},
+   {"id": 4, "name": "Sky Course", "setting": "Rock walls standing in the open sky"},
+   {"id": 5, "name": "The Ramparts", "setting": "Ruined stone walls float in the clouds"},
+   {"id": 6, "name": "Cloud Gardens", "setting": "Overgrown islands with stone towers"},
+   {"id": 7, "name": "The Arch", "setting": "A great arch of floating platforms"},
+   {"id": 8, "name": "Sky Labyrinths", "setting": "The largest island course"}
+  ]},
+  {"name": "Underground", "levels": [
+   {"id": 9, "name": "Root Caves", "setting": "Under the islands, earth and stone hold hollow caves"},
+   {"id": 10, "name": "Deep Labyrinth", "setting": "The heart of the rock"}
+  ]},
+  {"name": "Journey Across the World", "levels": [
+   {"id": 11, "name": "Sky Ruins", "setting": "The ruins of a city on the islands"},
+   {"id": 12, "name": "Deep Caverns", "setting": "Caves under the mountains"},
+   {"id": 13, "name": "Crate Tower", "setting": "A storehouse tower full of crates"},
+   {"id": 14, "name": "Desert", "setting": "The first desert: dunes, a canyon, a pyramid"},
+   {"id": 15, "name": "Mars", "setting": "The first landing on Mars"},
+   {"id": 16, "name": "Sandstone Canyons", "setting": "A plateau cut by canyons"},
+   {"id": 17, "name": "Sky Fortress", "setting": "A castle on an island in the sky"},
+   {"id": 18, "name": "Mars Caverns", "setting": "Lava caverns under the Martian crust"},
+   {"id": 19, "name": "Jungle Temple", "setting": "A temple in the swamp"},
+   {"id": 20, "name": "Olympus Mons", "setting": "The highest volcano in the solar system (finale)"}
+  ]},
+  {"name": "The Sea", "levels": [
+   {"id": 21, "name": "Coral Lagoon", "setting": "A shallow lagoon behind a lighthouse"},
+   {"id": 22, "name": "Kelp Currents", "setting": "A kelp sea under rock islands"},
+   {"id": 23, "name": "Sunken Galleon", "setting": "A shipwreck on the sea floor"},
+   {"id": 24, "name": "Undertow Caves", "setting": "Flooded caves"},
+   {"id": 25, "name": "The Abyss", "setting": "The deepest trench of the sea (finale)"}
+  ]},
+  {"name": "The Desert of Kings", "levels": [
+   {"id": 26, "name": "The Buried City", "setting": "A city the desert swallowed; only roofs and towers stand out of the sand"},
+   {"id": 27, "name": "Hoodoo Valley", "setting": "A valley of mushroom rocks over quicksand"},
+   {"id": 28, "name": "The Sinkhole", "setting": "One night the desert floor fell in"},
+   {"id": 29, "name": "The Hourglass", "setting": "A monument of the old kings in the shape of an hourglass"},
+   {"id": 30, "name": "The Colossus", "setting": "A king carved out of a mountain, sitting on his throne (finale)"}
+  ]},
+  {"name": "Ancient Mars", "levels": [
+   {"id": 31, "name": "Rift Bridge", "setting": "A rock bridge over a bottomless rift in the crust"},
+   {"id": 32, "name": "The Geode", "setting": "A lava bubble lined with crystal under the red plain"},
+   {"id": 33, "name": "The Monolith Field", "setting": "Black slabs, some hovering; nobody knows who set them up"},
+   {"id": 34, "name": "The Polar Layers", "setting": "The ice cap, a million years of ice and dust sheets"},
+   {"id": 35, "name": "The Beacon", "setting": "A lighthouse for ships nobody has seen (finale)"}
+  ]},
+  {"name": "The Deep Sea", "levels": [
+   {"id": 36, "name": "Tide Pools", "setting": "Low tide on a headland"},
+   {"id": 37, "name": "The Whirlpool", "setting": "Two tides meet and the sea never stops turning"},
+   {"id": 38, "name": "Kelp Forest", "setting": "Kelp on rock pillars under the cliffs"},
+   {"id": 39, "name": "The Drowned City", "setting": "A coastal town that sank into a cave under the sea"},
+   {"id": 40, "name": "The Leviathan's Bones", "setting": "The skeleton of a sea monster in the trench (finale of the campaign)"}
+  ]}
+ ]
+}

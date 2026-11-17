@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pygame
 
+from scripts.level_info import level_name
 from scripts.network.online import Background, Identity, JoinOnline, call_rendezvous, normalize_code
 from scripts.state_manager import State
 from scripts.ui_widgets import ScrollableListWidget
@@ -367,7 +368,7 @@ class FriendsState(_MenuScreen):
                 if status is None:
                     state = "..."
                 elif status.get("hosting"):
-                    state = self.loc.translate("mp.hosting_level").format(level=status.get("level", 0))
+                    state = self.loc.translate("mp.hosting_level").format(level=level_name(status.get("level", 0)))
                 else:
                     state = self.loc.translate("mp.offline")
                 text = f"{_friend_label(friend)}  {state}"

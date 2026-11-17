@@ -633,7 +633,18 @@ class PauseState(State):
 
 
 class LevelsState(State):
+    """Level select: the level names on the left, the selected level's
+    preview, chapter, setting and best time on the right.
+
+    A locked level's preview is pixelated and dimmed under a padlock: the
+    colours tell the world, the level itself stays a surprise.
+    """
+
     name = "LevelsState"
+
+    VISIBLE_ROWS = 9
+    ROW_SPACING = 52
+    THUMB_SCALE = 2  # thumbnails are 320x180 game pixels -> 640x360 on the 1280x720 menu
 
     def __init__(self) -> None:
         from scripts.displayManager import DisplayManager
@@ -659,17 +670,66 @@ class LevelsState(State):
             self.index = self.levels.index(selected)
         else:
             self.index = 0
+        from scripts.level_info import level_name
+
         self.widget = ScrollableListWidget(
-            [f"Level {lvl:<2}" for lvl in self.levels],
-            visible_rows=5,
-            spacing=50,
-            font_size=30,
+            [level_name(lvl) for lvl in self.levels],
+            visible_rows=self.VISIBLE_ROWS,
+            spacing=self.ROW_SPACING,
+            font_size=24,
         )
         self.widget.selected_index = self.index
+        self.widget._ensure_visible()
+        self.best_times = self._load_best_times()
+        self._thumbs: dict = {}  # (level, locked) -> scaled preview surface
         self.message: str | None = None
         self.message_timer: float = 0.0
         self.request_back = False
         self.enter = False
+
+    @staticmethod
+    def _load_best_times() -> dict:
+        import json
+
+        from scripts.timer import BEST_TIMES_FILE
+
+        try:
+            with open(BEST_TIMES_FILE) as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return {}
+        times = {}
+        for key, val in data.items():
+            t = val.get("time") if isinstance(val, dict) else val
+            if isinstance(t, (int, float)):
+                times[key] = t
+        return times
+
+    def _best_time_text(self, level) -> str:
+        t = self.best_times.get(str(level))
+        if t is None:
+            return "--:--.--"
+        t = int(t)
+        return f"{t // 60000 % 60:02}:{t // 1000 % 60:02}.{t % 1000 // 10:02}"
+
+    def _thumbnail(self, level, locked: bool, size: tuple[int, int]) -> pygame.Surface:
+        key = (level, locked, size)
+        if key not in self._thumbs:
+            from scripts.level_info import thumbnail_path
+
+            path = thumbnail_path(level)
+            surf = pygame.Surface(size)
+            if path is None:
+                surf.fill((24, 26, 44))
+            else:
+                img = pygame.image.load(path)
+                if locked:  # only the colours of the world show through
+                    img = pygame.transform.scale(img, (img.get_width() // 10, img.get_height() // 10))
+                surf = pygame.transform.scale(img, size)
+                if locked:
+                    surf.fill((90, 90, 110), special_flags=pygame.BLEND_RGB_MULT)
+            self._thumbs[key] = surf
+        return self._thumbs[key]
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
@@ -684,11 +744,13 @@ class LevelsState(State):
 
     def update(self, dt: float) -> None:
         if self.enter:
+            from scripts.level_info import level_name
+
             lvl = self.levels[self.widget.selected_index]
             # Use tracker authoritative unlock state
             if self.progress.is_unlocked(lvl):
                 self.settings.selected_level = lvl
-                self.message = self.loc.translate("menu.selected", lvl)
+                self.message = self.loc.translate("menu.selected", level_name(lvl))
             else:
                 self.message = self.loc.translate("menu.locked")
             self.message_timer = 1.0  # seconds
@@ -699,28 +761,69 @@ class LevelsState(State):
                 self.message = None
 
     def render(self, surface: pygame.Surface) -> None:
+        from scripts.level_info import level_info, level_name
+
         UI = self._ui
+        W, H = surface.get_size()
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, self.loc.translate("menu.select_level"), surface.get_width() // 2, 160)
-        # Decorate selected & owned indicator with padlocks at side
-        self.widget.render(surface, surface.get_width() // 2, 260)
-        # Draw padlocks
+        UI.render_menu_title(surface, self.loc.translate("menu.select_level"), W // 2, 60)
+
+        # Level list (left): padlock, name; the selection in the highlight colour
+        font = UI.get_font(self.widget.font_size)
+        list_x, list_y = int(W * 0.03), 150
         for i in range(self.widget.visible_rows):
             idx = self.widget._scroll_offset + i
             if idx >= len(self.levels):
                 break
             lvl = self.levels[idx]
-            icon = "data/images/padlock-o.png" if self.progress.is_unlocked(lvl) else "data/images/padlock-c.png"
-            UI.render_ui_img(
-                surface,
-                icon,
-                surface.get_width() // 2 + 150,
-                260 + (i * self.widget.spacing),
-                0.15,
-            )
+            y = list_y + i * self.widget.spacing
+            unlocked = self.progress.is_unlocked(lvl)
+            icon = "data/images/padlock-o.png" if unlocked else "data/images/padlock-c.png"
+            UI.render_ui_img(surface, icon, list_x + 14, y, 0.14)
+            if idx == self.widget.selected_index:
+                color = UI.SELECTOR_COLOR
+            else:
+                color = UI.PM_COLOR if unlocked else "#5A6B80"
+            text_y = y - font.get_height() // 2
+            UI.draw_text_with_outline(surface, font, self.widget.options[idx], list_x + 40, text_y, color, scale=3)
+        # scroll hints
+        if self.widget._scroll_offset > 0:
+            UI.render_menu_ui_element(surface, "...", list_x + 40, list_y - 50)
+        if self.widget._scroll_offset + self.widget.visible_rows < len(self.levels):
+            last_y = list_y + self.widget.visible_rows * self.widget.spacing
+            UI.render_menu_ui_element(surface, "...", list_x + 40, last_y - 30)
+
+        # Preview (right)
+        if self.levels:
+            lvl = self.levels[self.widget.selected_index]
+            info = level_info(lvl)
+            unlocked = self.progress.is_unlocked(lvl)
+            tw, th = 320 * self.THUMB_SCALE * W // 1280, 180 * self.THUMB_SCALE * H // 720
+            tx, ty = W - tw - int(W * 0.02), 120
+            frame = pygame.Rect(tx - 4, ty - 4, tw + 8, th + 8)
+            pygame.draw.rect(surface, (22, 24, 48), frame)
+            pygame.draw.rect(surface, UI.SELECTOR_COLOR if unlocked else "#5A6B80", frame, 3)
+            surface.blit(self._thumbnail(lvl, not unlocked, (tw, th)), (tx, ty))
+            if not unlocked:
+                UI.render_ui_img(surface, "data/images/padlock-c.png", tx + tw // 2, ty + th // 2, 0.5)
+            cx = tx + tw // 2
+            y = ty + th + 30
+            if info.chapter:
+                chapter = f"Chapter {info.chapter}: {info.chapter_name}"
+                UI.draw_text_with_outline(surface, UI.get_font(15), chapter, cx, y, UI.PM_COLOR, center=True, scale=2)
+                y += 30
+            if info.setting:
+                for line in self._wrap(info.setting, UI.get_font(15), tw):
+                    UI.draw_text_with_outline(
+                        surface, UI.get_font(15), line, cx, y, UI.GAME_UI_COLOR, center=True, scale=2
+                    )
+                    y += 24
+            best = f"{self.loc.translate('level_complete.best', self._best_time_text(lvl))}"
+            UI.draw_text_with_outline(surface, UI.get_font(15), best, cx, y + 8, UI.PM_COLOR, center=True, scale=2)
+
         UI.render_menu_ui_element(
             surface,
-            f"{self.loc.translate('menu.current')}: {self.settings.selected_level}",
+            f"{self.loc.translate('menu.current')}: {level_name(self.settings.selected_level)}",
             20,
             20,
         )
@@ -728,15 +831,20 @@ class LevelsState(State):
             surface,
             self.loc.translate("menu.back_hint"),
             20,
-            surface.get_height() - 40,
+            H - 40,
         )
         if self.message:
-            UI.render_menu_msg(
-                surface,
-                self.message,
-                surface.get_width() // 2,
-                surface.get_height() - 120,
-            )
+            UI.render_menu_msg(surface, self.message, W // 2, H - 60)
+
+    @staticmethod
+    def _wrap(text: str, font, width: int) -> list[str]:
+        lines: list[str] = []
+        for word in text.split():
+            if lines and font.size(lines[-1] + " " + word)[0] <= width:
+                lines[-1] += " " + word
+            else:
+                lines.append(word)
+        return lines
 
 
 class StoreState(State):
@@ -1144,6 +1252,9 @@ class LevelCompleteState(State):
 
         # Title
         UI.render_menu_title(surface, self.loc.translate("level_complete.title"), surface.get_width() // 2, 80)
+        from scripts.level_info import level_name
+
+        UI.render_menu_subtitle(surface, level_name(self.current_level), surface.get_width() // 2, 150)
 
         # Stats
         y_start = 320

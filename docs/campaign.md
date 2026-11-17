@@ -1,6 +1,8 @@
 # Campaign Overview
 
-The campaign has 41 levels (0-40) in eight chapters. This page lists each level's name, its place in the story and what the player does there. The game still shows numbers only; the names are the ones to use when levels get names in the menu (see the backlog).
+The campaign has 41 levels (0-40) in eight chapters. This page lists each level's name, its place in the story and what the player does there. The menus and the HUD show these names, read from `data/levels.json` (name, chapter, story setting; keep it in step with this page). Map files, saves, replays and best times keep the numbers.
+
+Each level has a preview in the level menu, `data/thumbnails/levels/<id>.png`, rendered by `python tools/thumbnails.py [ids]`: a 320x180 frame of the real game from the first 30% of the run, chosen for the most to see (or hand-picked in its `PICKS`), so the finale stays unseen. Locked levels show it pixelated under a padlock.
 
 Levels 0-10 are hand-drawn maps without a written story; their names and settings here are proposals. Levels 11-40 are built from code in `tools/worlds/levels/`, and each file's docstring tells its story in full.
 
