@@ -9,7 +9,8 @@ from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.utils import load_image, load_images
 
-MAP_NAME = "42"  # Default target map: the scratch map (may not exist). Will fallback to first available.
+MAP_NAME = "scratch"  # Default target map: a named scratch map outside the campaign (may not exist; then the
+# first numbered map is loaded as a start, and saving still writes the scratch map).
 CURRENT_MAP = "data/maps/" + str(MAP_NAME) + ".json"
 
 
@@ -98,7 +99,8 @@ class Editor:
         self.m_offset = self.multi_tile_size // 2
 
         settings.load_settings()
-        settings.set_editor_level(int(MAP_NAME))
+        if MAP_NAME.isdigit():
+            settings.set_editor_level(int(MAP_NAME))
         settings.save_settings()
 
         self.font = pygame.font.Font(None, 10)
