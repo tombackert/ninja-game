@@ -28,7 +28,7 @@ import pygame
 from scripts.level_info import level_name
 from scripts.network.online import Background, Identity, JoinOnline, call_rendezvous, normalize_code
 from scripts.state_manager import State
-from scripts.ui_widgets import ScrollableListWidget
+from scripts.ui_widgets import BackButton, ScrollableListWidget
 
 DEFAULT_PORT = 7777
 
@@ -99,6 +99,13 @@ class MultiplayerMenuState(State):
         self.next_action: Optional[str] = None
         self.error: Optional[str] = None
 
+    def pointer_widgets(self):
+        return (self.widget,)
+
+    def pointer_back(self) -> None:
+        """The mouse's back button (the list has its own Back row)."""
+        self.request_back = True
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
             if act == "menu_up":
@@ -157,6 +164,7 @@ class JoinGameState(State):
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
         self.text = initial or "127.0.0.1"
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         # Consumed by app.py: (host, port) once Enter is pressed
         self.join_request: Optional[Tuple[str, int]] = None
@@ -199,6 +207,7 @@ class JoinGameState(State):
             surface.get_width() // 2 - 160,
             surface.get_height() - 40,
         )
+        self.back.render(surface)
 
 
 class _MenuScreen(State):
@@ -214,19 +223,23 @@ class _MenuScreen(State):
         self.dm = DisplayManager()
         self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
         self.bg = pygame.image.load("data/images/background-big.png")
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
 
     def _render_frame(self, surface: pygame.Surface, title: str, hint: str) -> None:
+        """Background, title, the back button bottom left and the key hint bottom right."""
         UI = self._ui
         UI.render_menu_bg(surface, self.display, self.bg)
         UI.render_menu_title(surface, title, surface.get_width() // 2, 120)
-        UI.render_menu_ui_element(surface, hint, 20, surface.get_height() - 40)
+        self.back.render(surface)
+        if hint:
+            UI.render_menu_ui_element(surface, hint, surface.get_width() - 20, surface.get_height() - 40, "right")
 
-    def _line(self, surface: pygame.Surface, text: str, y: int, color=None) -> None:
-        """One centered line of menu text."""
+    def _line(self, surface: pygame.Surface, text: str, y: int, color=None) -> pygame.Rect:
+        """One centered line of menu text; returns where it was drawn."""
         UI = self._ui
         font = UI.get_font(15)
         width = font.size(text)[0] * 2  # rendered at scale 2
-        UI.draw_text_with_outline(
+        return UI.draw_text_with_outline(
             surface=surface,
             font=font,
             text=text,
@@ -256,6 +269,7 @@ class FriendsState(_MenuScreen):
         self._call: Optional[Background] = None
         self._next_poll = 0.0
         self.selected = 0
+        self._row_hits = ScrollableListWidget([], spacing=40)  # where render drew the rows (mouse)
         self.adding = False
         self.text = ""
         self.message = ""
@@ -290,6 +304,19 @@ class FriendsState(_MenuScreen):
                 else:
                     self._confirm_remove = friend["code"]
                     self.message = self.loc.translate("mp.remove_confirm").format(name=_friend_label(friend))
+
+    # Mouse: the rows are drawn by render, the selection is `self.selected`
+    def pointer_widgets(self):
+        return () if self.adding else (self._row_hits,)
+
+    def pointer_select(self, widget, index: int) -> None:
+        if index != self.selected:
+            self.selected = index
+            self._confirm_remove = None
+            self.message = ""
+
+    def pointer_scroll(self, widget, steps: int) -> None:
+        self.pointer_select(widget, max(0, min(len(self.rows) - 1, self.selected + steps)))
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
@@ -355,9 +382,11 @@ class FriendsState(_MenuScreen):
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
         hint = self.loc.translate("mp.add_hint" if self.adding else "mp.friends_hint")
+        self.back.label = self.loc.translate("menu.cancel" if self.adding else "menu.back")
         self._render_frame(surface, self.loc.translate("mp.friends_title"), hint)
         self._line(surface, self.loc.translate("mp.your_code").format(code=self.identity.code), 200)
         y = 260
+        self._row_hits.clear_hit_rects()
         for i, friend in enumerate(self.rows):
             if friend is None:
                 text = self.loc.translate("mp.add_friend")
@@ -373,7 +402,7 @@ class FriendsState(_MenuScreen):
                     state = self.loc.translate("mp.offline")
                 text = f"{_friend_label(friend)}  {state}"
             color = UI.SELECTOR_COLOR if i == self.selected else UI.PM_COLOR
-            self._line(surface, text, y, color)
+            self._row_hits.record_row(i, self._line(surface, text, y, color))
             y += 40
         for text in (self.message, self.status_error):
             if text:
@@ -411,7 +440,8 @@ class JoiningState(_MenuScreen):
 
     def render(self, surface: pygame.Surface) -> None:
         phase = self.session.phase
-        hint = self.loc.translate("mp.retry_hint" if phase == "failed" else "mp.cancel_hint")
+        hint = self.loc.translate("mp.retry_hint") if phase == "failed" else ""
+        self.back.label = self.loc.translate("menu.back" if phase == "failed" else "menu.cancel")
         self._render_frame(surface, self.loc.translate("mp.joining_title"), hint)
         name = self.session.host_name or self.friend_name
         if phase == "failed":

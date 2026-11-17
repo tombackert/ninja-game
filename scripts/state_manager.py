@@ -30,7 +30,7 @@ from typing import List, Sequence
 import pygame
 
 from scripts.logger import get_logger
-from scripts.ui_widgets import ScrollableListWidget
+from scripts.ui_widgets import BackButton, PointerRouter, ScrollableListWidget
 
 _state_log = get_logger("state")
 
@@ -68,6 +68,32 @@ class State:
     def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - default no-op
         pass
 
+    # Mouse (see ui_widgets.PointerRouter) --------------------------
+    def pointer_widgets(self) -> Sequence[ScrollableListWidget]:
+        """The lists the mouse can point at; none by default."""
+        return ()
+
+    def pointer_select(self, widget: ScrollableListWidget, index: int) -> None:
+        """The pointer is on row `index` of `widget` (hover or press)."""
+        widget.select(index)
+
+    def pointer_activate(self, widget: ScrollableListWidget, button: int) -> None:
+        """A row of `widget` was clicked (it is already selected); the left button confirms it."""
+        if button == 1:
+            self.handle_actions(["menu_select"])
+
+    def pointer_scroll(self, widget: ScrollableListWidget, steps: int) -> None:
+        """The wheel turned `steps` rows (positive = down) over or beside `widget`."""
+        widget.step(steps)
+
+    # A submenu's clickable "back" (bottom left); None where Esc does not go back
+    back: BackButton | None = None
+
+    def pointer_back(self) -> None:
+        """The back button or the mouse's thumb back button: same as Esc."""
+        if self.back is not None:
+            self.handle_actions(["menu_quit"])
+
 
 class StateManager:
     """Stack-based state manager.
@@ -80,6 +106,8 @@ class StateManager:
 
     def __init__(self) -> None:
         self._stack: List[State] = []
+        self.pointer = PointerRouter()
+        self._pointer_state: State | None = None  # the state the pointer last worked on
         _state_log.debug("StateManager init (empty stack)")
 
     # Introspection -------------------------------------------------
@@ -128,6 +156,10 @@ class StateManager:
     # Loop dispatch -------------------------------------------------
     def handle(self, events: Sequence[pygame.event.Event]) -> None:
         if self.current:
+            if self.current is not self._pointer_state:
+                self._pointer_state = self.current
+                self.pointer.reset()
+            self.pointer.process(self.current, events)
             self.current.handle(events)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
@@ -185,6 +217,9 @@ class MenuState(State):
         self.start_game = False
         self.next_state: str | None = None  # for submenu transitions
         self._ui = UI
+
+    def pointer_widgets(self):
+        return (self.list_widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
@@ -558,6 +593,9 @@ class PauseState(State):
             if hasattr(self._underlying.game, "timer"):
                 self._underlying.game.timer.adjust_for_pause(duration)
 
+    def pointer_widgets(self):
+        return (self.widget,)
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
             if act in ("menu_up",):
@@ -728,6 +766,7 @@ class LevelsState(State):
         self._thumbs: dict = {}  # (level, locked) -> scaled preview surface
         self.message: str | None = None
         self.message_timer: float = 0.0
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
 
@@ -775,6 +814,9 @@ class LevelsState(State):
             self._thumbs[key] = surf
         return self._thumbs[key]
 
+    def pointer_widgets(self):
+        return (self.widget,)
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
             if a == "menu_up":
@@ -815,6 +857,7 @@ class LevelsState(State):
         # Level list (left): padlock, name; the selection in the highlight colour
         font = UI.get_font(self.widget.font_size)
         list_x, list_y = int(W * 0.03), 150
+        self.widget.clear_hit_rects()
         for i in range(self.widget.visible_rows):
             idx = self.widget._scroll_offset + i
             if idx >= len(self.levels):
@@ -829,7 +872,11 @@ class LevelsState(State):
             else:
                 color = UI.PM_COLOR if unlocked else "#5A6B80"
             text_y = y - font.get_height() // 2
-            UI.draw_text_with_outline(surface, font, self.widget.options[idx], list_x + 40, text_y, color, scale=3)
+            text_rect = UI.draw_text_with_outline(
+                surface, font, self.widget.options[idx], list_x + 40, text_y, color, scale=3
+            )
+            # The padlock belongs to the row too
+            self.widget.record_row(idx, text_rect.union(pygame.Rect(list_x, text_rect.top, 1, text_rect.height)))
         # scroll hints
         if self.widget._scroll_offset > 0:
             UI.render_menu_ui_element(surface, "...", list_x + 40, list_y - 50)
@@ -871,12 +918,7 @@ class LevelsState(State):
             20,
             20,
         )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("menu.back_hint"),
-            20,
-            H - 40,
-        )
+        self.back.render(surface)
         if self.message:
             UI.render_menu_msg(surface, self.message, W // 2, H - 60)
 
@@ -915,8 +957,12 @@ class StoreState(State):
         self.widget = ScrollableListWidget(self.options, visible_rows=5, spacing=50, font_size=30)
         self.message: str | None = None
         self.message_timer = 0.0
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
+
+    def pointer_widgets(self):
+        return (self.widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
@@ -978,7 +1024,7 @@ class StoreState(State):
             20,
             "right",
         )
-        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
+        self.back.render(surface)
         if self.message:
             UI.render_menu_msg(
                 surface,
@@ -1012,6 +1058,7 @@ class AccessoriesState(State):
         self.gear_widget = ScrollableListWidget(self.gear, visible_rows=4, spacing=50, font_size=30)
         self.skin_widget = ScrollableListWidget(self.skins, visible_rows=4, spacing=50, font_size=30)
         self.active_panel = 0  # 0 weapons, 1 gear, 2 skins
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
         self.message: str | None = None
@@ -1019,6 +1066,17 @@ class AccessoriesState(State):
 
     def _active_widget(self):
         return (self.weapon_widget, self.gear_widget, self.skin_widget)[self.active_panel]
+
+    def pointer_widgets(self):
+        return (self.weapon_widget, self.gear_widget, self.skin_widget)
+
+    def pointer_select(self, widget, index: int) -> None:
+        self.active_panel = self.pointer_widgets().index(widget)
+        widget.select(index)
+
+    def pointer_scroll(self, widget, steps: int) -> None:
+        self.active_panel = self.pointer_widgets().index(widget)
+        widget.step(steps)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
@@ -1121,12 +1179,7 @@ class AccessoriesState(State):
             surface.get_width() // 2 - 90,
             surface.get_height() - 70,
         )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("menu.back_hint"),
-            surface.get_width() // 2 - 50,
-            surface.get_height() - 40,
-        )
+        self.back.render(surface)
         if self.message:
             UI.render_menu_msg(
                 surface,
@@ -1156,8 +1209,16 @@ class OptionsState(State):
         self._ui = UI
         self.settings = settings
         self.widget = ScrollableListWidget([], visible_rows=5, spacing=50, font_size=30)
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
+
+    def pointer_widgets(self):
+        return (self.widget,)
+
+    def pointer_activate(self, widget, button: int) -> None:
+        """Left click steps the value forward, right click back (like the arrow keys)."""
+        self.handle_actions(["options_right" if button == 1 else "options_left"])
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         from scripts.settings import CAMERA_STYLES
@@ -1208,7 +1269,7 @@ class OptionsState(State):
         UI.render_menu_bg(surface, self.display, self.bg)
         UI.render_menu_title(surface, self.loc.translate("options.title"), surface.get_width() // 2, 160)
         self.widget.render(surface, surface.get_width() // 2, 260)
-        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
+        self.back.render(surface)
 
 
 class LevelCompleteState(State):
@@ -1248,6 +1309,9 @@ class LevelCompleteState(State):
             [self.loc.translate(k) for k in self.options_keys], visible_rows=3, spacing=50, font_size=30
         )
         self.enter = False
+
+    def pointer_widgets(self):
+        return (self.widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
@@ -1370,6 +1434,9 @@ class GameOverState(State):
     @property
     def accepts_input(self) -> bool:
         return self._age >= self.INPUT_DELAY
+
+    def pointer_widgets(self):
+        return (self.widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         if not self.accepts_input:

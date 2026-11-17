@@ -34,15 +34,6 @@ def _key_rule(key: int, action: Action, event_type=pygame.KEYDOWN) -> Rule:
     return _r
 
 
-def _mouse_button_rule(button: int, action: Action, event_type=pygame.MOUSEBUTTONDOWN) -> Rule:
-    def _r(e: pygame.event.Event):  # type: ignore[override]
-        if e.type == event_type and getattr(e, "button", None) == button:
-            return action
-        return None
-
-    return _r
-
-
 class InputRouter:
     """Maps pygame events to semantic actions for the active state."""
 
@@ -65,8 +56,8 @@ class InputRouter:
         menu_rules: List[Rule] = []
         for act, keys in menu_binds.items():
             menu_rules.extend(bind(keys, act))
-        # Add mouse rule manually (not in settings yet?)
-        menu_rules.append(_mouse_button_rule(1, "menu_select"))
+        # Mouse clicks are not routed here: a click must hit a menu row,
+        # which only the state knows (ui_widgets.PointerRouter)
 
         # GameState (complex)
         game_binds = settings.key_bindings.get("GameState", {})

@@ -374,7 +374,7 @@ class UI:
                 button_color = UI.PM_COLOR
 
             button_text = f"{option}"
-            UI.draw_text_with_outline(
+            rect = UI.draw_text_with_outline(
                 surface=screen,
                 font=font,
                 text=button_text,
@@ -384,6 +384,7 @@ class UI:
                 center=True,
                 scale=3,
             )
+            option_rects.append(rect)
 
         return option_rects
 
