@@ -1208,7 +1208,7 @@ class OptionsState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self._ui = UI
         self.settings = settings
-        self.widget = ScrollableListWidget([], visible_rows=5, spacing=50, font_size=30)
+        self.widget = ScrollableListWidget([], visible_rows=6, spacing=50, font_size=30)
         self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
@@ -1250,6 +1250,9 @@ class OptionsState(State):
                     step = -1 if a == "options_left" else 1
                     i = CAMERA_STYLES.index(self.settings.camera_style)
                     self.settings.camera_style = CAMERA_STYLES[(i + step) % len(CAMERA_STYLES)]
+                elif idx == 5:
+                    # app.py switches the window when the setting changes
+                    self.settings.fullscreen = not self.settings.fullscreen
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
@@ -1262,6 +1265,10 @@ class OptionsState(State):
             self.loc.translate("options.ghosts", ghosts_status),
             self.loc.translate("options.ghost_mode", self.settings.ghost_mode.upper()),
             self.loc.translate("options.camera", self.settings.camera_style.upper()),
+            self.loc.translate(
+                "options.fullscreen",
+                self.loc.translate("options.on") if self.settings.fullscreen else self.loc.translate("options.off"),
+            ),
         ]
 
     def render(self, surface: pygame.Surface) -> None:

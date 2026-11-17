@@ -37,6 +37,7 @@
   "options.ghosts": "Ghosts: {}",
   "options.ghost_mode": "Ghost Mode: {}",
   "options.camera": "Camera: {}",
+  "options.fullscreen": "Fullscreen: {}",
   "options.on": "ON ",
   "options.off": "OFF",
   "level_complete.title": "Level Complete!",

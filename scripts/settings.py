@@ -26,6 +26,7 @@ class Settings:
         self._ghost_enabled = True
         self._ghost_mode = "best"  # "best" or "last"
         self._camera_style = "classic"  # one of CAMERA_STYLES
+        self._fullscreen = False  # GPU-scaled fullscreen (scripts/displayManager.apply_window_mode)
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -144,6 +145,18 @@ class Settings:
             self._dirty = True
             self.flush()
 
+    @property
+    def fullscreen(self) -> bool:
+        return self._fullscreen
+
+    @fullscreen.setter
+    def fullscreen(self, value: bool) -> None:
+        new_val = bool(value)
+        if new_val != self._fullscreen:
+            self._fullscreen = new_val
+            self._dirty = True
+            self.flush()
+
     def set_editor_level(self, value):
         self.selected_editor_level = max(0, value)
 
@@ -230,6 +243,7 @@ class Settings:
                     camera_style = data.get("camera_style", self._camera_style)
                     if camera_style in CAMERA_STYLES:
                         self._camera_style = camera_style
+                    self._fullscreen = bool(data.get("fullscreen", self._fullscreen))
                     playable_levels = data.get("playable_levels", {})
                     # Every saved level, not only the defaults (levels 11+ were dropped on restart)
                     for level, playable in playable_levels.items():
@@ -272,6 +286,7 @@ class Settings:
             "ghost_enabled": self._ghost_enabled,
             "ghost_mode": self._ghost_mode,
             "camera_style": self._camera_style,
+            "fullscreen": self._fullscreen,
             "key_bindings": self.key_bindings,
         }
         try:
