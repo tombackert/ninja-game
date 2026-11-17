@@ -66,6 +66,7 @@ class Settings:
             "PauseState": {
                 "pause_close": [pygame.K_ESCAPE],
                 "pause_menu": [pygame.K_m],
+                "pause_restart": [pygame.K_r],
                 "menu_up": [pygame.K_UP, pygame.K_w],
                 "menu_down": [pygame.K_DOWN, pygame.K_s],
                 "menu_select": [pygame.K_RETURN, pygame.K_KP_ENTER],

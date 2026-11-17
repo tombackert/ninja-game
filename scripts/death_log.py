@@ -2,7 +2,7 @@
 
 Every death ends in one place: the death and respawn block of
 `GameState.update` (scripts/state_manager.py), where the level reloads at the
-respawn point, or from the start once no life is left. That block writes the
+respawn point, or the game over screen opens once no life is left. That block writes the
 line, once per death (`record_death`). The places where a death starts only
 name its cause (`set_cause`; the first cause of a death wins):
 

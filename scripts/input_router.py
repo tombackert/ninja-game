@@ -132,6 +132,7 @@ class InputRouter:
                 "AccessoriesState": menu_rules,
                 "OptionsState": menu_rules,
                 "LevelCompleteState": menu_rules,
+                "GameOverState": menu_rules,
                 "MultiplayerGameState": mp_game_rules,
                 "MultiplayerMenuState": menu_rules,
                 "JoinGameState": join_rules,

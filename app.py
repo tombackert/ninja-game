@@ -23,6 +23,7 @@ from scripts.state_manager import (
     PauseState,
     StateManager,
     StoreState,
+    fresh_game_state,
 )
 
 
@@ -199,9 +200,12 @@ def main():
             sm.push(PauseState())
         if isinstance(cur, PauseState) and cur.closed:
             return_to_menu = cur.return_to_menu
+            restart = cur.restart_requested
             sm.pop()  # resume underlying state (GameState)
             if return_to_menu:
                 sm.set(MenuState())
+            elif restart and isinstance(sm.current, GameState):
+                sm.set(fresh_game_state(sm.current.game.level))
 
         # --- Update & Render cycle ---
         dt = pacer.tick()  # exactly 60 FPS; dt in seconds

@@ -236,6 +236,31 @@ class MenuState(State):
         )
 
 
+def opaque_surface(size: tuple[int, int]) -> pygame.Surface:
+    """A buffer without an alpha channel, for composing a screen's backdrop.
+
+    A plain `pygame.Surface(size)` takes the window's format, which on macOS
+    is ARGB: blending a translucent overlay onto it leaves the alpha below
+    255, and outlined text blitted over such pixels shows its whole box
+    (the window ignores the alpha). 24 bits have no alpha to lose.
+    """
+    return pygame.Surface(size, 0, 24)
+
+
+def fresh_game_state(level) -> "GameState":
+    """A new run of `level` from its start, with full lives and a fresh timer.
+
+    A named map (str, app.py --map) is loaded by name; a campaign level is
+    selected in the settings first, as the menu's Play does.
+    """
+    if isinstance(level, str):
+        return GameState(level=level)
+    from scripts.settings import settings
+
+    settings.selected_level = level
+    return GameState()
+
+
 class GameState(State):
     name = "GameState"
 
@@ -264,6 +289,7 @@ class GameState(State):
         self._accum = 0.0  # placeholder for future fixed timestep accumulator
         self._initialized_audio = False
         self.request_pause = False
+        self.game_over = False  # the last life is gone: GameOverState took over
         # Performance HUD (timings + counts) toggle (F1) - start disabled to match legacy debug overlay test expectation
         self.perf_enabled = False
         # Backward-compatible alias for existing test referencing debug_overlay
@@ -302,7 +328,8 @@ class GameState(State):
         try:
             from scripts import death_log
 
-            if not self._game.endpoint:
+            # (a game over already ended the attempt with its death line)
+            if not self._game.endpoint and not self.game_over:
                 death_log.record_quit(self._game)
         except Exception:  # pragma: no cover - logging never blocks leaving
             pass
@@ -443,6 +470,11 @@ class GameState(State):
                 g.load_level(g.level, player_lives_attr, respawn=True)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
                 death_log.record_death(g, restart=True)
+                if self.manager:
+                    self.game_over = True
+                    self.manager.set(GameOverState(level=g.level))
+                    return
+                # Without a state manager (tests, headless drivers) the level starts over
                 g.load_level(g.level)
 
         # --- Input (legacy direct keyboard polling) ---
@@ -478,25 +510,16 @@ class PauseState(State):
     name = "PauseState"
 
     def __init__(self) -> None:
-        from scripts.ui_widgets import ScrollableListWidget
         from scripts.localization import LocalizationService
 
         self.loc = LocalizationService.get()
         self._ticks = 0
         self.closed = False
         self.return_to_menu = False
+        self.restart_requested = False  # app.py starts the level over (fresh_game_state)
         self.quit_requested = False
         self._underlying: State | None = None  # set in on_enter
-        self.options_keys = [
-            "menu.resume",
-            "menu.menu",
-        ]  # 'Menu' reused? "menu.menu" -> "Menu" (implied context) or "level_complete.menu"?
-        # Let's use "level_complete.menu" for "Menu" button
-        self.options_keys = ["menu.resume", "level_complete.menu"]
-
-        self.widget = ScrollableListWidget(
-            [self.loc.translate(k) for k in self.options_keys], visible_rows=3, spacing=60, font_size=30
-        )
+        self._set_options(["menu.resume", "menu.restart", "level_complete.menu"])
         self.bg: pygame.Surface | None = None
         # Background image (menu backdrop) for pause overlay decoration
         try:
@@ -509,9 +532,24 @@ class PauseState(State):
         # change, so it is composed once instead of re-rendered every frame.
         self._backdrop: pygame.Surface | None = None
 
+    def _set_options(self, keys: list[str]) -> None:
+        from scripts.ui_widgets import ScrollableListWidget
+
+        self.options_keys = keys
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in keys], visible_rows=3, spacing=60, font_size=30
+        )
+
+    @property
+    def can_restart(self) -> bool:
+        """Only a single-player level can start over (a multiplayer world is shared)."""
+        return self._underlying is None or isinstance(self._underlying, GameState)
+
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
         self.pause_start_ticks = pygame.time.get_ticks()
+        if not self.can_restart:
+            self._set_options([k for k in self.options_keys if k != "menu.restart"])
 
     def on_exit(self, next_state: "State | None") -> None:
         # Calculate pause duration and offset the game timer so elapsed time remains correct
@@ -531,11 +569,17 @@ class PauseState(State):
             elif act == "pause_menu":  # legacy direct key -> menu
                 self.return_to_menu = True
                 self.closed = True
+            elif act == "pause_restart" and self.can_restart:  # R
+                self.restart_requested = True
+                self.closed = True
             elif act == "menu_select":
                 # Use index to match key logic
                 idx = self.widget.selected_index
                 key = self.options_keys[idx]
                 if key == "menu.resume":
+                    self.closed = True
+                elif key == "menu.restart":
+                    self.restart_requested = True
                     self.closed = True
                 elif key == "level_complete.menu":
                     self.return_to_menu = True
@@ -1226,13 +1270,7 @@ class LevelCompleteState(State):
                     self.manager.set(GameState())
             elif choice_key == "level_complete.replay":
                 if self.manager:
-                    from scripts.settings import settings
-
-                    if isinstance(self.current_level, str):  # a named map: not a campaign level to select
-                        self.manager.set(GameState(level=self.current_level))
-                    else:
-                        settings.selected_level = self.current_level
-                        self.manager.set(GameState())
+                    self.manager.set(fresh_game_state(self.current_level))
             elif choice_key == "level_complete.menu":
                 if self.manager:
                     self.manager.set(MenuState())
@@ -1297,3 +1335,94 @@ class LevelCompleteState(State):
 
         # Hints
         UI.render_menu_ui_element(surface, self.loc.translate("menu.enter_hint"), 20, surface.get_height() - 40)
+
+
+class GameOverState(State):
+    """Shown when the last life is gone: try the level again or go to the menu.
+
+    Input is ignored for a moment after it appears, so a jump or a click
+    from the last seconds of play does not pick an option by accident.
+    """
+
+    name = "GameOverState"
+    INPUT_DELAY = 0.6  # seconds
+
+    def __init__(self, level) -> None:
+        from scripts.localization import LocalizationService
+        from scripts.ui import UI
+
+        self.loc = LocalizationService.get()
+        self.level = level
+        self._ui = UI
+        self.options_keys = ["game_over.retry", "level_complete.menu"]
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in self.options_keys], visible_rows=2, spacing=50, font_size=30
+        )
+        self.bg: pygame.Surface | None = None
+        try:
+            self.bg = pygame.image.load("data/images/background-big.png")
+        except Exception:  # pragma: no cover - asset optional in tests
+            pass
+        self._backdrop: pygame.Surface | None = None  # background + red veil, built once per size
+        self._age = 0.0
+        self.enter = False
+
+    @property
+    def accepts_input(self) -> bool:
+        return self._age >= self.INPUT_DELAY
+
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        if not self.accepts_input:
+            return
+        for act in actions:
+            if act == "menu_up":
+                self.widget.move_up()
+            elif act == "menu_down":
+                self.widget.move_down()
+            elif act == "menu_select":
+                self.enter = True
+            elif act in ("menu_quit", "menu_back"):
+                self.widget.selected_index = self.options_keys.index("level_complete.menu")
+                self.enter = True
+
+    def update(self, dt: float) -> None:
+        self._age += dt
+        if not self.enter:
+            return
+        self.enter = False
+        if self.manager is None:
+            return
+        if self.options_keys[self.widget.selected_index] == "game_over.retry":
+            self.manager.set(fresh_game_state(self.level))
+        else:
+            self.manager.set(MenuState())
+
+    def render(self, surface: pygame.Surface) -> None:
+        UI = self._ui
+        size = surface.get_size()
+        if self._backdrop is None or self._backdrop.get_size() != size:
+            self._backdrop = opaque_surface(size)
+            if self.bg is not None:
+                self._backdrop.blit(pygame.transform.scale(self.bg, size), (0, 0))
+            veil = pygame.Surface(size, pygame.SRCALPHA)
+            veil.fill((60, 0, 0, 170))
+            self._backdrop.blit(veil, (0, 0))
+        surface.blit(self._backdrop, (0, 0))
+
+        from scripts.level_info import level_name
+
+        cx = size[0] // 2
+        UI.draw_text_with_outline(
+            surface=surface,
+            font=UI.get_font(50),
+            text=self.loc.translate("game_over.title"),
+            x=cx,
+            y=140,
+            text_color=(220, 40, 40),
+            center=True,
+            scale=3,
+        )
+        UI.render_menu_subtitle(surface, level_name(self.level), cx, 240)
+        UI.render_menu_msg(surface, self.loc.translate("game_over.subtitle"), cx, 310)
+        self.widget.render(surface, cx, 400)
+        UI.render_menu_ui_element(surface, self.loc.translate("menu.enter_hint"), 20, size[1] - 40)
