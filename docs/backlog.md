@@ -37,6 +37,7 @@
 - Improve swimming - diving head first (body rotation changes). Air after diving recharges slower than instantly.
 - The new water levels were trivial for Tobi. Must then become much harder later. Question: How can one design levels on which human players get stuck for a very long time? It seems that the search/evaluation does not yet find all possible human inputs when evaluating the levels. There is still optimization potential there!
 - The levels need to get some kind of preview/thumbnail or names so that they can be found again in the menu. Also, one could think about an improvement of the level menu itself - based on or inspo from Super Mario Bros worlds. Maybe a 2D map in which one can walk through the worlds map?
+- Rename levels from number to theme-name; like in docs/Bildschirmfoto 2026-11-16 um 22.43.55.png; move screenshot content into a doc file; keep one file in the docs which holds all levels with their concept in the campagne to have an overview and to align the story more; add remaining levels not on the screenshot
 
 ## Benchmark Findings (tools/bench, 2026-10-18; numbers in BENCHMARKS.md)
 - Camera glide (68c2a6d) costs +1.3 ms per gameplay frame (2.14 -> 3.44 ms, +61%; first frame of a level +115%), not the ~0.4 ms its commit states: profile Renderer._present (full-window alpha upscale and blit every frame)
