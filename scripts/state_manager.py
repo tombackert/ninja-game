@@ -1204,10 +1204,23 @@ class _ItemMenuState(State):
         if name == "Coin Magnet":
             from scripts.skin_preview import _load_image
 
+            frames = [_load_image(f"collectables/coin/{i}.png") for i in range(10)]
+            ticks = self.preview.ticks
+            cycle, fly = 90, 50  # each coin flies in for `fly` ticks, then respawns
+
             def coins(stage, feet):
-                coin = _load_image("collectables/coin/0.png")
-                for dx, dy in ((-26, -24), (16, -28), (26, -12)):
-                    stage.blit(coin, (feet[0] + dx, feet[1] + dy))
+                # Spinning coins pulled into the ninja's hitbox center, one after another
+                tx, ty = feet[0], feet[1] - 8
+                frame = frames[int(ticks // 6) % len(frames)]  # img_dur=6 as in game.py
+                half = frame.get_width() // 2
+                for i, (dx, dy) in enumerate(((-34, -14), (30, -20), (-8, -22))):
+                    t = ((ticks + i * cycle / 3) % cycle) / fly
+                    if t >= 1:
+                        continue  # collected, waiting to respawn
+                    pull = t * t  # speeds up as it closes in, like the magnet's pull
+                    x = tx + dx * (1 - pull)
+                    y = ty + dy * (1 - pull)
+                    stage.blit(frame, (round(x) - half, round(y) - half))
 
             return coins
         return None
