@@ -61,6 +61,7 @@ def build() -> Level:
     lv.coins(-26, 27, -8, 3)
     lv.enemy(-14, 29)
     lv.wp(-9, 29, -6, 29, ground=True, label="the quay's edge")
+    lv.crumble(-6, 30, -5)  # the old quay's edge is breaking away
     lv.carve(-4, 20, 5, 40)
     lv.water(-4, 30, 5, 40)
     lv.carve(6, CEIL + 1, 9, 40)  # the street in under the ceiling
@@ -111,6 +112,7 @@ def build() -> Level:
     lv.enemy(p0 + 17, 49)
     lv.big_decor(p0 + 20, 49, CHEST)
     lv.coins(p0 + 10, 46, p1 - 10, 3)
+    lv.spikes(p1 - 12, 49, p1 - 11)  # the hall's fallen iron chandelier
     lv.wp(p1 - 8, 50, p1 - 2, 54, label="the great hall's east pool")
     lv.carve(p1, 56, p1, 59)  # out into the market
     lv.wp(p1, 56, p1, 59, label="the palace's back door")
@@ -146,7 +148,10 @@ def build() -> Level:
     lv.wp(t0 + 1, surf - 3, ground=True, label="tower ledge")
     for i, row in enumerate((surf - 7, surf - 12, surf - 17)):
         x = t1 - 1 if i % 2 == 0 else t0 + 1
-        lv.rect(x, row, x, row, HOUSE)
+        if i == 1:  # old masonry, loose
+            lv.crumble(x, row)
+        else:
+            lv.rect(x, row, x, row, HOUSE)
         lv.wp(x, row - 1, ground=True, label=f"belfry rest {i}")
         lv.coin((t0 + t1) // 2, row - 3)
     lv.rect(t0 - 2, 2, t1 + 4, 3, HOUSE)  # the roof

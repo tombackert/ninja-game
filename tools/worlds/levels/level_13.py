@@ -4,7 +4,9 @@ Six storeys inside a tower, each a different box climb that ends in a
 wall-jump chimney through a hole in the floor above: box stairs, a dash
 over a broken floor, single floating crates over a hole, a labyrinth
 storey, dash pits under fire, a zigzag chimney and floating crates up to
-the roof hole. A fall lands on the storey below.
+the roof hole. A fall lands on the storey below. Old crates crumble under
+a player's feet (a rest ledge, crates over the hole, the far side of the
+break), spikes guard the floors and the roof.
 """
 
 from tools.worlds.builder import Level, Maze, box
@@ -30,6 +32,7 @@ def build() -> Level:
         box(lv, bx, by)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, bx + 1, by - 1, ground=True, label=f"s1 box {bx}")
+    lv.spikes(10, 140, 11)
     lv.rect(32, 132, 37, 133)  # chimney base
     lv.rect(32, 120, 32, 128)  # left wall (crawl under it)
     lv.rect(37, 120, 37, 131)  # right wall
@@ -42,11 +45,12 @@ def build() -> Level:
 
     # --- Storey 2: broken floor (dash), chimney at the west wall ------------
     lv.carve(12, 118, 20, 119)  # 9-wide break in floor 1
+    lv.crumble(9, 118, 11)  # the far side of the break gives way
     lv.wp(21, 117, 24, 117, ground=True, label="s2 break edge")
     lv.wp(7, 117, 11, 117, ground=True, label="s2 across the break")
     lv.rect(5, 98, 5, 112)  # chimney pillar, inner x 1..4
     lv.carve(1, 96, 4, 97)  # hole in floor 2
-    lv.rect(5, 105, 5, 105)
+    lv.crumble(5, 105)  # the rest ledge is a loose crate
     lv.wp(1, 113, 4, 117, ground=True, label="s2 chimney base")
     lv.wp(1, 93, 4, 95, label="s2 hole", guide=True)
     for x in (8, 26, 44, 50, 56):  # clear of the hole at x 33..36
@@ -59,7 +63,10 @@ def build() -> Level:
     lv.carve(9, 96, 45, 97)  # hole in floor 2 under the crates
     crates = [(13, 94), (17, 93), (21, 94), (25, 92), (29, 93), (33, 91), (37, 92), (41, 91)]
     for bx, by in crates:
-        box(lv, bx, by, 1, 1)
+        if bx in (25, 37):
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, 1, 1)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, ground=True, label=f"s3 crate {bx}")
     lv.wp(46, 95, 50, 95, ground=True, label="s3 landing")
@@ -97,6 +104,7 @@ def build() -> Level:
         lv.carve(px, 52, px + 5, 58)
     for x in (23, 35, 47):  # clear of the exit at x 8..10
         lv.enemy(x, 51)
+    lv.spikes(20, 51)  # on the far lip of the first pit
     lv.coins(15, 48, 18)
     lv.coins(27, 48, 30)
     lv.coins(39, 48, 42)
@@ -114,7 +122,10 @@ def build() -> Level:
 
     # --- Storey 6: floating crates to the roof chimney -----------------------
     for bx, by in [(50, 28), (45, 26), (40, 24), (35, 23), (30, 24), (25, 22), (21, 23)]:
-        box(lv, bx, by)
+        if bx == 35:
+            lv.crumble(bx, by, bx + 1)
+        else:
+            box(lv, bx, by)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, bx + 1, by - 1, ground=True, label=f"s6 box {bx}")
     box(lv, 14, 21, 2, 1)
@@ -131,6 +142,7 @@ def build() -> Level:
     for x in (28, 37, 46):
         lv.enemy(x, 7)
     lv.coins(20, 5, 54, 3)
+    lv.spikes(41, 7, 42)
     lv.big_decor(24, 7, 2)
     lv.decor(50, 7, 2)
     lv.flag(58, 7)

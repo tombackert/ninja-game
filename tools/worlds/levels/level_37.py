@@ -64,6 +64,7 @@ def build() -> Level:
     lv.decor(-28, SURF - 1, STARFISH)
     lv.rect(-26, SURF - 3, -24, SURF - 1, "wreck")  # a crate stack
     lv.rect(-25, SURF - 5, -24, SURF - 4, "wreck")
+    lv.crumble(-25, SURF - 5, -24)  # the top crate has rotted
     lv.wp(-25, SURF - 6, -24, SURF - 6, ground=True, label="crate stack")
     lv.carve(-21, SURF, -16, SURF + 6)  # a rift in the reef, the sea down in it
     lv.water(-21, SURF + 2, -16, SURF + 6)
@@ -80,6 +81,7 @@ def build() -> Level:
     lv.coins(-27, SURF - 8, -15, 3)
     lv.decor(2, SURF - 1, STARFISH)
     lv.rect(4, SURF - 2, 5, SURF - 1, "wreck")  # crates
+    lv.spikes(6, SURF - 1, 7)  # broken iron sticking out of the wreckage
     lv.rect(9, SURF - 4, 9, SURF - 1, "wreck")  # a broken mast
     lv.coins(2, SURF - 4, 8, 2)
     lv.wp(9, SURF - 5, ground=True, label="broken mast")
@@ -128,6 +130,8 @@ def build() -> Level:
     for i, (dx, top) in enumerate(masts):
         mx += dx
         lv.rect(mx, hull_y + top + 3, mx, bs + 5, "wreck")
+        if i in (4, 9):  # rotten mast tops
+            lv.crumble(mx, hull_y + top + 3)
         lv.wp(mx, hull_y + top + 2, ground=True, label=f"mast {i}")
         lv.coin(mx, hull_y + top + 1)
     for kx in range(b0 + 3, b1 - 2, 6):
@@ -215,6 +219,7 @@ def build() -> Level:
     lv.rect(gx + 5, gy - 2, gx + 12, gy + 3, "wreck")
     lv.wp(gx + 5, gy - 3, gx + 8, gy - 3, ground=True, label="first wreck")
     lv.big_decor(gx + 11, gy - 3, ANCHOR)
+    lv.spikes(gx + 9, gy - 3, gx + 10)  # its broken ribs
     lv.rect(gx + 17, gy - 3, gx + 21, gy - 1, "wreck")
     lv.rect(gx + 18, gy, gx + 20, gy + 3, "wreck")
     lv.wp(gx + 17, gy - 4, gx + 19, gy - 4, ground=True, label="capsized boat")
@@ -234,7 +239,7 @@ def build() -> Level:
     lv.rect(w0 - 2, roof + 6, w0, gy - 9, "wreck")
     lv.rect(w0 + 5, roof + 3, w0 + 8, gy + 3, "wreck")  # the second hull
     lv.wp(w0 - 2, gy - 5, w0, gy - 5, ground=True, label="hull foot")
-    lv.rect(w0 + 4, gy - 13, w0 + 4, gy - 13, "wreck")
+    lv.crumble(w0 + 4, gy - 13)  # a rotten plank to rest on
     lv.wp(w0 + 4, gy - 14, ground=True, label="hull rest")
     lv.wp(w0 - 2, roof + 5, w0, roof + 5, ground=True, label="first hull top")
     lv.coins(w0 + 2, gy - 10, w0 + 3)

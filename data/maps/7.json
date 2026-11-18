@@ -1430,7 +1430,7 @@
                 ]
             },
             "8;-6": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     8,
@@ -1438,7 +1438,7 @@
                 ]
             },
             "7;-6": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     7,
@@ -11918,7 +11918,7 @@
                 ]
             },
             "-59;-35": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -59,
@@ -11934,7 +11934,7 @@
                 ]
             },
             "-71;-36": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -71,

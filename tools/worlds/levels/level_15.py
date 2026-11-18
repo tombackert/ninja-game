@@ -32,6 +32,8 @@ def build() -> Level:
         lv.coins(cx + 1, ground - 4, cx + w - 2, 2)
         lv.wp(cx - 4, ground - 1, cx - 2, ground - 1, ground=True, label=f"crater {cx} rim")
         lv.wp(cx + w + 1, ground - 1, cx + w + 3, ground - 1, ground=True, label=f"crater {cx} far rim")
+    lv.flamejet(55, ground, "up", on=40)  # a fumarole right behind the far rim of the second crater
+    lv.flamejet(61, ground - 1, "up", on=40, phase=57)  # a vent in the third crater's rim
     for x in (42, 59, 76):  # one per stretch, away from the landing spots
         lv.enemy(x, ground - 1)
     lv.decor(42, ground - 1, 7)
@@ -46,6 +48,7 @@ def build() -> Level:
     lv.rect(90, 18, 110, BOTTOM)  # mesa
     lv.rect(89, 40, 89, 40)  # rest ledges
     lv.rect(85, 30, 85, 30)
+    lv.flamejet(90, 35, "left", on=40)
     lv.wp(85, ground - 3, 89, ground - 1, ground=True, label="chimney base")
     lv.wp(89, 39, 89, 39, ground=True, label="chimney rest 1")
     lv.wp(85, 29, 85, 29, ground=True, label="chimney rest 2")
@@ -60,13 +63,19 @@ def build() -> Level:
     # --- Floating rocks over the chasm ------------------------------------------
     rocks = [(114, 19), (118, 18), (123, 20), (127, 19), (132, 21)]  # gaps of 3 and 4
     for bx, by in rocks:
-        box(lv, bx, by, 1, 1)
+        if bx == 123:
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, 1, 1)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, ground=True, label=f"rock {bx}")
     box(lv, 138, 22, 2, 1)  # dash
     lv.wp(138, 21, 139, 21, ground=True, label="rock ledge 138")
     for bx, by in [(143, 21), (147, 23)]:
-        box(lv, bx, by, 1, 1)
+        if bx == 143:
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, 1, 1)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, ground=True, label=f"rock {bx}")
     lv.coins(133, 18, 136)
@@ -94,8 +103,8 @@ def build() -> Level:
     # Lava vents in the tube's ceiling between the pits (the campaign's first
     # flame jets): each burns down to the floor for 0.8 s of every 2 s, one
     # after the other, so the crawl waits for its gap at each
-    for i, x in enumerate((192, 201, 210)):
-        lv.flamejet(x, 32, facing="down", period=120, on=48, phase=40 * i)
+    for x, phase in ((192, 23), (201, 65), (210, 80)):
+        lv.flamejet(x, 32, facing="down", period=120, on=48, phase=phase)
     for x in (183, 191, 200, 211):
         lv.enemy(x, 34)
     lv.coins(180, 43, 212, 4)
@@ -120,6 +129,8 @@ def build() -> Level:
                 lv.enemy(x + 1, y + 2)
                 placed += 1
 
+    mz.vents((0, 0), (cols - 1, 2), 2)
+
     # Zigzag shaft from the last cell up to the launch pad
     ex, ey = mz.cell_xy(cols - 1, 2)
     zx = ex + 6
@@ -130,6 +141,7 @@ def build() -> Level:
     lv.rect(zx, top + 1, zx, top + 1)
     for i in range(5):
         lv.coin(zx + 1 + (2 if i % 2 else 0), ey - 1 - 5 * i)
+    lv.flamejet(zx + 5, ey - 5, "left", on=36, phase=11)  # burns across the second piece
     lv.wp(zx - 3, top - 1, zx - 1, top - 1, ground=True, label="launch pad")
 
     # Launch pad

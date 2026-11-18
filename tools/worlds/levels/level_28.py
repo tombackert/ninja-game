@@ -94,6 +94,8 @@ def build() -> Level:
         lv.rect(x0, b0 + top, x1, BOTTOM)
         lv.wp(x0, b0 + top - 1, x1, b0 + top - 1, ground=True, label=f"rubble pillar {i}")
         lv.coin(x0, b0 + top - 3)
+        if i == 1:  # loose rubble on top
+            lv.crumble(x0, b0 + top)
 
     # --- The old river's tunnel: up the riverbed past the sinks in its floor ----------------------------
     # (first column, floor row, sink width): stretches ten columns long, each two rows higher
@@ -104,6 +106,8 @@ def build() -> Level:
         lv.carve(x, fl - 4, x + 9, fl - 1)
         px = x + 3
         lv.carve(px, fl, px + w - 1, BOTTOM)
+        if i in (1, 4, 6):  # the floor is still falling in at the sink's edge
+            lv.crumble(px - 1, fl)
         lv.wp(px + w, fl - 1, px + w + 1, fl - 1, ground=True, label=f"riverbed sink {i}")
         lv.coin(px + w // 2, fl - 2)
         lv.rect(x + 7, fl - 4, x + 7, fl - 3)  # a stalactite

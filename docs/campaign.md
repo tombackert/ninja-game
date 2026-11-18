@@ -22,13 +22,15 @@ A ninja sets out from the floating islands over the clouds, finds the way down i
 
 ## Levels
 
+Hazards are placed only where the setting explains them. Steel spikes are traps or broken metal in ruins, castles, tombs, temples, mines and wrecks. Flame jets are volcanic vents, old traps and machine exhausts, and hydrothermal vents in the deep sea. Crumbling clay blocks are loose stones, crates, rotten wood, weathered sandstone and broken bridge pieces. The sky and cave levels 2-10 have crumbling blocks only, and levels 0-1 have no hazards.
+
 ### Chapter 1: Sky Islands (0-8)
 
 | # | Name | Story setting | Gameplay |
 | --- | --- | --- | --- |
 | 0 | First Steps | A small island in the clouds, where the journey starts | Run, jump and collect coins on a few grass islands |
 | 1 | Island Hop | Islands drift apart over the void | Hops between islands, the first enemies |
-| 2 | Broken Bridge | A chain of islands where a stone bridge once ran | Longer hops over floating rocks |
+| 2 | Broken Bridge | A chain of islands where a stone bridge once ran | Longer hops over floating rocks, a broken bridge block that crumbles (first crumbling blocks) |
 | 3 | The Cliff | A stone cliff hanging under the islands | Ledges along the cliff and islands below it |
 | 4 | Sky Course | Rock walls standing in the open sky | Wall jumps and coin trails along walls and platforms |
 | 5 | The Ramparts | Ruined stone walls float in the clouds | Wall-jump shafts, ramps and platform chains |
@@ -47,11 +49,11 @@ A ninja sets out from the floating islands over the clouds, finds the way down i
 
 | # | Name | Story setting | Gameplay |
 | --- | --- | --- | --- |
-| 11 | Sky Ruins | The ruins of a city on the islands | Pillar run, a dash chasm, a chimney up a ruined tower, crumbling crates (first crumbling blocks), a ruin labyrinth |
-| 12 | Deep Caverns | Caves under the mountains | A drop shaft, a low crawlway over pits (first spikes), a zigzag chimney, a labyrinth, a gauntlet under ceiling spikes |
+| 11 | Sky Ruins | The ruins of a city on the islands | Pillar run, a dash chasm, a chimney up a ruined tower, crumbling crates, a ruin labyrinth with flame traps (first flame jets), a fortress under ceiling spikes (first spikes) |
+| 12 | Deep Caverns | Caves under the mountains | A drop shaft, a low crawlway over pits with spikes, a zigzag chimney, a labyrinth, a gauntlet under ceiling spikes |
 | 13 | Crate Tower | A storehouse tower full of crates | Six storeys, each a different climb up to the hole in the floor above |
 | 14 | Desert | The first desert: dunes, a canyon, a pyramid | Quicksand, sandstone pillars, a stepped pyramid with a tomb labyrinth |
-| 15 | Mars | The first landing on Mars | Crater dashes, a mesa chimney, lava tubes under flaming vents (first flame jets), the launch pad |
+| 15 | Mars | The first landing on Mars | Crater dashes, a mesa chimney, lava tubes under flaming vents, the launch pad |
 | 16 | Sandstone Canyons | A plateau cut by canyons | Pillar runs, holed chimneys, wall bounces, a cave labyrinth |
 | 17 | Sky Fortress | A castle on an island in the sky | Moat, murder holes, battlements, a sky bridge to the floating keep |
 | 18 | Mars Caverns | Lava caverns under the Martian crust | Stalagmites, a free-standing chimney, a tube labyrinth, lava pits |

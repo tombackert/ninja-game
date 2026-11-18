@@ -218,11 +218,40 @@ class Level:
             {"label": label, "box": (x0, y0, x1, y1), "before": before, "after": after, "margin": margin, "area": area}
         )
 
+    def _check_hazards(self):
+        """Spikes need a solid tile behind their base, a flame jet air in front
+        of its nozzle, and no enemy may spawn in a jet's flame (it would burn on
+        the first beat): a later carve or rect can break what was placed."""
+        # (UP, DOWN, ... are the water flows here, FACINGS holds the hazard facings)
+        offsets = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+        steps = {FACINGS[k]: v for k, v in offsets.items()}
+        bad = []
+        for (x, y), (kind, variant) in self.objects.items():
+            if kind == SPIKES:
+                dx, dy = steps[variant]
+                if not self.is_solid(x - dx, y - dy):
+                    bad.append(f"spikes at {(x, y)} hang in the air")
+        for (x, y), fields in self.fixed.items():
+            if self.solid.get((x, y)) != FLAMEJET:
+                continue
+            dx, dy = steps[fields["variant"]]
+            if self.is_solid(x + dx, y + dy):
+                bad.append(f"flame jet at {(x, y)} fires into rock")
+            for i in range(1, 4):
+                c = (x + dx * i, y + dy * i)
+                if self.is_solid(*c):
+                    break
+                if self.objects.get(c, ("",))[0] == "spawners" and self.objects[c][1] != 0:
+                    bad.append(f"enemy at {c} spawns in the flame of the jet at {(x, y)}")
+        if bad:
+            raise ValueError(f"level {self.map_id}: " + "; ".join(bad))
+
     # --- export ----------------------------------------------------------
     def to_json(self) -> dict:
         clash = sorted(set(self.objects) & set(self.solid))
         if clash:  # an object placed first, a solid stamped over it later
             raise ValueError(f"level {self.map_id}: objects inside solid tiles at {clash}")
+        self._check_hazards()
         leaks = water_leaks(self.water_tiles, self.is_solid)
         if leaks:  # water with no rock to hold it, beside or under it
             raise ValueError(f"level {self.map_id}: water would run out into {leaks[:12]}")
@@ -259,8 +288,9 @@ class Level:
 
     def save(self, maps_dir: str = "data/maps") -> str:
         path = os.path.join(maps_dir, f"{self.map_id}.json")
+        data = self.to_json()  # checks first: a failed check leaves the old map in place
         with open(path, "w") as f:
-            json.dump(self.to_json(), f, separators=(",", ":"))
+            json.dump(data, f, separators=(",", ":"))
         return path
 
     def solids(self) -> Terrain:
@@ -441,6 +471,39 @@ class Maze:
                 self.lv.wp(cx, cy, cx + self.cw - 1, cy + self.ch - 1, label=f"maze {c},{r}")
             if coins and (cx + 1, cy) not in self.lv.objects:
                 self.lv.coin(cx + 1, cy)
+
+    def vent(self, c: int, r: int, period: int = FLAME_PERIOD, on: int = FLAME_ON, phase: int = 0) -> bool:
+        """A flame jet in the ceiling over the middle of cell (c, r), burning
+        down to its floor on a beat. Left out (False) where the ceiling is open
+        (a shaft) or an enemy stands in the flame."""
+        x, y = self.cell_xy(c, r)
+        x += self.cw // 2
+        if not (self.lv.is_solid(x, y - 1) and self.lv.is_solid(x, y - 2)):
+            return False
+        if any(self.lv.objects.get((x, yy), ("",))[0] == "spawners" for yy in range(y, y + self.ch)):
+            return False
+        self.lv.flamejet(x, y - 1, "down", period, on, phase)
+        return True
+
+    def vents(self, a, b, count: int = 3, period: int = FLAME_PERIOD, on: int = FLAME_ON, phases=None) -> list:
+        """Up to `count` vents (see vent) spread over the cells of the way from
+        cell a to cell b, its ends left out; `phases`: one per vent. Returns
+        the cells that got one."""
+        path = maze_path(self.edges, a, b)[1:-1]
+        placed: list = []
+        if not path:
+            return placed
+        step = max(1, len(path) // count)
+        order = path[step // 2 :: step] + [p for i, p in enumerate(path) if (i - step // 2) % step]
+        for c, r in order:
+            if len(placed) == count:
+                break
+            if any(abs(c - pc) + abs(r - pr) < 2 for pc, pr in placed):
+                continue
+            phase = phases[len(placed)] if phases else 40 * len(placed)
+            if self.vent(c, r, period, on, phase):
+                placed.append((c, r))
+        return placed
 
     def dead_ends(self):
         deg: dict = {}

@@ -37,7 +37,8 @@
 
 ## Enemy Kinds & Hazards Follow-ups
 - Difficulty model: enemies and bullets are still not in it (tools/worlds/windows, assess). Next: an exposure term per element (frames in a gunner's or turret's line of fire, frames next to a touch-kill kind) now that each kind has fixed numbers
-- Hazards are only in levels 11 (crumbling crates), 12 (spikes) and 15 (flame jets): build them into the later chapters and re-cast the hand-placed enemies of the finales by design (`Level.enemy(x, y, "turret")`)
+- Hazards are now placed by setting in levels 2-40 (see docs/campaign.md); next: re-cast the hand-placed enemies of the finales by design (`Level.enemy(x, y, "turret")`)
+- Hand levels 2-10 were checked against the human replays only (the planner does not finish on the big hand maps); 8-10 have no replay, so play them once
 - The route planner is time-blind: it plans as if flames never burn and crumbling blocks never fall; hazard_check only rejects a route, so a jet's phase has to be tuned by hand
 - Moving platforms were left out (riding, network sync and the planner's model would all need to know them)
 - Editor: entity tracking of spawners is still broken (see the water world note below); placing kinds and hazards as tiles works

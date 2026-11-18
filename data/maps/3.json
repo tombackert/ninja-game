@@ -14502,16 +14502,16 @@
                 ]
             },
             "-19;-62": {
-                "type": "stone",
-                "variant": 2,
+                "type": "crumble",
+                "variant": 0,
                 "pos": [
                     -19,
                     -62
                 ]
             },
             "-20;-62": {
-                "type": "stone",
-                "variant": 1,
+                "type": "crumble",
+                "variant": 0,
                 "pos": [
                     -20,
                     -62
@@ -14534,7 +14534,7 @@
                 ]
             },
             "-22;-68": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -22,
@@ -16413,14 +16413,6 @@
                     -60
                 ]
             },
-            "-20;-63": {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    -20,
-                    -63
-                ]
-            },
             "-11;-72": {
                 "type": "decor",
                 "variant": 0,
@@ -16902,7 +16894,7 @@
                 ]
             },
             "8;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     8,
@@ -16934,7 +16926,7 @@
                 ]
             },
             "11;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     11,
@@ -16942,7 +16934,7 @@
                 ]
             },
             "10;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     10,
@@ -17022,7 +17014,7 @@
                 ]
             },
             "9;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     9,

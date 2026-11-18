@@ -65,6 +65,7 @@ def build() -> Level:
     # A dry pit in the plateau, no water to catch a miss
     lv.carve(128, 24, 138, BOTTOM)
     pillar_run(lv, [(131, 25), (134, 23), (137, 26)], BOTTOM, label="plateau pillar")
+    lv.crumble(134, 23)  # a loose rock on the middle pillar
     lv.wp(139, 23, 141, 23, ground=True, label="past the pit")
     lv.enemy(143, 23)
     lv.big_decor(141, 23, 7)
@@ -98,6 +99,7 @@ def build() -> Level:
     lv.coins(178, 13, 181, 3)
     lv.decor(180, 15, 8)
     holed_chimney(lv, 182, 3, 0, 16, rests=[(1, 8)], label="flag chimney")
+    lv.crumble(185, 8)  # the rest is a loose stone
     lv.rect(189, 0, 197, 1)  # flag slab, two tiles off the chimney
     lv.wp(189, -1, 191, -1, ground=True, label="flag slab")
     lv.coins(190, -3, 194, 2)

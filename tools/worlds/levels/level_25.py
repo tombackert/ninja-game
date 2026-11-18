@@ -31,6 +31,7 @@ def build() -> Level:
         lv, [(18, SEA - 2), (23, SEA - 3), (28, SEA - 1), (33, SEA - 3), (38, SEA - 2)], SHELF - 1, label="stack"
     )
     lv.coins(20, SHELF - 3, 36, 4)
+    lv.crumble(28, SEA - 1)  # a loose top on the lowest stack
     for x in (21, 31):
         lv.big_decor(x, SHELF - 1, 6)
     lv.decor(26, SHELF - 1, 9)
@@ -56,6 +57,8 @@ def build() -> Level:
     lv.wp(70, DEEP - 6, 73, DEEP - 1, label="carried")
     for x in (68, 82):
         lv.enemy(x, DEEP - 1)
+    lv.flamejet(76, DEEP, "up", on=40)  # hydrothermal vents in the trench floor
+    lv.flamejet(100, DEEP, "up", on=40, phase=60)
     lv.carve(86, DEEP - 13, 90, DEEP - 9)  # second air dome
     lv.drain(86, DEEP - 13, 90, DEEP - 10)
     lv.wp(86, DEEP - 10, 90, DEEP - 9, label="second air", guide=True)
@@ -87,11 +90,13 @@ def build() -> Level:
     lv.wp(125, SEA - 2, 128, SEA - 2, ground=True, label="ledge")
     lv.enemy(131, SEA - 2)
     holed_chimney(lv, 135, 4, SEA - 22, SEA - 1, rests=[(1, SEA - 12)], label="sea stack", top=False)
+    lv.crumble(139, SEA - 12)
     lv.rect(135, SEA - 1, 167, BOTTOM)
     lv.rect(142, SEA - 22, 146, SEA - 21)  # the summit, then pillars over the drop
     lv.wp(142, SEA - 23, 145, SEA - 23, ground=True, label="summit")
     lv.enemy(145, SEA - 23)
     pillar_run(lv, [(150, SEA - 24), (154, SEA - 21), (158, SEA - 25)], SEA - 18, label="summit pillar")
+    lv.crumble(154, SEA - 21)
     lv.rect(162, SEA - 22, 166, SEA - 21)
     lv.coins(163, SEA - 25, 165, 2)
     lv.flag(165, SEA - 23)

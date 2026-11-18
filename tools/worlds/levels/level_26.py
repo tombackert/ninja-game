@@ -119,6 +119,7 @@ def build() -> Level:
     lv.carve(88, deck + 4, 89, deck + 6)  # its pier broke lower
     lv.wp(91, deck - 1, 93, deck - 1, ground=True, label="aqueduct break 1")
     lv.coins(84, deck - 3, 88)
+    lv.crumble(91, deck, 92)  # the far edge of the break is still cracking off
     # the covered channel: its cover slabs still lie on the deck, a hole under them
     lv.rect(92, deck - 3, 103, deck - 3, CITY)
     lv.carve(98, deck, 101, deck + 3)
@@ -127,6 +128,7 @@ def build() -> Level:
     lv.enemy(79, deck - 1)
     # the last span fell, its pier broke lower: a long dash to the broken pier
     lv.carve(106, deck, a1, deck + 3)
+    lv.crumble(104, deck, 105)  # and so is the edge before the fallen span
     lv.carve(a1 - 1, deck + 4, a1, deck + 4)
     lv.carve(a1 - 1, deck + 5, a1 - 1, deck + 7)  # only a sliver of it stands
     lv.wp(a1, deck + 4, ground=True, label="broken pier")
@@ -167,7 +169,7 @@ def build() -> Level:
     lv.rect(ax + 3, roof_q, ax + 16, BOTTOM, CITY)  # house Q
     perforate(lv, x, t5_top + 1, alley_floor - 6, solid=2, gap=1)
     perforate(lv, ax + 3, roof_q + 1, alley_floor - 6, solid=2, gap=1)
-    lv.rect(ax + 2, alley_floor - 11, ax + 2, alley_floor - 11, CITY)  # a balcony to rest on
+    lv.crumble(ax + 2, alley_floor - 11)  # an old clay balcony to rest on, briefly
     lv.wp(ax, alley_floor - 3, ax + 2, alley_floor - 1, ground=True, label="alley")
     lv.wp(ax + 2, alley_floor - 12, ground=True, label="balcony")
     lv.coin(ax + 1, alley_floor - 7)
@@ -206,7 +208,10 @@ def build() -> Level:
     for i in range(beams):
         row = r3 - 3 * (i + 1)
         xs = (bl + 6, bl + 6) if i % 2 == 0 else (bl + 2, bl + 2)  # one-tile beams
-        lv.rect(xs[0], row, xs[1], row, CITY)
+        if i == 4:  # a rotten beam
+            lv.crumble(xs[0], row)
+        else:
+            lv.rect(xs[0], row, xs[1], row, CITY)
         lv.wp(xs[0], row - 1, xs[1], row - 1, ground=True, label=f"beam {i}")
         lv.coin(bl + 4, row - 1)
     for k in range(1, beams, 2):  # slits in the outer walls
@@ -289,7 +294,7 @@ def build() -> Level:
     lv.rect(m + 5, mtop, m + 6, proof - 1, CITY)
     perforate(lv, m, mtop + 1, proof - 6, solid=2, gap=1)  # notches on the inner faces
     perforate(lv, m + 5, mtop + 1, proof - 6, solid=2, gap=1)
-    lv.rect(m + 4, proof - 13, m + 4, proof - 13, CITY)  # a balcony
+    lv.crumble(m + 4, proof - 13)  # a balcony, crumbling
     lv.wp(m + 3, proof - 3, m + 4, proof - 1, ground=True, label="between the minarets")
     lv.wp(m + 4, proof - 14, ground=True, label="minaret balcony")
     lv.coin(m + 2, proof - 8)

@@ -136,6 +136,8 @@ def build() -> Level:
         lv.coin(bx + w // 2, btop - 2)
         if i in (1, 3):
             lv.enemy(bx + w - 1, btop - 1)
+        if i == 4:  # a loose stone on the last boulder
+            lv.crumble(bx, btop)
     lv.wp(c0 - 3, flats - 2, c0 - 1, flats - 2, ground=True, label="garden bank")
     dress(lv, range(r0 + 1, c0 - 4, 2), flats, (SEAWEED, ANEMONE, STARFISH, CORAL), seed=365)
 
@@ -158,6 +160,7 @@ def build() -> Level:
     face = c1 + 12  # the face's column, five off the needle
     top_t = bank - 16
     holed_chimney(lv, c1 + 6, 5, bank - 14, bank, rests=[(1, bank - 8)], label="needle", top=False)
+    lv.crumble(c1 + 11, bank - 8)  # the surf has worn the rest thin
     lv.rect(face + 1, top_t, face + 4, BOTTOM)
     lv.wp(face + 1, top_t - 1, face + 3, top_t - 1, ground=True, label="terrace top")
     lv.coins(c1 + 8, bank - 5, c1 + 10)
@@ -208,6 +211,7 @@ def build() -> Level:
     # --- The cleft: a crack up the cliff, wall to wall -----------------------------------------------------
     lv.carve(n0, cl_top, n0 + 5, ledge - 1)
     holed_chimney(lv, n0, 4, cl_top + 2, ledge, rests=[(1, ledge - 9), (-1, ledge - 17)], label="cleft")
+    lv.crumble(n0 + 4, ledge - 9)
     lv.checkpoint(n0 + 2, ledge - 1)  # halfway
     lv.decor(n0 + 4, ledge - 1, STARFISH)
     lv.wp(n0 + 6, cl_top - 1, n0 + 8, cl_top - 1, ground=True, label="cliff top")
@@ -246,10 +250,12 @@ def build() -> Level:
     lv.rect(lg0, lsurf - 1, lg0 + 1, lsurf + 4)  # the step back out
     stacks = [(6, -1, 1), (6, -1, 1), (5, 0, 2), (6, -1, 1), (5, -3, 1), (7, -2, 2), (6, -3, 1), (6, -4, 1)]
     sx = lg0
-    for dx, dy, sw in stacks:
+    for k, (dx, dy, sw) in enumerate(stacks):
         sx += dx
         stop = rim + dy
         lv.rect(sx, stop, sx + sw - 1, lsurf + 4)
+        if k in (3, 6):  # loose tops: a miss is a swim back
+            lv.crumble(sx, stop)
         lv.coin(sx, stop - 2)
         lv.wp(sx, stop - 1, sx + sw - 1, stop - 1, ground=True, label=f"stack {sx}")
         sx += sw - 1

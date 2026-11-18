@@ -109,6 +109,9 @@ def build() -> Level:
             lv.rect(x + 3, SPINE + 10, x + 6, SPINE + 10, BONE)  # the breastbone
             lv.wp(x + 3, SPINE + 9, x + 6, SPINE + 9, ground=True, label="the heart")
             lv.checkpoint(x + 5, SPINE + 9)
+    # hydrothermal vents in the trench floor of two bays where the tide runs down
+    for k in (3, 8):
+        lv.flamejet(x0 + pitch * k + 4, FLOOR, "up", on=40, phase=60 * (k % 2))
     # a rib fallen across two bays (a gap left at its west end), the undertow along the floor
     fx = x0 + pitch * 7
     lv.rect(fx + 3, SPINE + 14, fx + pitch + 5, SPINE + 14, BONE)

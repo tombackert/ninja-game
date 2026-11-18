@@ -62,6 +62,8 @@ def build() -> Level:
     # --- Pillar hop over open water -------------------------------------------------
     lv.rect(91, 56, 150, BOTTOM)  # floor of the bay, on under the ledge
     pillar_run(lv, [(108, SEA - 2), (112, SEA - 3), (116, SEA - 1), (120, SEA - 3), (124, SEA - 2)], 55)
+    for x in (116, 124):  # loose rocks on two of the pillars: a miss only means a swim
+        lv.crumble(x, SEA - 1 if x == 116 else SEA - 2)
     lv.rect(128, SEA - 2, 133, 55)  # reef table
     lv.wp(128, SEA - 3, 131, SEA - 3, ground=True, label="reef table")
     lv.decor(132, SEA - 3, 10)

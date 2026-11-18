@@ -76,6 +76,7 @@ def build() -> Level:
     lv.coins(-34, G - 3, -26, 2)
     lv.carve(-24, G, -14, BOTTOM)  # the canal
     lv.rect(-20, G - 1, -19, BOTTOM, TOWER)  # a pier of the old bridge
+    lv.crumble(-20, G - 1, -19)  # its top is loose
     lv.wp(-20, G - 2, -19, G - 2, ground=True, label="bridge pier")
     lv.wp(-13, G - 1, -10, G - 1, ground=True, label="past the canal")
     lv.enemy(-4, G - 1)
@@ -96,6 +97,7 @@ def build() -> Level:
     holed_chimney(
         lv, X1 - 6, 4, top(1) + 2, G, rests=[(1, f - 5), (-1, f - 9)], label="cracked wall", t=TOWER, top=False
     )
+    lv.crumble(X1 - 2, f - 5)  # the crack runs through the lower rest
     lv.carve(X1 - 5, top(1), X1 - 2, top(1) + 1)
     lv.wp(X1 - 9, top(1) - 1, X1 - 6, top(1) - 1, ground=True, label="through hatch 1")
 
@@ -106,6 +108,7 @@ def build() -> Level:
         lv.wp(x0 - 2, f, x0 - 1, f, ground=True, label=f"past hole {x0}")
         lv.coins(x0, f - 2, x1, 2)
     lv.rect(50, f - 4, 51, f - 4, TOWER)  # a cog wheel's axle
+    lv.flamejet(51, top(1), "up", on=40, phase=8)  # the machines still vent
     lv.decor(58, f, 6)
     hatch(lv, 2, west=True)
 
@@ -147,6 +150,8 @@ def build() -> Level:
     lv.carve(X0 + 10, top(5), X1 - 7, top(5) + 1)
     for i, (x, row, w) in enumerate(((52, f + 1, 2), (57, f, 1))):
         lv.rect(x, row, x + w - 1, row, TOWER)
+        if i == 1:  # it breaks off
+            lv.crumble(x, row)
         lv.wp(x, row - 1, x + w - 1, row - 1, ground=True, label=f"floe {i}")
         lv.coin(x, row - 2)
     hatch(lv, 6, west=False)

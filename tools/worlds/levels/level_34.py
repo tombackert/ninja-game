@@ -72,6 +72,7 @@ def build() -> Level:
         lv.wp(x0 - 3, f, x0 - 1, f, ground=True, label=f"past crevasse {i}")
         lv.coins(x0, f - 2, x1, 2)
     lv.enemy(16, f)
+    lv.crumble(18, top(1))  # the dust at a crevasse's lip is loose
     crack(2)
 
     # --- Storey 3: icicles hanging to three rows over the floor, ice blocks between ---------------------------------
@@ -89,6 +90,9 @@ def build() -> Level:
     lv.checkpoint(E - 6, f)
     for x0, x1 in ((28, 30), (23, 25), (17, 20), (12, 14), (7, 9)):
         lv.carve(x0, top(3), x1, top(3) + 1)
+    for x in (26, 21):  # the thinnest bits of the floor give way
+        lv.crumble(x, top(3), x + 1)
+        lv.crumble(x, top(3) + 1, x + 1)
     for i, x in enumerate((26, 21, 15)):
         lv.wp(x - 1, f, x, f, ground=True, label=f"thin ice {i}")
         lv.coin(x, f - 2)

@@ -70,11 +70,14 @@ def build() -> Level:
     lv.decor(-12, 87, 3)
     lv.coins(-10, 85, 20, 3)
     lv.enemy(10, 87)
+    lv.flamejet(2, 88, "up", on=40, phase=8)  # the lava tube still breathes
+    lv.flamejet(20, 88, "up", on=40, phase=60)
     lv.wp(24, 87, 28, 87, ground=True, label="the tube's mouth")
     for i, (x, h) in enumerate(((40, 2), (48, 1), (55, 2), (64, 2), (72, 1), (80, 2))):
         lv.rect(x, 88 - h, x + 1, 87, CRYSTAL)
         lv.wp(x, 87 - h, x + 1, 87 - h, ground=True, label=f"floor crystal {i}")
         lv.coin(x, 85 - h)
+    lv.flamejet(44, 88, "up", on=40, phase=10)  # a vent through the floor of the bubble
     lv.enemy(60, 87)
     lv.enemy(76, 87)
     for x in (35, 52, 68, 85):  # small crystals between

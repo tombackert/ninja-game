@@ -133,6 +133,7 @@ def build() -> Level:
     lv.coins(x, TOP - 4, x + 20, 2)
     lv.wp(x + 6, TOP - 1, x + 8, TOP - 1, ground=True, label="span 1 a")
     lv.wp(x + 14, TOP - 1, x + 16, TOP - 1, ground=True, label="span 1 b")
+    lv.flamejet(x + 15, TOP, "up", on=40, phase=105)  # a vent in the bridge's back, between two crags
     lv.wp(x + 20, TOP - 1, x + 22, TOP - 1, ground=True, label="span 1 c")
     tooth(lv, x + 27, TOP, 6, w=3, cap=4)
 
@@ -147,10 +148,12 @@ def build() -> Level:
     lv.coins(x, TOP - 4, x + 18, 2)
     lv.wp(x + 7, TOP - 1, x + 10, TOP - 1, ground=True, label="span 2 a")
     lv.wp(x + 15, TOP - 1, x + 17, TOP - 1, ground=True, label="span 2 b")
+    lv.flamejet(x + 16, TOP, "up", on=40)
     tooth(lv, x + 24, TOP, 6, cap=4)
 
     # --- U3: two swings into a basket -------------------------------------------------------
     c = underpass(lv, x + 20, (1, 3, 3), "u3", rests=((1, 43), (-1, 38), (1, 33)))
+    lv.crumble(c, 38)  # a brittle rest in the basket
 
     # --- The crown of the bridge (banner) ----------------------------------------------
     x = c + 5
@@ -175,6 +178,7 @@ def build() -> Level:
     lv.decor(x + 8, TOP - 1, 5)
     lv.coins(x, TOP - 4, x + 20, 2)
     lv.wp(x + 6, TOP - 1, x + 8, TOP - 1, ground=True, label="span 4 a")
+    lv.flamejet(x + 7, TOP, "up", on=40, phase=112)
     lv.wp(x + 14, TOP - 1, x + 16, TOP - 1, ground=True, label="span 4 b")
     lv.wp(x + 20, TOP - 1, x + 22, TOP - 1, ground=True, label="span 4 c")
     tooth(lv, x + 27, TOP, 6, w=3, cap=4)
@@ -196,7 +200,8 @@ def build() -> Level:
 
     # --- U6: two swings, then the long climb between the needle and the east cliff ----------
     rests = ((1, 43), (-1, 38), (1, 33), (-1, 28), (1, 23), (-1, 18))
-    underpass(lv, x6, gaps6, "u6", rests=rests, rim=RIM)
+    c = underpass(lv, x6, gaps6, "u6", rests=rests, rim=RIM)
+    lv.crumble(c + 2, 23)  # high up the long climb, a rest breaks off
     lv.big_decor(EAST + 9, RIM - 1, 5)
     lv.decor(EAST + 13, RIM - 1, 6)
     lv.flag(EAST + 11, RIM - 1)

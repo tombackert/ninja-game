@@ -96,6 +96,7 @@ def build() -> Level:
     lv.enemy(40, 115)
     lv.coins(23, 113, 25, 2)
     steps(lv, [(27, 114, 2), (32, 112, 2), (36, 110, 1), (41, 108, 2), (47, 106, 2)], "lower step")
+    lv.crumble(36, 110)  # not every step hardened well: some crumble back into sand
     steps(lv, [(50, 104, 3), (44, 102, 3)], "lower turn")
     # the stone under the waist, the waist hanging into the chamber over it
     lv.rect(37, 100, 43, 100, ROCK)
@@ -112,6 +113,8 @@ def build() -> Level:
     lv.checkpoint(44, 74)  # halfway
     lv.wp(58, 65, 59, 65, ground=True, label="bowl rim")
     steps(lv, [(55, 64, 2), (49, 62, 2), (42, 61, 2), (37, 58, 1), (31, 56, 2)], "upper step")
+    lv.crumble(49, 62, 50)
+    lv.crumble(37, 58)
     steps(lv, [(28, 53, 3)], "west turn")
     lv.rect(33, 51, 42, 51, ROCK)  # the stone under the upper neck
     lv.wp(36, 50, 40, 50, ground=True, label="under the neck")

@@ -23,6 +23,7 @@ def build() -> Level:
     lv.enemy(12, 14)
     lv.carve(16, 15, 29, 44)  # dry pit in the cave floor
     pillar_run(lv, [(19, 14), (22, 16), (25, 15)], 44, label="cave pillar")
+    lv.crumble(22, 16)  # a loose rock on the middle pillar
     lv.wp(30, 14, 32, 14, ground=True, label="past the pit")
     lv.enemy(35, 14)
     lv.coins(31, 12, 37, 3)
@@ -105,6 +106,7 @@ def build() -> Level:
     lv.wp(gx + 4, exit_floor - 1, gx + 7, exit_floor - 1, ground=True, label="exit cave")
     lv.carve(gx + 9, exit_floor, gx + 18, exit_floor + 12)  # last pit
     pillar_run(lv, [(gx + 12, exit_floor), (gx + 15, exit_floor - 2)], exit_floor + 12, label="exit pillar")
+    lv.crumble(gx + 12, exit_floor)
     lv.wp(gx + 19, exit_floor - 1, gx + 20, exit_floor - 1, ground=True, label="past the last pit")
     lv.decor(gx + 7, exit_floor - 1, 8)
     # A notched shaft up to the flag cave

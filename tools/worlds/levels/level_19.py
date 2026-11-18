@@ -41,6 +41,7 @@ def build() -> Level:
     holed_chimney(lv, 74, 4, 32, 55, rests=[(1, 46), (-1, 39)], t="grass", label="giant tree")
     canopy = [(84, 33, 1), (88, 34, 1), (93, 36, 1), (97, 38, 1), (102, 40, 1), (106, 42, 1)]
     crate_chain(lv, canopy, t="grass", label="canopy crate")
+    lv.crumble(97, 38)  # a rotten one
     lv.big_decor(76, 31, 2)
 
     # --- Stepped temple, climbed via single blocks ------------------------------
@@ -64,6 +65,7 @@ def build() -> Level:
             lv.wp(face, foot - sh - 1, face + 1, foot - sh - 1, ground=True, label=f"temple step {k} ({kind})")
         if k in (1, 2, 4, 5):
             lv.enemy(face + 3, foot - sh - 1)
+    lv.spikes(116, base - sh * 4 - 1, 117)  # the temple's traps: spikes under the jump to step 4
     for k in range(1, steps):  # coins over the steps, once every block stands
         lv.coins(x0 + sw * k + 1, base - sh * (k + 1) - 3, x0 + sw * k + 2)
     lv.big_decor(x0 + sw * steps + 4, apex - 1, 1)
@@ -85,6 +87,7 @@ def build() -> Level:
             if (c + r) % 2 == 1 and lv.is_solid(x + 1, y + 3) and placed < 10:
                 lv.enemy(x + 1, y + 2)
                 placed += 1
+    mz.vents((4, 0), (7, 2), 2, phases=(6, 46))  # fire traps in the temple's ceilings
     ex, ey = mz.cell_xy(7, 2)
     lv.carve(ex + 3, ey, x1, ey + 2)  # east door
     lv.wp(x1 - 3, ey, x1, ey + 2, ground=True, label="east door")
@@ -95,6 +98,7 @@ def build() -> Level:
     crates = [(g0, floor, 1), (g0 + 5, floor - 1, 1), (g0 + 10, floor - 1, 1), (g0 + 15, floor - 2, 2)]
     crates += [(g0 + 22, floor - 2, 1), (g0 + 27, floor - 3, 1), (g0 + 32, floor - 4, 1)]  # 4-tile gaps
     crate_chain(lv, crates, label="gorge crate")
+    lv.crumble(g0 + 10, floor - 1)
 
     # --- Wall-bounce ladder up the far cliff --------------------------------------
     cliff = g0 + 44

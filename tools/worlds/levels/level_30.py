@@ -42,6 +42,7 @@ def build() -> Level:
         lv.rect(x, G - h, x + w - 1, G - 1, CITY)  # toppled statues and broken walls
         lv.wp(x, G - h - 1, x + w - 1, G - h - 1, ground=True, label=f"forecourt {i}")
         lv.coin(x + w // 2, G - h - 3)
+    lv.crumble(-22, G - 5, -21)  # the top of the broken wall is loose
     lv.carve(-36, G, -33, BOTTOM)  # a crack in the court
     lv.carve(-18, G, -15, BOTTOM)
     lv.enemy(-26, G - 1)
@@ -62,6 +63,7 @@ def build() -> Level:
     lv.rect(20, 90, 22, 91)  # its head
     lv.wp(22, 141, 26, 143, label="under the scepter")
     rests(lv, 22, 26, [(1, 138), (-1, 132), (1, 126), (-1, 120), (1, 114)], "shin")
+    lv.crumble(26, 126)  # weathered: some rests break off
     lv.rect(25, 98, 35, 105)  # the knee, out over the gap
     rests(lv, 22, 24, [(-1, 104)], "knee")
     lv.wp(26, 97, 29, 97, ground=True, label="the knee")
@@ -90,6 +92,7 @@ def build() -> Level:
     lv.rect(55, 63, 59, 92)  # the upper arm
     lv.wp(51, 92, 54, 92, ground=True, label="forearm")
     rests(lv, 51, 54, [(1, 87), (-1, 81), (1, 75), (-1, 69), (1, 65)], "arm")
+    lv.crumble(54, 75)
     lv.rect(55, 62, 92, 97)  # shoulder and chest
     lv.wp(55, 61, 58, 61, ground=True, label="the shoulder")
     lv.checkpoint(57, 61)
@@ -103,6 +106,7 @@ def build() -> Level:
     lv.rect(64, 34, 65, 58)  # the lappet of the headdress
     lv.wp(66, 59, 69, 61, label="under the lappet")
     rests(lv, 66, 68, [(1, 54), (-1, 48), (1, 42), (-1, 37)], "cheek")
+    lv.crumble(66, 48)
     lv.rect(62, 30, 88, 33)  # the crown's band
     lv.carve(66, 30, 69, 33)  # broken away
     lv.wp(70, 29, 72, 29, ground=True, label="the crown")

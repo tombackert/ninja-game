@@ -26,14 +26,19 @@ def build() -> Level:
     for x in (12, 16, 22, 26, 32, 36, 42, 46):
         lv.enemy(x, GROUND - 1)
     lv.coins(6, GROUND - 3, 50, 4)
+    lv.flamejet(29, GROUND, "up", on=40)  # a fumarole in the crater floor
     holed_chimney(lv, 58, 4, 118, GROUND, rests=[(1, 131), (-1, 124)], label="floor chimney", top=False)
     lv.rect(66, 118, RIGHT - 1, 118)  # ledge L1, two tiles off the chimney
     lv.wp(66, 117, 68, 117, ground=True, label="L1")
+    lv.crumble(62, 131)  # the lower rest is brittle tuff
 
     # --- Floating rocks leading west to L2 ----------------------------------------
     rocks = [(55, 115, 1), (51, 113, 1), (46, 112, 1), (42, 110, 1), (37, 109, 1), (33, 107, 1), (28, 106, 1)]
     rocks += [(24, 105, 1)]
     crate_chain(lv, rocks, label="rock")
+    for bx, by, _w in rocks:
+        if bx in (42, 28):  # pumice: it gives way
+            lv.crumble(bx, by)
     lv.rect(LEFT + 1, 104, 19, 104)  # L2
     lv.wp(15, 103, 19, 103, ground=True, label="L2")
     for x in (5, 14, 17):
@@ -53,6 +58,7 @@ def build() -> Level:
     lv.carve(14, 81, 16, 83)  # door in the outcrop's west face
     zigzag(lv, 17, 83, sections=4, height=6, inner=3, offset=2, label="outcrop zigzag")
     lv.carve(17, 60, 19, 61)
+    lv.flamejet(22, 74, "left", on=36)  # a vent across the second piece
     for i in range(4):
         lv.coin(18 + (2 if i % 2 else 0), 80 - 6 * i)
     lv.wp(20, 59, 23, 59, ground=True, label="outcrop top")
@@ -63,6 +69,7 @@ def build() -> Level:
     # --- Rock ladder up the east side ---------------------------------------------
     ladder = [(56, 58, 1), (60, 56, 1), (64, 54, 1), (60, 52, 1), (56, 50, 1)]
     crate_chain(lv, ladder, label="ladder rock")
+    lv.crumble(60, 52)
 
     # --- Holed chimney on L5, entered from the right --------------------------------
     lv.rect(42, 48, 52, 48)  # L5
@@ -73,6 +80,7 @@ def build() -> Level:
     perforate(lv, 50, 27, 42, solid=2, gap=1)
     perforate(lv, 45, 27, 42, solid=2, gap=1)
     lv.rect(46, 37, 46, 37)  # rest ledge
+    lv.flamejet(50, 39, "left", on=40, phase=111)  # under the rest: the left wall stays clear
     lv.wp(46, 45, 49, 47, ground=True, label="summit chimney base")
     lv.wp(46, 36, ground=True, label="summit chimney rest")
     lv.coins(47, 41, 48)
@@ -85,6 +93,7 @@ def build() -> Level:
         lv.enemy(x, 23)
     lv.coins(56, 21, 66, 2)
     crate_chain(lv, [(46, 23, 1), (38, 23, 1), (30, 22, 1), (22, 23, 1)], label="caldera rock")
+    lv.crumble(30, 22)
     lv.rect(LEFT + 1, 22, 16, 23)  # west rim
     lv.wp(13, 21, 16, 21, ground=True, label="west rim")
     lv.enemy(7, 21)

@@ -45,6 +45,7 @@ def build() -> Level:
     lv.big_decor(-14, G - 1, 5)
     lv.coins(-18, G - 3, 0, 3)
     lv.enemy(-6, G - 1)
+    lv.flamejet(-11, G, "up", on=40, phase=110)  # fumaroles in the plain
     lv.wp(0, G - 1, 3, G - 1, ground=True, label="the field's edge")
 
     # --- Under the first hovering slab, up between it and its neighbour -----------------------------------------
@@ -77,6 +78,7 @@ def build() -> Level:
     lv.checkpoint(53, G - 1)
     lv.enemy(58, G - 1)
     lv.decor(48, G - 1, 3)
+    lv.flamejet(47, G, "up", on=40)
 
     # --- Up between the tallest hovering slab and its twin ----------------------------------------------------------
     slab(lv, 61, 63, 12, G - 4)  # hovering

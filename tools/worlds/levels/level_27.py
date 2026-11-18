@@ -95,6 +95,8 @@ def build() -> Level:
 
     # --- The balanced rocks ------------------------------------------------------------------------
     rocks_run(lv, [(x + 5, 41), (x + 12, 40), (x + 19, 42), (x + 26, 40), (x + 33, 41), (x + 40, 39)], "balanced rock")
+    lv.crumble(x + 26, 40, x + 27)  # soft sandstone: this boulder topples in two pieces
+    lv.crumble(x + 26, 41, x + 27)
     x += 41
 
     # --- The arch: a bridge of rock between two hoodoos ------------------------------------------------
@@ -215,6 +217,8 @@ def build() -> Level:
         (x + 39, 30),
     ]
     rocks_run(lv, pins, "pin", w=1)
+    for px, top in (pins[2], pins[5]):  # loose pebbles
+        lv.crumble(px, top)
     x += 39
 
     # --- The Sentinel and the Watchman: up between them, round the great cap to the flag -------------------

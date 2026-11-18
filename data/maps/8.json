@@ -9638,7 +9638,7 @@
                 ]
             },
             "26;-12": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     26,
@@ -9646,7 +9646,7 @@
                 ]
             },
             "25;-12": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     25,
@@ -9670,7 +9670,7 @@
                 ]
             },
             "41;-15": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     41,
@@ -9678,7 +9678,7 @@
                 ]
             },
             "42;-15": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     42,
@@ -9702,7 +9702,7 @@
                 ]
             },
             "56;-14": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     56,
@@ -9710,7 +9710,7 @@
                 ]
             },
             "57;-14": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     57,
@@ -9734,7 +9734,7 @@
                 ]
             },
             "73;-14": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     73,

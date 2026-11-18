@@ -103,6 +103,7 @@ def build() -> Level:
     lv.rect(cx + 5, cliff, cx + 140, BOTTOM)  # the cliff east of the clearing
     lv.carve(cx, 0, cx + 140, cliff - 1)
     holed_chimney(lv, cx - 1, 4, cliff, top, rests=[(1, top - 8), (-1, top - 14)], label="trunks", top=False)
+    lv.crumble(cx + 3, top - 8)  # a loose stone wedged between the trunks
     lv.rect(cx + 4, cliff, cx + 4, floor - 1)
     lv.route = [w for w in lv.route if w.label != "trunks base"]
     lv.wp(cx + 5, cliff - 1, cx + 7, cliff - 1, ground=True, label="cliff top")
@@ -178,6 +179,7 @@ def build() -> Level:
         label="cave chimney",
         top=False,
     )
+    lv.crumble(ch, cave_floor - 17)  # the sea has worn the upper rest thin
     lv.wp(ch + 6, head - 1, ch + 8, head - 1, ground=True, label="headland")
     lv.coins(ch + 2, cave_floor - 6, ch + 3)
     lv.coins(ch + 2, cave_floor - 13, ch + 3)

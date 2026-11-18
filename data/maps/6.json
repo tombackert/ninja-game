@@ -2870,7 +2870,7 @@
                 ]
             },
             "37;-32": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     37,
@@ -2886,7 +2886,7 @@
                 ]
             },
             "30;-29": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     30,
@@ -3630,7 +3630,7 @@
                 ]
             },
             "-12;-34": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -12,
@@ -3790,7 +3790,7 @@
                 ]
             },
             "-28;-31": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -28,

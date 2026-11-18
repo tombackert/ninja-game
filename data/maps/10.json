@@ -48283,7 +48283,7 @@
                 ]
             },
             "39;22": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     39,
@@ -48299,7 +48299,7 @@
                 ]
             },
             "33;22": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     33,
@@ -54787,7 +54787,7 @@
                 ]
             },
             "65;32": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     65,
@@ -54811,7 +54811,7 @@
                 ]
             },
             "69;38": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     69,
