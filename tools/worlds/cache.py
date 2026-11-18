@@ -108,18 +108,26 @@ class Probe:
 def tiles_hash(solids, box: tuple | None) -> str:
     """Hash of the solid tiles and water in `box` (None: the whole level)."""
     water = getattr(solids, "water", None) or {}
+    lethal = getattr(solids, "lethal", None) or {}  # spikes: in the key only where there are any
     if box is None:
         cache = getattr(solids, "__dict__", None)
         if cache is not None and "_whole_hash" in cache:
             return cache["_whole_hash"]
-        h = hashlib.sha1(repr((sorted(solids), sorted(water.items()))).encode()).hexdigest()
+        parts = (sorted(solids), sorted(water.items()))
+        if lethal:
+            parts += (sorted(lethal.items()),)
+        h = hashlib.sha1(repr(parts).encode()).hexdigest()
         if cache is not None:
             cache["_whole_hash"] = h
         return h
     x0, y0, x1, y1 = box
     rock = [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1) if (x, y) in solids]
     wet = [((x, y), water[(x, y)]) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1) if (x, y) in water]
-    return hashlib.sha1(repr((rock, wet)).encode()).hexdigest()
+    parts = (rock, wet)
+    spikes = [(t, lethal[t]) for t in sorted(lethal) if x0 <= t[0] <= x1 and y0 <= t[1] <= y1]
+    if spikes:
+        parts += (spikes,)
+    return hashlib.sha1(repr(parts).encode()).hexdigest()
 
 
 def input_key(*parts) -> str:

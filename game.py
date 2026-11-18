@@ -19,7 +19,9 @@ from scripts.constants import (
 )
 from scripts.displayManager import DisplayManager
 from scripts.entities import Enemy, Player
+from scripts.enemy_kinds import KINDS, SPAWNER_IDS, kind_for_variant
 from scripts.entity_id import EntityIDGenerator
+from scripts.hazards import HazardSystem
 from scripts.keyboardManager import KeyboardManager
 from scripts.particle import Particle
 from scripts.particle_system import ParticleSystem
@@ -87,6 +89,9 @@ class Game:
             "mars": am.get_image_frames("tiles/mars"),
             "reef": am.get_image_frames("tiles/reef"),
             "wreck": am.get_image_frames("tiles/wreck"),
+            "spikes": am.get_image_frames("tiles/spikes"),
+            "crumble": am.get_image_frames("tiles/crumble"),
+            "flamejet": am.get_image_frames("tiles/flamejet"),
             "water/surface": am.get_image_frames("water/surface"),
             "player": am.get_image("entities/player.png"),
             "background": am.get_image("background-big.png"),
@@ -109,6 +114,11 @@ class Game:
             "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
+        # Each enemy kind is a palette swap of the default enemy (tools/gen_hazard_art.py)
+        for kind in KINDS:
+            if kind != "gunner":
+                self.assets[f"enemy/{kind}/idle"] = am.get_animation(f"entities/enemy/{kind}/idle", img_dur=6)
+                self.assets[f"enemy/{kind}/run"] = am.get_animation(f"entities/enemy/{kind}/run", img_dur=4)
         # Register every store skin's animation set (all palette swaps of default)
         for skin_path in CollectableManager.SKIN_PATHS:
             base = f"entities/player/{skin_path}"
@@ -163,8 +173,11 @@ class Game:
         self.timer.reset()
         path = "data/maps/" + str(map_id) + ".json"
         if respawn and self.tilemap.loaded_path == path:
-            # Tiles only change by extraction (spawners, pickups): put those
-            # back instead of parsing the map file again (up to ~45 ms)
+            # Tiles only change by extraction (spawners, pickups) and by
+            # crumbling blocks: put those back instead of parsing the map
+            # file again (up to ~45 ms)
+            if getattr(self, "hazards", None) is not None:
+                self.hazards.restore()
             self.tilemap.restore_extracted()
         else:
             self.tilemap.load(path)
@@ -185,6 +198,9 @@ class Game:
         for tile in flag_tiles:
             flag_rect = pygame.Rect(tile["pos"][0], tile["pos"][1], 16, 16)
             self.flags.append(flag_rect)
+
+        # Spikes, crumbling blocks and flame jets
+        self.hazards = HazardSystem(self.tilemap)
 
         # Checkpoints (their banners stay hoisted through a respawn: the tiles are kept)
         self.checkpoints = find_checkpoints(self.tilemap)
@@ -220,9 +236,9 @@ class Game:
                 player.velocity = [0, 0]  # Reset velocity too for safety
                 player.breath = BREATH_FRAMES
                 player.swim_cooldown = 0
-            for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
-                if spawner["variant"] == 1:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
+            for spawner in self.tilemap.extract(SPAWNER_IDS):
+                if spawner["variant"] != 0:
+                    self.enemies.append(self._spawn_enemy(spawner, id_gen.next_id()))
         else:
             # Capture RNG state at start of level
             self.level_rng_state = rng.get_state()
@@ -238,7 +254,7 @@ class Game:
                 gear_name = "None"
             if gear_name == "Lucky Charm" and self.cm.lucky_charm > 0:
                 lives += 1
-            for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
+            for spawner in self.tilemap.extract(SPAWNER_IDS):
                 if spawner["variant"] == 0:
                     player = Player(
                         self,
@@ -252,7 +268,7 @@ class Game:
                     player.air_time = 0
                     self.players.append(player)
                 else:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
+                    self.enemies.append(self._spawn_enemy(spawner, id_gen.next_id()))
             self.saves = 1
 
             # Set the current player if there are any players
@@ -285,6 +301,10 @@ class Game:
             except Exception:
                 pass
 
+    def _spawn_enemy(self, spawner, entity_id):
+        """The enemy of a spawner tile; its variant names the kind (scripts/enemy_kinds.py)."""
+        return Enemy(self, spawner["pos"], (8, 15), entity_id, kind=kind_for_variant(spawner["variant"]))
+
     def apply_inputs(self, inputs):
         """Map input names (left/right/jump/dash/shoot) onto the player."""
         self.movement = [False, False]
@@ -311,6 +331,11 @@ class Game:
         self.tick += 1
         self.screenshake = max(0, self.screenshake - 1)
 
+        # Hazards first: their clock is this tick for everything below
+        hazards = getattr(self, "hazards", None)
+        if hazards is not None:
+            hazards.update(self.players, self)
+
         self.projectiles.update(self.tilemap, self.players, self.enemies)
         self.clouds.update()
 
@@ -318,6 +343,8 @@ class Game:
             kill = enemy.update(self.tilemap, (0, 0))
             if kill:
                 self.enemies.remove(enemy)
+        if hazards is not None:
+            hazards.burn_enemies(self.enemies, self)
 
         if not self.dead:
             for idx, player in enumerate(self.players):

@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import pygame
 
 from scripts.constants import DASH_MIN_ACTIVE_ABS
+from scripts.enemy_kinds import KINDS
 from scripts.entities import Enemy, Player
 from scripts.net_hud import NetHUD
 from scripts.network.interpolation import SnapshotBuffer, interpolate_entity
@@ -78,6 +79,8 @@ class MPPlayer(Player):
     """
 
     def render(self, surf, offset=(0, 0)):
+        if self.blink_hidden():
+            return
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             # Skip Player.render (it checks local settings); use base sprite.
             from scripts.entities import PhysicsEntity
@@ -608,6 +611,13 @@ class MultiplayerGameState(State):
                     g.audio.play("shoot")
 
         movement = (int(move[1]) - int(move[0]), 0)
+        # Hazards: crumbling blocks follow every player in view, as on the
+        # server; the flames keep the server's beat (its clock is its tick,
+        # as it loads the level when it starts)
+        hazards = getattr(g, "hazards", None)
+        if hazards is not None:
+            hazards.update(g.players, g)
+            hazards.clock = int(getattr(g, "tick", hazards.clock))
         player.update(g.tilemap, movement)
 
     def _find_local_player(self) -> Any:
@@ -768,6 +778,7 @@ class MultiplayerGameState(State):
         player.shoot_cooldown = p_snap.shoot_cooldown
         player.breath = p_snap.breath
         player.swim_cooldown = p_snap.swim_cooldown
+        player.invulnerable = p_snap.invulnerable
         player.lives = p_snap.lives
         if player.action != p_snap.action:
             player.set_action(p_snap.action)
@@ -915,7 +926,7 @@ class MultiplayerGameState(State):
             seen.add(e_snap.id)
             enemy = self._enemy_entities.get(e_snap.id)
             if enemy is None:
-                enemy = Enemy(g, list(e_snap.pos), (8, 15), e_snap.id)
+                enemy = Enemy(g, list(e_snap.pos), (8, 15), e_snap.id, kind=KINDS.get(e_snap.kind))
                 self._enemy_entities[e_snap.id] = enemy
                 self._enemy_buffers[e_snap.id] = SnapshotBuffer(max_size=20)
             self._enemy_buffers[e_snap.id].push(server_tick, e_snap)
@@ -947,10 +958,12 @@ class MultiplayerGameState(State):
                 {
                     "id": p.id,
                     "pos": list(p.pos),
-                    "vel": [p.velocity, 0.0],
+                    "vel": [p.velocity, getattr(p, "vy", 0.0)],
                     "age": p.timer,
                     "owner": p.owner,
                     "owner_id": p.owner_id,
+                    "gravity": getattr(p, "gravity", 0.0),
+                    "kind": getattr(p, "kind", "bullet"),
                 }
             )
             # Shot feedback for projectiles we did not fire ourselves
@@ -964,7 +977,9 @@ class MultiplayerGameState(State):
         if not hasattr(g, "projectiles") or not hasattr(g.projectiles, "_projectiles"):
             return
         for proj in g.projectiles._projectiles:
+            proj["vel"][1] += proj.get("gravity", 0.0)
             proj["pos"][0] += proj["vel"][0]
+            proj["pos"][1] += proj["vel"][1]
 
     # --- Collectables ---
 

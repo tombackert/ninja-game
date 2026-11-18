@@ -309,6 +309,10 @@ class UI:
         game.tilemap.render(game.display, offset=render_scroll)
         if getattr(game.tilemap, "water", None):
             game.tilemap.render_water_rock(game.display, render_scroll)
+        # Flames of the flame jets (the hazards' other parts are tiles)
+        hazards = getattr(game, "hazards", None)
+        if hazards is not None and getattr(hazards, "jets", None):
+            hazards.render(game.display, render_scroll)
 
         # Enemies
         for enemy in game.enemies:

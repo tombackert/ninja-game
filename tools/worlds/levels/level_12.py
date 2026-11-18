@@ -1,8 +1,10 @@
 """Level 12 - Deep Caverns (stone).
 
 A drop shaft with a side exit (miss it and climb back up), a crawlway only
-two tiles high over pits that have to be dashed, a zigzag chimney, a large
-labyrinth with low corridors, an enemy gauntlet and a box-climbing hall
+two tiles high over pits that have to be dashed (spikes on the lip of one:
+the campaign's first spikes), a zigzag chimney, a large
+labyrinth with low corridors, an enemy gauntlet (spikes under its ceiling
+in two stretches) and a box-climbing hall
 up to the flag.
 """
 
@@ -42,7 +44,10 @@ def build() -> Level:
         lv.carve(px, cy + 1, px + w - 1, 37)  # pit into the lower tunnel
         lv.coin(px + w // 2, cy - 1)
     lv.carve(38, 33, 96, 37)  # lower tunnel (floor row 38) back to the chamber
-    for x in (44, 51, 60, 69, 77, 87, 93):
+    # Spikes on the lip of the fourth pit: the 4-wide pit dashes like a 5-wide
+    # one (the campaign's first spikes)
+    lv.spikes(70, cy, facing="up")
+    for x in (44, 51, 60, 68, 77, 87, 93):
         lv.enemy(x, cy)
     lv.coins(42, 37, 52, 2)
     lv.coins(60, 37, 70, 2)
@@ -85,6 +90,10 @@ def build() -> Level:
         lv.carve(px, gy, px + 3, 80)
         lv.coin(px + 1, gy - 2)
         lv.wp(px - 4, gy - 3, px - 1, gy - 1, ground=True, label=f"tunnel pit {px}")
+    # Spikes under the ceiling between two pairs of pits: no jumping over the
+    # enemies there, dash through them or shoot
+    lv.spikes(114, gy - 3, 123, facing="down")
+    lv.spikes(86, gy - 3, 95, facing="down")
     for x in (40, 48, 61, 75, 89, 103, 117, 131, 138):
         lv.enemy(x, gy - 1)
     lv.coins(36, gy - 2, 136, 6)

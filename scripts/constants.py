@@ -66,13 +66,14 @@ GRAPPLE_ARRIVE_DIST = 6  # release distance to anchor
 
 # Gear (passive items)
 SHIELD_REARM_FRAMES = 600  # ~10 s until next shield charge arms
+# A hit (bullet, star, spikes, flame, an enemy that hurts on touch) costs a
+# life, then the player blinks this long and nothing hits them
+HIT_INVULNERABLE_FRAMES = 90  # 1.5 s
+HIT_KNOCKBACK_X = 2.5  # touch hits throw the player away from what hit them ...
+HIT_KNOCKBACK_Y = -2.5  # ... and up
 AIR_JUMP_VELOCITY = -2.7  # moon boots double jump (weaker than ground jump)
 MAGNET_RADIUS = 48  # coin magnet attraction radius
 MAGNET_PULL_SPEED = 1.8  # coin movement toward player per frame
-ENEMY_SHOOT_BASE = 1.15  # base enemy projectile speed factor
-ENEMY_DIRECTION_BASE = 0.35  # base enemy walking direction magnitude
-ENEMY_DIRECTION_SCALE_LOG = 0.8  # scale for log(level+1) when walking
-ENEMY_SHOOT_SCALE_LOG = 0.59  # scale for log(level+1) when shooting
 SPARK_PARTICLE_SPEED_MAX = 5  # random() * this for spark speed
 SPARK_COUNT_ENEMY_HIT = 30  # sparks spawned when enemy killed or hit
 SPARK_COUNT_DASH_COLLIDE = 30  # sparks spawned when dash collision occurs

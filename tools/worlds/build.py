@@ -2,8 +2,9 @@
 
 For each level: build the geometry (tools/worlds/levels/level_<id>.py),
 write data/maps/<id>.json, plan the intended route with the exact physics
-replica (fails loudly at the first unreachable waypoint) and save the
-input plan to tools/worlds/plans/<id>.json for the real-game bot.
+replica (fails loudly at the first unreachable waypoint), check it against
+the flame jets' beat and the crumbling blocks (tools/worlds/hazard_check.py)
+and save the input plan to tools/worlds/plans/<id>.json for the real-game bot.
 
 With --assess, each level's difficulty is measured right after its route is
 planned: the timing windows of its elements and the calibrated time to the
@@ -67,6 +68,14 @@ def process_level(map_id: int, args) -> int:
             f"{dashes} dashes, planned in {res.seconds:.1f} s"
         )
         print(f"  planner: {res.summary()}")
+        if res.ok:
+            from tools.worlds.hazard_check import check_route
+
+            problems = check_route(lv.to_json()["map_data"]["tilemap"], spawn_px, res.frames, solids)
+            for line in problems:
+                print(f"  hazard {line}")
+            if problems:
+                failed = 1
         if res.ok:
             save_plan(map_id, spawn_px, res.frames, lv.route, res.segments)
             if args.assess:

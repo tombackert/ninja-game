@@ -35,7 +35,9 @@ import pygame
 from scripts.checkpoints import find_checkpoints
 from scripts.checkpoints import touch as touch_checkpoint
 from scripts.constants import AIR_TIME_FATAL, BREATH_FRAMES, DASH_MIN_ACTIVE_ABS, PROJECTILE_SPEED
+from scripts.enemy_kinds import SPAWNER_IDS, kind_for_variant
 from scripts.entities import Enemy, Player
+from scripts.hazards import HazardSystem
 from scripts.entity_id import EntityIDGenerator
 from scripts.projectile_system import ProjectileSystem
 from scripts.tilemap import Tilemap
@@ -138,14 +140,20 @@ class HeadlessGame:
         self.players: List[Player] = []
         self.enemies: List[Enemy] = []
 
-        # Extract spawn points (variant 0) and enemies (variant 1)
+        # Extract spawn points (variant 0) and enemies (the other variants name their kind)
         self._spawn_points: List[List[float]] = []
         self._spawn_index: int = 0
-        for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)], keep=False):
+        for spawner in self.tilemap.extract(SPAWNER_IDS, keep=False):
             if spawner["variant"] == 0:
                 self._spawn_points.append(list(spawner["pos"]))
             else:
-                self.enemies.append(Enemy(self, spawner["pos"], (8, 15), self._id_gen.next_id()))
+                kind = kind_for_variant(spawner["variant"])
+                self.enemies.append(Enemy(self, spawner["pos"], (8, 15), self._id_gen.next_id(), kind=kind))
+
+        # Spikes, crumbling blocks and flame jets (deaths by touch in Player.update).
+        # Their clock runs on the server tick, which clients see in every snapshot.
+        self.hazards = HazardSystem(self.tilemap)
+        self.hazards.clock = getattr(self, "tick", 0)
 
         # Collectables with stable IDs (extraction order: coins, then ammo —
         # must mirror CollectableManager.load_collectables_from_tilemap)
@@ -249,6 +257,7 @@ class HeadlessGame:
         player.jumps = 1
         player.breath = BREATH_FRAMES
         player.swim_cooldown = 0
+        player.invulnerable = 0
 
     def _nearest_player(self, enemy: Enemy) -> Optional[Player]:
         """Find the player closest to an enemy (AI targeting)."""
@@ -266,6 +275,9 @@ class HeadlessGame:
         projectiles, collectables, deaths/respawns)."""
         self.tick += 1
 
+        # Hazards' clock and crumbling blocks first, as Game.step does
+        self.hazards.update(self.players)
+
         # --- Players: one physics step per input + fatal fall / drowning ---
         for player in self.players:
             steps = self._pending_steps.get(player.id)
@@ -275,7 +287,9 @@ class HeadlessGame:
                 for action in actions:
                     self._apply_action(player, action)
                 player.update(self.tilemap, movement)
-                # fell (out of the level or for too long) or drowned
+                # fell (out of the level or for too long) or drowned; spikes,
+                # flames and enemies that hurt on touch cost a life in update
+                # (Player.take_hit), the last one respawns below
                 if player.air_time > AIR_TIME_FATAL or player.breath <= 0 or player.fell_out(self.tilemap):
                     self._respawn(player, lose_life=True)
                 else:
@@ -306,10 +320,12 @@ class HeadlessGame:
                     self.enemies.remove(enemy)
                     break
 
+        self.hazards.burn_enemies(self.enemies)
+
         # --- Projectiles (handles enemy hits, PvP hits, tile impacts) ---
         self.projectiles.update(self.tilemap, self.players, self.enemies)
 
-        # --- Respawn players killed by projectiles ---
+        # --- Respawn players whose last life a hit took ---
         for player in self.players:
             if player.lives < 1:
                 self._respawn(player, lose_life=False)

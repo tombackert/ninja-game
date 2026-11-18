@@ -16,8 +16,11 @@ import os
 import random
 from collections import deque
 
+from scripts.enemy_kinds import get_kind
+from scripts.hazards import CRUMBLE, DOWN, FLAME_ON, FLAME_PERIOD, FLAMEJET, LEFT, RIGHT, SPIKES, UP
 from scripts.water import water_leaks, water_to_rows
-from tools.worlds.physics import Terrain
+from tools.worlds import roster
+from tools.worlds.physics import Terrain, lethal_from_tiles
 from tools.worlds.planner import Waypoint
 
 AUTOTILE_MAP = {
@@ -45,6 +48,9 @@ LARGE_DECOR_SIZE = {
     8: (17, 22),
     9: (19, 13),
 }
+
+FACINGS = {"up": UP, "down": DOWN, "left": LEFT, "right": RIGHT}
+CAST = -1  # spawner variant of an enemy whose kind the level's cast picks on save
 
 # Water flows (scripts/water.py)
 STILL, RIGHT, LEFT, UP, DOWN = range(5)
@@ -90,6 +96,7 @@ class Level:
         self.route: list[Waypoint] = []
         self.spawn_tile: tuple[int, int] | None = None
         self.obstacles: list[dict] = []  # declared for the shortcut checker (tools/worlds/shortcuts.py)
+        self.fixed: dict[tuple[int, int], dict] = {}  # solid tiles with their own variant (hazards), + fields
 
     # --- terrain ---------------------------------------------------------
     def rect(self, x0, y0, x1, y1, t: str | None = None):
@@ -132,8 +139,34 @@ class Level:
         self._obj(x, y, "spawners", 0)
         self.spawn_tile = (x, y)
 
-    def enemy(self, x, y):
-        self._obj(x, y, "spawners", 1)
+    def enemy(self, x, y, kind: str | None = None):
+        """An enemy standing on air tile (x, y). `kind` (scripts/enemy_kinds.py):
+        gunner, patrol, turret, chaser or jumper; None lets the level's cast
+        pick one for the spot (tools/worlds/roster.py)."""
+        self._obj(x, y, "spawners", CAST if kind is None else get_kind(kind).variant)
+
+    # --- hazards (scripts/hazards.py) -------------------------------------
+    def spikes(self, x0, y, x1=None, facing: str = "up"):
+        """Spikes on tiles x0..x1 of row y (air tiles), points to `facing`:
+        "up" on the ground below, "down" under the ceiling above, "left" /
+        "right" on the wall to the right / left of the tile."""
+        for x in range(min(x0, x1 if x1 is not None else x0), max(x0, x1 if x1 is not None else x0) + 1):
+            self._obj(x, y, SPIKES, FACINGS[facing])
+
+    def crumble(self, x0, y, x1=None):
+        """Crumbling blocks on tiles x0..x1 of row y: solid until a player has
+        stood on one for CRUMBLE_DELAY frames."""
+        for x in range(min(x0, x1 if x1 is not None else x0), max(x0, x1 if x1 is not None else x0) + 1):
+            self.solid[(x, y)] = CRUMBLE
+            self.fixed[(x, y)] = {"variant": 0}
+
+    def flamejet(self, x, y, facing: str = "up", period: int = FLAME_PERIOD, on: int = FLAME_ON, phase: int = 0):
+        """A flame jet nozzle (a solid block) at (x, y) firing `facing` for
+        `on` of every `period` frames, `phase` frames ahead of the beat."""
+        if not 0 < on < period:
+            raise ValueError(f"level {self.map_id}: flame jet at {(x, y)}: on {on} must lie in 1..period-1")
+        self.solid[(x, y)] = FLAMEJET
+        self.fixed[(x, y)] = {"variant": FACINGS[facing], "period": period, "on": on, "phase": phase}
 
     def coin(self, x, y):
         self._obj(x, y, "coin", 0)
@@ -195,9 +228,15 @@ class Level:
             raise ValueError(f"level {self.map_id}: water would run out into {leaks[:12]}")
         tilemap = {}
         for (x, y), t in self.solid.items():
+            fixed = self.fixed.get((x, y))
+            if fixed is not None and t in (CRUMBLE, FLAMEJET):
+                tilemap[f"{x};{y}"] = {"type": t, "pos": [x, y], **fixed}
+                continue
             nb = {o for o in ((1, 0), (-1, 0), (0, -1), (0, 1)) if self.solid.get((x + o[0], y + o[1])) == t}
             tilemap[f"{x};{y}"] = {"type": t, "variant": autotile_variant(nb), "pos": [x, y]}
         for (x, y), (kind, variant) in self.objects.items():
+            if kind == "spawners" and variant == CAST:
+                variant = get_kind(roster.cast(self.map_id, self.is_solid, x, y)).variant
             tilemap[f"{x};{y}"] = {"type": kind, "variant": variant, "pos": [x, y]}
         meta = {
             "map": self.map_id,
@@ -225,13 +264,14 @@ class Level:
         return path
 
     def solids(self) -> Terrain:
-        return Terrain(self.solid, dict(self.water_tiles))
+        spikes = [{"type": k, "variant": v, "pos": [x, y]} for (x, y), (k, v) in self.objects.items() if k == SPIKES]
+        return Terrain(self.solid, dict(self.water_tiles), lethal_from_tiles(spikes))
 
     def stats(self) -> dict:
         xs = [x for x, _ in self.solid]
         ys = [y for _, y in self.solid]
         kinds = [k for k, _v in self.objects.values()]
-        enemies = sum(1 for k, v in self.objects.values() if k == "spawners" and v == 1)
+        enemies = sum(1 for k, v in self.objects.values() if k == "spawners" and v != 0)
         return {
             "size": (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1),
             "tiles": len(self.solid),

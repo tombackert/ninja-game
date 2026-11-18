@@ -44,6 +44,10 @@ class Editor:
             "flag": load_images("tiles/collectables/flag"),
             "reef": load_images("tiles/reef"),
             "wreck": load_images("tiles/wreck"),
+            # Hazards (scripts/hazards.py); variant = facing for spikes and flame jets
+            "spikes": load_images("tiles/spikes"),
+            "crumble": load_images("tiles/crumble")[:1],
+            "flamejet": load_images("tiles/flamejet"),
             # Water layer brush: the variant is the flow (0 still, 1-4 a current)
             "water": load_images("tiles/water"),
             # Checkpoint banner, drawn from its tile down: place it one tile over

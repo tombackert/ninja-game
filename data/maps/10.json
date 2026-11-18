@@ -166052,7 +166052,7 @@
             },
             "-9;18": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     -9,
                     18
@@ -166068,7 +166068,7 @@
             },
             "-14;30": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 5,
                 "pos": [
                     -14,
                     30
@@ -166076,7 +166076,7 @@
             },
             "-6;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 5,
                 "pos": [
                     -6,
                     57
@@ -166092,7 +166092,7 @@
             },
             "11;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 3,
                 "pos": [
                     11,
                     57
@@ -166116,7 +166116,7 @@
             },
             "36;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     36,
                     57
@@ -166132,7 +166132,7 @@
             },
             "67;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     67,
                     57
@@ -166140,7 +166140,7 @@
             },
             "89;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     89,
                     57
@@ -166156,7 +166156,7 @@
             },
             "124;57": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     124,
                     57
@@ -166164,7 +166164,7 @@
             },
             "126;11": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     126,
                     11
@@ -166188,7 +166188,7 @@
             },
             "108;32": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 3,
                 "pos": [
                     108,
                     32
@@ -166196,7 +166196,7 @@
             },
             "116;39": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     116,
                     39
@@ -166236,7 +166236,7 @@
             },
             "67;46": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     67,
                     46
@@ -166268,7 +166268,7 @@
             },
             "60;11": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     60,
                     11
@@ -166276,7 +166276,7 @@
             },
             "58;7": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     58,
                     7
@@ -166284,7 +166284,7 @@
             },
             "63;3": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     63,
                     3
@@ -166292,7 +166292,7 @@
             },
             "64;-1": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     64,
                     -1
@@ -166308,7 +166308,7 @@
             },
             "79;19": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     79,
                     19
@@ -166324,7 +166324,7 @@
             },
             "24;21": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     24,
                     21
@@ -166332,7 +166332,7 @@
             },
             "2;12": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     2,
                     12

@@ -27,10 +27,12 @@ class EntitySnapshot:
     dashing: int = 0
     shoot_cooldown: int = 0
     walking: int = 0  # Enemy specific
+    kind: str = ""  # Enemy specific: its kind (scripts/enemy_kinds.py)
     coins: int = 0  # Player specific (multiplayer score)
     ammo: int = 0  # Player specific (multiplayer)
     breath: int = BREATH_FRAMES  # Player specific (water world)
     swim_cooldown: int = 0  # Player specific (water world)
+    invulnerable: int = 0  # Player specific: frames left blinking after a hit
 
 
 @dataclass
@@ -41,6 +43,9 @@ class ProjectileSnapshot:
     timer: float
     owner: str
     owner_id: int | None = None  # Player ID who fired this projectile
+    vy: float = 0.0  # vertical speed (arcing projectiles: thrown stars)
+    gravity: float = 0.0
+    kind: str = "bullet"  # "bullet" or "star" (drawn spinning)
 
 
 @dataclass
@@ -93,6 +98,7 @@ class SnapshotService:
                 ammo=_int_attr(p, "mp_ammo"),
                 breath=_int_attr(p, "breath", BREATH_FRAMES),
                 swim_cooldown=_int_attr(p, "swim_cooldown"),
+                invulnerable=_int_attr(p, "invulnerable"),
             )
             players.append(player_snap)
 
@@ -109,6 +115,7 @@ class SnapshotService:
                     action=e.action,
                     owner_id=None,  # Enemies are server-owned in multiplayer
                     walking=e.walking,
+                    kind=getattr(getattr(e, "kind", None), "name", ""),
                 )
                 enemies.append(enemy_snap)
 
@@ -124,6 +131,9 @@ class SnapshotService:
                     timer=p["age"],
                     owner=p["owner"],
                     owner_id=p.get("owner_id"),
+                    vy=p["vel"][1],
+                    gravity=p.get("gravity", 0.0),
+                    kind=p.get("kind", "bullet"),
                 )
                 projectiles.append(proj_snap)
 
@@ -172,6 +182,7 @@ class SnapshotService:
                 p.shoot_cooldown = p_snap.shoot_cooldown
                 p.breath = p_snap.breath
                 p.swim_cooldown = p_snap.swim_cooldown
+                p.invulnerable = p_snap.invulnerable
 
         # Restore Enemies
         for i, e_snap in enumerate(snapshot.enemies):
@@ -193,10 +204,12 @@ class SnapshotService:
                     proj = {
                         "id": proj_snap.id,
                         "pos": list(proj_snap.pos),
-                        "vel": [proj_snap.velocity, 0.0],
+                        "vel": [proj_snap.velocity, proj_snap.vy],
                         "age": proj_snap.timer,
                         "owner": proj_snap.owner,
                         "owner_id": proj_snap.owner_id,
+                        "gravity": proj_snap.gravity,
+                        "kind": proj_snap.kind,
                     }
                     game.projectiles._projectiles.append(proj)
 

@@ -179,14 +179,10 @@ class ProjectileSystem:
                     for player in players:
                         if getattr(player, "id", None) == proj.get("owner_id"):
                             continue  # never hit the shooter
-                        if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                        if self._can_hit(player, rect):
                             if proj in self._projectiles:
                                 self._projectiles.remove(proj)
-                                if not self._try_absorb(player):
-                                    player.lives -= 1
-                                self.game.audio.play("hit")
-                                self.game.screenshake = max(16, self.game.screenshake)
-                                spawn_hit_sparks(self.game, player.rect().center)
+                                self._hit(player, proj)
                                 hits_player += 1
                                 removed += 1
                             break
@@ -194,16 +190,10 @@ class ProjectileSystem:
                 # Player damage (skip if heavily dashing similar to old logic)
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
                 for player in players:
-                    if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                    if self._can_hit(player, rect):
                         if proj in self._projectiles:
                             self._projectiles.remove(proj)
-                            absorbed = self._try_absorb(player)
-                            if not absorbed:
-                                player.lives -= 1
-                            death_log.record_hit(self.game, player, absorbed)
-                            self.game.audio.play("hit")
-                            self.game.screenshake = max(16, self.game.screenshake)
-                            spawn_hit_sparks(self.game, player.rect().center)
+                            self._hit(player, proj)
                             hits_player += 1
                             removed += 1
                         break
@@ -214,6 +204,29 @@ class ProjectileSystem:
             "hits_enemy": hits_enemy,
             "active": len(self._projectiles),
         }
+
+    @staticmethod
+    def _can_hit(player, rect) -> bool:
+        """A projectile hits a player it touches, unless they dash or still
+        blink from the last hit (Player.take_hit)."""
+        blinking = getattr(player, "invulnerable", 0)
+        if isinstance(blinking, int) and blinking > 0:
+            return False
+        return abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect)
+
+    def _hit(self, player, proj) -> None:
+        """Cost `player` a life (Player.take_hit: shield, blinking, log)."""
+        take_hit = getattr(player, "take_hit", None)
+        if callable(take_hit):
+            take_hit("star" if proj.get("kind") == "star" else "bullet")
+            return
+        absorbed = self._try_absorb(player)  # a stand-in player without take_hit
+        if not absorbed:
+            player.lives -= 1
+        death_log.record_hit(self.game, player, absorbed)
+        self.game.audio.play("hit")
+        self.game.screenshake = max(16, self.game.screenshake)
+        spawn_hit_sparks(self.game, player.rect().center)
 
     @staticmethod
     def _try_absorb(player) -> bool:

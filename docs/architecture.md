@@ -116,14 +116,17 @@ This allows proper delta compression even when entities are reordered or dynamic
 ## 5. AI & Behavior
 AI logic is decoupled from Entity classes using a **Strategy Pattern**.
 - **Policy Interface:** `scripts/ai/core.py`. Defines `decide(entity, context) -> intentions`.
-- **Behaviors:**
-    - `ScriptedEnemy`: Legacy random walk + shoot.
-    - `Patrol`: Back-and-forth movement, no shooting.
-    - `Shooter`: Stationary tracking turret, shoots when player aligned.
-    - `Chaser`: Actively pursues player within territory, jumps obstacles.
-    - `Jumper`: Patrols with frequent jumps, harder to hit.
-- **Integration:** Enemies are initialized with a policy name. `Enemy.update` delegates decision making to the policy.
-- **Difficulty Scaling:** Shoot probability scales with `log(level + 1)` via RNGService.
+- **Enemy kinds** (`scripts/enemy_kinds.py`): each kind has fixed numbers (speed, bullet speed, sight, fire period, hurts on touch) and a behavior in `scripts/ai/behaviors.py`. The map stores the kind as the enemy spawner's variant, so the editor places a kind by its spawner image and old maps (variant 1) keep the gunner.
+    - `gunner` (1, red): wanders, stops, fires along its line of sight (range: just past the frame edge).
+    - `patrol` (2, amber): walks its platform edge to edge without a pause; no gun, hurts on touch.
+    - `turret` (3, steel): stands, turns to the player, fires on a fixed beat after a wind-up.
+    - `chaser` (4, purple): wakes when the player comes near and runs at them; stops at edges; hurts on touch.
+    - `jumper` (5, green): hops along its platform; hurts on touch, so it cannot simply be jumped over.
+    - `thrower` (6, teal): paces 2.5 tiles to either side of its spawn and throws ninja stars in an arc aimed at the player (only when the arc reaches them), on a fixed beat; a ledge is no cover.
+    - Walkers turn at walls, edges, spikes and flame jets' reach. An armed enemy holds its fire while one close by just fired (cluster rule).
+- **Integration:** `Enemy(kind=...)` picks the kind's policy, palette-swapped animation (`entities/enemy/<kind>/`, made by `tools/gen_hazard_art.py`) and numbers. `Enemy.update` delegates decision making to the policy.
+- **Difficulty:** no scaling with the level number. A level's difficulty comes from its cast: which kinds stand where (`tools/worlds/roster.py` introduces the kinds over the campaign and fills in spawners a level script leaves open). Every hit costs a life without a respawn: a bullet, a thrown star, touching a patrol, chaser or jumper, spikes or a flame (`Player.take_hit`). The player is thrown back from a touch and blinks for `HIT_INVULNERABLE_FRAMES` (1.5 s), during which nothing hits them; an armed shield takes the hit instead. Only falls and drowning are deaths (respawn at the last banner).
+- **Hazards** (`scripts/hazards.py`, `HazardSystem` built per level load): spikes (hurt, not solid), crumbling blocks (fall `CRUMBLE_DELAY` frames after a step, come back later) and flame jets (burn on a beat: `period`, `on`, `phase` tile fields). Their clock counts ticks since the level was (re)loaded, so every attempt starts on the same beat. The route planner sees spikes; `tools/worlds/hazard_check.py` checks a planned route against flames and crumbling blocks.
 
 ---
 ## 6. Audio System

@@ -1,7 +1,8 @@
 """Level 11 - Sky Ruins (grass islands, stone ruins).
 
 Pillar run over the void, a 7-tile dash chasm, a 4-wide wall-jump chimney
-up a ruined tower, floating box stairs, a ruin labyrinth whose low
+up a ruined tower, floating box stairs (two of them crumbling clay, the
+campaign's first crumbling blocks), a ruin labyrinth whose low
 corridors cap every jump, a 5-wide chimney between two sky spires and a
 fortress gauntlet before the flag island.
 """
@@ -75,10 +76,15 @@ def build() -> Level:
     lv.enemy(101, 55)
     lv.enemy(104, 55)
     lv.wp(104, 55, 106, 55, ground=True, label="bridge end")
-    # mostly single crates: 3-tile gaps, rising up to 2 per jump
+    # mostly single crates: 3-tile gaps, rising up to 2 per jump. The two level
+    # ones are loose clay: they fall half a second after a landing, so the
+    # hop across them has to keep going (the first crumbling blocks)
     stairs = [(110, 54, 2), (115, 52, 1), (119, 51, 1), (123, 49, 1), (127, 49, 1), (131, 47, 2), (136, 45, 1)]
     for bx, by, w in stairs:
-        box(lv, bx, by, w, 2)
+        if bx in (123, 127):
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, w, 2)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, bx + w - 1, by - 1, ground=True, label=f"crate {bx}")
 

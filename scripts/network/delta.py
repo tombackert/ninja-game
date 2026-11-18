@@ -237,10 +237,12 @@ def copy_entity(e: EntitySnapshot) -> EntitySnapshot:
         dashing=e.dashing,
         shoot_cooldown=e.shoot_cooldown,
         walking=e.walking,
+        kind=e.kind,
         coins=e.coins,
         ammo=e.ammo,
         breath=e.breath,
         swim_cooldown=e.swim_cooldown,
+        invulnerable=e.invulnerable,
     )
 
 
@@ -252,6 +254,9 @@ def copy_projectile(p: ProjectileSnapshot) -> ProjectileSnapshot:
         timer=p.timer,
         owner=p.owner,
         owner_id=p.owner_id,
+        vy=p.vy,
+        gravity=p.gravity,
+        kind=p.kind,
     )
 
 
@@ -281,6 +286,8 @@ def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
         d["shoot_cooldown"] = b.shoot_cooldown
     if a.walking != b.walking:
         d["walking"] = b.walking
+    if a.kind != b.kind:
+        d["kind"] = b.kind
     if a.coins != b.coins:
         d["coins"] = b.coins
     if a.ammo != b.ammo:
@@ -289,6 +296,8 @@ def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
         d["breath"] = b.breath
     if a.swim_cooldown != b.swim_cooldown:
         d["swim_cooldown"] = b.swim_cooldown
+    if a.invulnerable != b.invulnerable:
+        d["invulnerable"] = b.invulnerable
     return d
 
 
@@ -307,7 +316,9 @@ def diff_projectile(a: ProjectileSnapshot, b: ProjectileSnapshot) -> Dict[str, A
         d["timer"] = b.timer
     if a.owner_id != b.owner_id:
         d["owner_id"] = b.owner_id
-    # owner (string) usually constant
+    if a.vy != b.vy:
+        d["vy"] = b.vy
+    # owner, gravity and kind are constant
     return d
 
 

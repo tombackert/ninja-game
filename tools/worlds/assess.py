@@ -405,7 +405,7 @@ def _measure(
         "level": map_id,
         "source": source,
         "size": [max(xs) - min(xs) + 1, max(ys) - min(ys) + 1],
-        "enemies": sum(1 for t in tiles if t["type"] == "spawners" and t["variant"] == 1),
+        "enemies": sum(1 for t in tiles if t["type"] == "spawners" and t["variant"] != 0),
         "coins": sum(1 for t in tiles if t["type"] == "coin"),
         "seconds": round(len(frames) / 60, 1),
         "jumps": jumps,

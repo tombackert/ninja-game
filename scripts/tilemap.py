@@ -37,7 +37,8 @@ NEIGHBOR_OFFSET = [
     (0, 1),
     (1, 1),
 ]
-PHYSICS_TILES = {"grass", "stone", "sand", "mars", "reef", "wreck"}  # things an entity can colid with
+# things an entity can collide with (crumble: crumbling blocks, flamejet: flame jet nozzles, scripts/hazards.py)
+PHYSICS_TILES = {"grass", "stone", "sand", "mars", "reef", "wreck", "crumble", "flamejet"}
 AUTOTILE_TILES = {"grass", "stone", "sand", "mars", "reef", "wreck"}
 
 

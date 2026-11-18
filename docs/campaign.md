@@ -47,11 +47,11 @@ A ninja sets out from the floating islands over the clouds, finds the way down i
 
 | # | Name | Story setting | Gameplay |
 | --- | --- | --- | --- |
-| 11 | Sky Ruins | The ruins of a city on the islands | Pillar run, a dash chasm, a chimney up a ruined tower, a ruin labyrinth |
-| 12 | Deep Caverns | Caves under the mountains | A drop shaft, a low crawlway over pits, a zigzag chimney, a labyrinth |
+| 11 | Sky Ruins | The ruins of a city on the islands | Pillar run, a dash chasm, a chimney up a ruined tower, crumbling crates (first crumbling blocks), a ruin labyrinth |
+| 12 | Deep Caverns | Caves under the mountains | A drop shaft, a low crawlway over pits (first spikes), a zigzag chimney, a labyrinth, a gauntlet under ceiling spikes |
 | 13 | Crate Tower | A storehouse tower full of crates | Six storeys, each a different climb up to the hole in the floor above |
 | 14 | Desert | The first desert: dunes, a canyon, a pyramid | Quicksand, sandstone pillars, a stepped pyramid with a tomb labyrinth |
-| 15 | Mars | The first landing on Mars | Crater dashes, a mesa chimney, lava tubes, the launch pad |
+| 15 | Mars | The first landing on Mars | Crater dashes, a mesa chimney, lava tubes under flaming vents (first flame jets), the launch pad |
 | 16 | Sandstone Canyons | A plateau cut by canyons | Pillar runs, holed chimneys, wall bounces, a cave labyrinth |
 | 17 | Sky Fortress | A castle on an island in the sky | Moat, murder holes, battlements, a sky bridge to the floating keep |
 | 18 | Mars Caverns | Lava caverns under the Martian crust | Stalagmites, a free-standing chimney, a tube labyrinth, lava pits |

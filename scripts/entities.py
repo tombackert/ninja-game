@@ -13,8 +13,6 @@ from scripts.constants import (
     DASH_MIN_ACTIVE_ABS,
     DASH_SPEED,
     DASH_TRAIL_PARTICLE_SPEED,
-    ENEMY_SHOOT_BASE,
-    ENEMY_SHOOT_SCALE_LOG,
     GRAPPLE_ARRIVE_DIST,
     GRAPPLE_MAX_FRAMES,
     GRAPPLE_PULL_SPEED,
@@ -23,6 +21,9 @@ from scripts.constants import (
     JUMP_VELOCITY,
     MAX_FALL_SPEED,
     SHIELD_REARM_FRAMES,
+    HIT_INVULNERABLE_FRAMES,
+    HIT_KNOCKBACK_X,
+    HIT_KNOCKBACK_Y,
     SWIM_STROKE_COOLDOWN,
     SWIM_STROKE_VELOCITY,
     WALL_JUMP_HORIZONTAL_VEL,
@@ -35,8 +36,11 @@ from scripts.constants import (
     WATER_MAX_SINK,
     WATER_MOVE_SCALE,
 )
+from scripts.death_log import record_hit
 from scripts.death_log import set_cause as set_death_cause
 from scripts.effects_util import spawn_hit_sparks
+from scripts.enemy_kinds import CLUSTER_HOLD, get_kind
+from scripts.hazards import HazardSystem
 from scripts.particle import Particle
 from scripts.policy_service import PolicyService
 from scripts.rng_service import RNGService
@@ -184,11 +188,33 @@ class PhysicsEntity:
 
 class Enemy(PhysicsEntity):
     def __init__(
-        self, game, pos, size=(15, 8), id=0, services: ServiceContainer | None = None, policy: str = "scripted_enemy"
+        self,
+        game,
+        pos,
+        size=(15, 8),
+        id=0,
+        services: ServiceContainer | None = None,
+        policy: str | None = None,
+        kind=None,
     ):
+        """`kind`: an EnemyKind or its name (scripts/enemy_kinds.py, default the
+        gunner); `policy` overrides the kind's behavior by name."""
+        self.kind = get_kind(kind)  # before set_action picks the kind's animation
         super().__init__(game, "enemy", pos, size, id, services=services)
-        self.walking = 0
-        self.policy = PolicyService.get(policy)
+        self.walking = 0  # gunner: frames left of the current walk
+        self.cooldown = 0  # turret: frames to the next shot; jumper: to the next hop
+        self.awake = False  # chaser: hunting the player; turret: the player is in sight
+        self.since_shot = CLUSTER_HOLD  # frames since this enemy last fired
+        self.home = self.pos[0]  # thrower: paces around where it spawned
+        self.pause = 0  # thrower: frames it stands after a throw
+        self.policy = PolicyService.get(policy or self.kind.policy)
+
+    def set_action(self, action):
+        if action != self.action:
+            self.action = action
+            assets = self.game.assets
+            key = f"enemy/{self.kind.name}/{action}"
+            self.animation = (assets[key] if key in assets else assets["enemy/" + action]).copy()
 
     def update(self, tilemap, movement=(0, 0)):
         rng = RNGService.get()
@@ -202,31 +228,47 @@ class Enemy(PhysicsEntity):
         combined_movement = (movement[0] + intent_movement[0], movement[1] + intent_movement[1])
 
         # Apply jump intent
-        if decision.get("jump") and self.collisions["down"]:
-            self.velocity[1] = JUMP_VELOCITY
+        if decision.get("jump") and (self.collisions["down"] or decision.get("jump_velocity")):
+            self.velocity[1] = decision.get("jump_velocity", JUMP_VELOCITY)
+
+        self.since_shot += 1
 
         # Apply shooting intent
-        if decision.get("shoot"):
+        shoot_dir = decision.get("shoot_direction", 0) if decision.get("shoot") else 0
+        if shoot_dir != 0 and self.kind.armed:
             if self.services:
                 self.services.play("shoot")
             else:
                 self.game.audio.play("shoot")
+            self.since_shot = 0
+            # Spawn clear of the enemy's own body (ProjectileSystem checks the owner too)
+            spawn_x = self.rect().centerx + (15 if shoot_dir > 0 else -15)
+            (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+                spawn_x,
+                self.rect().centery,
+                shoot_dir * self.kind.bullet_speed,
+                "enemy",
+            )
 
-            shoot_dir = decision.get("shoot_direction", 0)
-            if shoot_dir != 0:
-                direction = (
-                    shoot_dir * ENEMY_SHOOT_BASE * (1 + ENEMY_SHOOT_SCALE_LOG * math.log(settings.selected_level + 1))
-                )
-                # Ensure we spawn slightly offset to avoid self-hit immediately if not careful,
-                # though ProjectileSystem handles owner check.
-                # Original logic used centerx +/- 15.
-                spawn_x = self.rect().centerx + (15 if shoot_dir > 0 else -15)
-                (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
-                    spawn_x,
-                    self.rect().centery,
-                    direction,
-                    "enemy",
-                )
+        # A thrown star: an arc (scripts/ai/behaviors.py, throw_velocity)
+        throw = decision.get("throw")
+        if throw and self.kind.armed:
+            if self.services:
+                self.services.play("shoot")
+            else:
+                self.game.audio.play("shoot")
+            self.since_shot = 0
+            vx, vy = throw
+            r = self.rect()
+            (self.services.projectiles.spawn if self.services else self.game.projectiles.spawn)(
+                r.centerx + (6 if vx > 0 else -6),
+                r.top + 3,
+                vx,
+                "enemy",
+                vy=vy,
+                gravity=self.kind.throw_gravity,
+                kind="star",
+            )
 
         super().update(tilemap, movement=combined_movement)
 
@@ -260,6 +302,15 @@ class Enemy(PhysicsEntity):
     def render(self, surf, offset=(0, 0)):
         super().render(surf, offset=offset)
 
+        if not self.kind.armed:
+            return
+        if self.kind.projectile == "star":
+            # a star in the raised hand, ready to throw (gone for the follow-through)
+            star = self.game.assets.get("star") if hasattr(self.game.assets, "get") else None
+            if star is not None and not self.pause:
+                hx = self.rect().centerx + (-6 if self.flip else 6) - star.get_width() // 2
+                surf.blit(star, (hx - offset[0], self.rect().top - 2 - offset[1]))
+            return
         if self.flip:
             surf.blit(
                 pygame.transform.flip(self.game.assets["gun"], True, False),
@@ -311,6 +362,7 @@ class Player(PhysicsEntity):
         self.shield_rearm = 0  # frames until next charge arms
         # Water world
         self.breath = BREATH_FRAMES  # frames left before drowning, full while the head is dry
+        self.invulnerable = 0  # frames left blinking after a hit, nothing hits meanwhile (take_hit)
         self.swim_cooldown = 0  # frames until the next swim stroke
 
     # --- New canonical attribute ---
@@ -361,6 +413,51 @@ class Player(PhysicsEntity):
         self.shield_ready = False
         self.shield_rearm = SHIELD_REARM_FRAMES
         spawn_hit_sparks(self.game, self.rect().center)
+        return True
+
+    def touch_damage(self) -> "tuple[str, float] | None":
+        """What hurts the player where they stand this frame and where it is:
+        (cause, x) with cause "spikes" or "flame" (scripts/hazards.py) or
+        "enemy" (a kind that hurts on touch, unless the player dashes through
+        it, which kills the enemy), or None."""
+        rect = self.rect()
+        hazards = getattr(self.game, "hazards", None)
+        if isinstance(hazards, HazardSystem):
+            touch = hazards.touching(rect)
+            if touch:
+                return touch[0], touch[1].centerx
+        if abs(self.dashing) < DASH_MIN_ACTIVE_ABS:
+            enemies = getattr(self.game, "enemies", None)
+            for enemy in enemies if isinstance(enemies, list) else ():
+                kind = getattr(enemy, "kind", None)
+                if getattr(kind, "contact", False) is True and enemy.rect().colliderect(rect):
+                    return "enemy", enemy.rect().centerx
+        return None
+
+    def take_hit(self, cause: str, source_x: float | None = None) -> bool:
+        """A hit costs a life (an armed shield takes it instead), then the
+        player blinks HIT_INVULNERABLE_FRAMES long and nothing hits them. A
+        touch (source_x given) also throws them away from what hit them and
+        up. Returns False if they are still blinking from the last hit."""
+        if self.invulnerable > 0:
+            return False
+        absorbed = self.absorb_hit()
+        if not absorbed:
+            self.lives -= 1
+        record_hit(self.game, self, absorbed, cause)
+        self.invulnerable = HIT_INVULNERABLE_FRAMES
+        if source_x is not None:
+            away = 1 if self.rect().centerx >= source_x else -1
+            self.velocity[0] = away * HIT_KNOCKBACK_X
+            self.velocity[1] = HIT_KNOCKBACK_Y
+            self.dashing = 0
+            self.grapple_point = None
+        if not absorbed:
+            spawn_hit_sparks(self.game, self.rect().center)
+        audio = self.services.audio if self.services else getattr(self.game, "audio", None)
+        if audio is not None:
+            audio.play("hit")
+        self.game.screenshake = max(16, getattr(self.game, "screenshake", 0))
         return True
 
     def head_in_water(self, tilemap) -> bool:
@@ -437,6 +534,13 @@ class Player(PhysicsEntity):
         else:
             self.breath = BREATH_FRAMES
 
+        # Spikes, a flame or an enemy that hurts on touch cost a life
+        if self.invulnerable > 0:
+            self.invulnerable -= 1
+        else:
+            touch = self.touch_damage()
+            if touch:
+                self.take_hit(*touch)
         if self.air_time > AIR_TIME_FATAL or self.breath <= 0 or self.fell_out(tilemap):
             if self.fell_out(tilemap):
                 set_death_cause(self.game, "fell_out", self)
@@ -572,7 +676,14 @@ class Player(PhysicsEntity):
         "Grapple Hook": ("hook", "grapple_hook"),
     }
 
+    def blink_hidden(self) -> bool:
+        """True on the frames a hit player is not drawn (they blink)."""
+        inv = self.invulnerable
+        return isinstance(inv, int) and inv > 0 and (inv // 4) % 2 == 1
+
     def render(self, surf, offset=(0, 0)):
+        if self.blink_hidden():
+            return
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
 

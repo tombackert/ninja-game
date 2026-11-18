@@ -9,10 +9,12 @@ name its cause (`set_cause`; the first cause of a death wins):
 - `Player.update` (scripts/entities.py): "air_time", "fell_out" (below the
   kill line), "breath";
 - the R key (scripts/keyboardManager.py): "restart";
-- the death block itself: "out_of_lives" (bullets took the last life).
+- the death block itself: "out_of_lives" (hits took the last life).
 
-A bullet costs a life without a death (scripts/projectile_system.py), so it
-is logged as a "hit" event of its own. The log also notes the manual
+A hit costs a life without a death (`Player.take_hit`): a bullet or star
+(scripts/projectile_system.py), spikes or a flame (scripts/hazards.py), or
+an enemy kind that hurts on touch (scripts/enemy_kinds.py). It is logged as
+a "hit" event of its own, with its cause. The log also notes the manual
 checkpoint ("save", the P key), the level's clear ("clear") and leaving the
 level unfinished ("quit"), so attempts per element can be counted: every
 attempt ends in a death, a clear or a quit.
@@ -105,10 +107,12 @@ def record_death(game, restart: bool) -> None:
         log.record_death(restart)
 
 
-def record_hit(game, player, absorbed: bool = False) -> None:
+def record_hit(game, player, absorbed: bool = False, cause: str = "bullet") -> None:
+    """A hit that cost a life (or the shield): cause "bullet", "star",
+    "spikes", "flame" or "enemy" (touch)."""
     log = _of(game)
     if log is not None and player is getattr(game, "player", None):
-        log.record_event("hit", absorbed=bool(absorbed), lives=_lives(player))
+        log.record_event("hit", cause=cause, absorbed=bool(absorbed), lives=_lives(player))
 
 
 def record_save(game) -> None:

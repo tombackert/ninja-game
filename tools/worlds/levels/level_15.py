@@ -1,8 +1,9 @@
 """Level 15 - Mars (mars rock, Mars sky).
 
 A crater field crossed by dash jumps, a 5-wide chimney up a mesa, single
-floating rocks over a chasm, lava tubes (a crawlway over pits and a tube
-labyrinth) and a zigzag shaft up to the launch pad with the flag.
+floating rocks over a chasm, lava tubes (a crawlway over pits under lava
+vents that flame on a beat, and a tube labyrinth) and a zigzag shaft up to
+the launch pad with the flag.
 """
 
 from tools.worlds.builder import Level, Maze, box, perforate, zigzag
@@ -90,7 +91,12 @@ def build() -> Level:
         lv.coin(px + 2, 33)
     lv.carve(176, 42, 214, 44)  # lower tube (floor row 45)
     lv.carve(176, 33, 177, 44)  # back up to the crawlway start (2-wide chimney)
-    for x in (183, 192, 201, 210):
+    # Lava vents in the tube's ceiling between the pits (the campaign's first
+    # flame jets): each burns down to the floor for 0.8 s of every 2 s, one
+    # after the other, so the crawl waits for its gap at each
+    for i, x in enumerate((192, 201, 210)):
+        lv.flamejet(x, 32, facing="down", period=120, on=48, phase=40 * i)
+    for x in (183, 191, 200, 211):
         lv.enemy(x, 34)
     lv.coins(180, 43, 212, 4)
     lv.wp(191, 33, 194, 34, ground=True, label="crawl 1")
