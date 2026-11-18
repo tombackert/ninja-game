@@ -28,9 +28,6 @@
   "accessories.coins": "Coins: ${}",
   "accessories.equipped": "Equipped {}",
   "accessories.locked": "Locked {}",
-  "accessories.tab_hint": "TAB switch list",
-  "accessories.equipped_weapon": "Weapon: {}",
-  "accessories.equipped_skin": "Skin: {}",
   "options.title": "Options",
   "options.music_volume": "Music Volume: {:3d}%",
   "options.sound_volume": "Sound Volume: {:3d}%",
@@ -77,7 +74,6 @@
   "mp.join_hint": "Enter host address, then press Enter",
   "mp.host_failed": "Could not start server",
   "accessories.gear": "Gear",
-  "accessories.equipped_gear": "Gear: {}",
   "hud.stars": "Stars: {}",
   "hud.shield": "Shield: {}",
   "mp.friends": "Join Friend",
@@ -100,6 +96,15 @@
   "mp.phase_stun": "Finding your address...",
   "mp.phase_asking": "Asking {name}'s game...",
   "mp.phase_punching": "Opening a path to {name}...",
-  "mp.phase_connected": "Connected"
+  "mp.phase_connected": "Connected",
+  "store.already_owned": "You already own {}",
+  "store.owned": "Owned",
+  "accessories.status_equipped": "Equipped",
+  "accessories.status_owned": "ENTER to equip",
+  "accessories.status_locked": "Locked - ${} in the Store",
+  "store.owned_count": "{} of {} owned",
+  "store.buy_status": "${} - ENTER to buy",
+  "store.stack_status": "${} - you have {}",
+  "store.hub_hint": "ENTER open / ESC back"
  }
 }

@@ -140,6 +140,20 @@ def player_screen_pos(g):
     return r.centerx - ox, r.centery - oy
 
 
+def select_row(d, widget, idx: int) -> None:
+    """Move a list's selection to `idx` with real arrow-key presses."""
+    cur = widget.selected_index
+    key = pygame.K_DOWN if idx > cur else pygame.K_UP
+    for _ in range(abs(idx - cur)):
+        d.press(key)
+
+
+def open_category(d, state, category: str) -> None:
+    """From a store/accessories hub, open one category page."""
+    select_row(d, state.widget, state.CATEGORIES.index(category))
+    d.press(pygame.K_RETURN, frames_after=3)
+
+
 # ---------------------------------------------------------------------------
 # Phases
 # ---------------------------------------------------------------------------
@@ -163,33 +177,38 @@ def phase_store(d: Driver) -> None:
     store = d.cur
     cm = store.cm
     start_coins = cm.coins
-    bought = {}
-    # Buy every item once (list order == store display order)
-    for idx, name in enumerate(store.options_raw):
-        cur_idx = store.widget.selected_index
-        key = pygame.K_DOWN if idx > cur_idx else pygame.K_UP
-        for _ in range(abs(idx - cur_idx)):
-            d.press(key)
-        before = cm.get_amount(name)
-        d.press(pygame.K_RETURN, frames_after=3)
-        after = cm.get_amount(name)
-        idef = cm.get_item_def(name)
-        bought[name] = after
-        check(
-            f"store.buy.{name.replace(' ', '_')}",
-            after == before + idef.increment,
-            f"amount {before}->{after} (price {idef.price})",
-        )
-    # Two extra shield charges + one extra ammo pack for the gameplay phase
-    for extra, presses in (("Shield", 2), ("Ammo", 1)):
-        idx = store.options_raw.index(extra)
-        cur_idx = store.widget.selected_index
-        key = pygame.K_DOWN if idx > cur_idx else pygame.K_UP
-        for _ in range(abs(idx - cur_idx)):
-            d.press(key)
-        for _ in range(presses):
+    bought_names = []
+    # Buy every item once, category by category (hub -> page -> back to hub)
+    for category in store.CATEGORIES:
+        open_category(d, store, category)
+        check(f"store.opens.{category}", store.category == category, f"category={store.category}")
+        screenshot(f"02_store_{category}")
+        for idx, name in enumerate(store.items):
+            select_row(d, store.item_widget, idx)
+            before = cm.get_amount(name)
             d.press(pygame.K_RETURN, frames_after=3)
-    total_price = sum(cm.get_item_def(n).price for n in store.options_raw)
+            after = cm.get_amount(name)
+            idef = cm.get_item_def(name)
+            bought_names.append(name)
+            check(
+                f"store.buy.{name.replace(' ', '_')}",
+                after == before + idef.increment,
+                f"amount {before}->{after} (price {idef.price})",
+            )
+        # Two extra shield charges + one extra ammo pack for the gameplay phase
+        for extra, presses in (("Shield", 2), ("Ammo", 1)):
+            if extra in store.items:
+                select_row(d, store.item_widget, store.items.index(extra))
+                for _ in range(presses):
+                    d.press(pygame.K_RETURN, frames_after=3)
+        if category == "skins":
+            # A skin you own is not sold twice
+            coins = cm.coins
+            d.press(pygame.K_RETURN, frames_after=3)
+            check("store.skin_not_sold_twice", cm.coins == coins, f"coins {coins}->{cm.coins}")
+        d.press(pygame.K_ESCAPE, frames_after=3)  # page -> hub
+        check(f"store.back_to_hub.{category}", store.category is None and isinstance(d.cur, StoreState))
+    total_price = sum(cm.get_item_def(n).price for n in bought_names)
     total_price += cm.get_item_def("Shield").price * 2 + cm.get_item_def("Ammo").price
     check(
         "store.coins_deducted",
@@ -204,8 +223,8 @@ def phase_store(d: Driver) -> None:
     fresh = CollectableManager(None)
     check(
         "store.persisted",
-        fresh.rifle == 1 and fresh.sword == 1 and fresh.grapple_hook == 1 and fresh.berserker == 1,
-        f"rifle={fresh.rifle} sword={fresh.sword} grapple={fresh.grapple_hook} berserker={fresh.berserker}",
+        fresh.rifle == 1 and fresh.sword == 1 and fresh.grapple_hook == 1 and fresh.kitsune == 1,
+        f"rifle={fresh.rifle} sword={fresh.sword} grapple={fresh.grapple_hook} kitsune={fresh.kitsune}",
     )
     d.press(pygame.K_ESCAPE, frames_after=3)  # back to menu
 
@@ -223,30 +242,21 @@ def phase_accessories(d: Driver) -> None:
     acc = d.cur
     check("menu.opens_accessories", isinstance(acc, AccessoriesState), f"state={acc.name}")
 
-    # Panel 0: equip Sword via real keys
-    sword_idx = acc.weapons.index("Sword")
-    for _ in range(sword_idx):
-        d.press(pygame.K_DOWN)
-    d.press(pygame.K_RETURN, frames_after=3)
-    check(
-        "accessories.equip_sword", settings.selected_weapon == sword_idx, f"selected_weapon={settings.selected_weapon}"
-    )
-
-    # TAB -> gear panel: equip Shield
-    d.press(pygame.K_TAB)
-    shield_idx = acc.gear.index("Shield")
-    for _ in range(shield_idx):
-        d.press(pygame.K_DOWN)
-    d.press(pygame.K_RETURN, frames_after=3)
-    check("accessories.equip_shield", settings.selected_gear == shield_idx, f"selected_gear={settings.selected_gear}")
-
-    # TAB -> skins panel: equip Gold Ninja
-    d.press(pygame.K_TAB)
-    gold_idx = acc.skins.index("Gold Ninja")
-    for _ in range(gold_idx):
-        d.press(pygame.K_DOWN)
-    d.press(pygame.K_RETURN, frames_after=3)
-    check("accessories.equip_gold_skin", settings.selected_skin == gold_idx, f"selected_skin={settings.selected_skin}")
+    # Each category page: equip via real keys (hub -> page -> ENTER -> back)
+    for category, name, attr in (
+        ("weapons", "Sword", "selected_weapon"),
+        ("gear", "Shield", "selected_gear"),
+        ("skins", "Shogun", "selected_skin"),
+    ):
+        open_category(d, acc, category)
+        idx = acc.items.index(name)
+        select_row(d, acc.item_widget, idx)
+        d.press(pygame.K_RETURN, frames_after=3)
+        check(f"accessories.equip.{name}", getattr(settings, attr) == idx, f"{attr}={getattr(settings, attr)}")
+        if category == "skins":
+            d.step(60)  # let the stage play
+            screenshot("04_accessories_skins")
+        d.press(pygame.K_ESCAPE, frames_after=3)
     screenshot("04_accessories")
     d.press(pygame.K_ESCAPE, frames_after=3)
 
@@ -303,14 +313,15 @@ def phase_gameplay(d: Driver) -> None:
     settings.selected_gear = 0
 
     # --- Skins render with correct palettes -------------------------------
-    skin_body = {
+    skin_body = {  # a main color of each skin's torso (tools/gen_skins.py)
         "default": (38, 36, 58),
-        "red": (245, 65, 84),
-        "gold": (196, 148, 32),
-        "platinum": (150, 160, 172),
-        "diamond": (64, 180, 216),
-        "assassin": (30, 30, 36),
-        "berserker": (122, 44, 32),
+        "homura": (176, 30, 38),
+        "shogun": (218, 166, 44),
+        "chrome": (176, 186, 200),
+        "crystal": (64, 180, 216),
+        "shadow": (40, 38, 50),
+        "oni": (40, 36, 48),
+        "kitsune": (240, 236, 230),
     }
     for idx, path in enumerate(CM.SKIN_PATHS):
         g.player.skin = idx

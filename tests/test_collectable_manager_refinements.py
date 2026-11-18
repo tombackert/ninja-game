@@ -20,10 +20,11 @@ def test_owned_lists():
     g = Game()
     cm: CollectableManager = g.cm
     cm.coins = 5000
-    assert "Red Ninja" not in cm.list_owned_skins()
+    cm.red_ninja = 0  # the test save is a copy of the player's own
+    assert "Homura" not in cm.list_owned_skins()
     assert cm.buy_collectable("Gun") == "success"
     assert "Gun" in cm.list_owned_weapons()
-    assert cm.buy_collectable("Red Ninja") == "success"
+    assert cm.buy_collectable("Homura") == "success"
     skins = cm.list_owned_skins()
-    assert "Red Ninja" in skins
+    assert "Homura" in skins
     assert skins[0] == "Default"

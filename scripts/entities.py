@@ -52,6 +52,10 @@ from scripts.settings import settings
 from scripts.spark import Spark
 
 
+# Frame size anim_offset is measured for (player skins may draw larger frames)
+SPRITE_BOX = (14, 18)
+
+
 class PhysicsEntity:
     def __init__(self, game, e_type, pos, size, id, services: ServiceContainer | None = None):
         # Retain original game reference for legacy code; prefer services if provided.
@@ -179,14 +183,18 @@ class PhysicsEntity:
         self.apply_gravity()
         self.finalize_update()
 
-    def render(self, surf, offset=(0, 0)):
-        surf.blit(
-            pygame.transform.flip(self.animation.img(), self.flip, False),
-            (
-                self.pos[0] - offset[0] + self.anim_offset[0],
-                self.pos[1] - offset[1] + self.anim_offset[1],
-            ),
+    def sprite_pos(self, img, offset=(0, 0)):
+        """Top-left to draw `img` at. anim_offset places a SPRITE_BOX frame; larger
+        frames (horns, hats, capes) stay centered on it and share its bottom edge."""
+        bw, bh = SPRITE_BOX
+        return (
+            self.pos[0] - offset[0] + self.anim_offset[0] - (img.get_width() - bw) // 2,
+            self.pos[1] - offset[1] + self.anim_offset[1] - (img.get_height() - bh),
         )
+
+    def render(self, surf, offset=(0, 0)):
+        img = self.animation.img()
+        surf.blit(pygame.transform.flip(img, self.flip, False), self.sprite_pos(img, offset))
 
 
 # Frames an enemy shows its shoot animation after firing (4 images of 6,

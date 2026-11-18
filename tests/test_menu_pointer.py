@@ -122,11 +122,18 @@ def test_wheel_moves_the_selection_without_wrapping(monkeypatch):
     assert menu.list_widget.selected_index == 0
 
 
-def test_hovering_another_accessories_panel_focuses_it():
+def test_clicking_a_category_opens_its_page_and_back_returns_to_the_hub():
     acc = _rendered(AccessoriesState())
     sm = _manager_with(acc)
-    sm.handle([_move(_row(acc.skin_widget, 1))])
-    assert acc.active_panel == 2 and acc.skin_widget.selected_index == 1
+    sm.handle(_click(_row(acc.widget, 2)))
+    acc.update(0.0)
+    assert acc.category == "skins"
+    _rendered(acc)
+    assert acc.pointer_widgets() == (acc.item_widget,)
+    sm.handle([_move(_row(acc.item_widget, 1))])
+    assert acc.item_widget.selected_index == 1
+    sm.handle(_click(acc.back.rect.center))
+    assert acc.category is None and not acc.request_back
 
 
 def test_options_click_steps_value_forward_and_right_click_back():
@@ -233,3 +240,30 @@ def test_friends_back_cancels_adding_first():
     _rendered(friends)
     sm.handle(_click(friends.back.rect.center))
     assert friends.request_back
+
+
+def test_store_pages_list_their_category_and_buy_with_enter():
+    store = StoreState()
+    store.cm.coins = 100000
+    store.cm.kitsune = 0
+    for category, sample in (("weapons", "Rifle"), ("gear", "Moon Boots"), ("skins", "Kitsune")):
+        store.open_category(category)
+        assert sample in store.items
+        _rendered(store)
+    store.item_widget.select(store.items.index("Kitsune"))
+    store.handle_actions(["menu_select"])
+    store.update(0.0)
+    assert store.cm.kitsune == 1
+    store.handle_actions(["menu_back"])
+    assert store.category is None and not store.request_back
+
+
+def test_accessories_equip_from_a_category_page():
+    acc = AccessoriesState()
+    acc.cm.gold_ninja = 1
+    acc.open_category("skins")
+    assert acc.item_widget.selected_index == acc.settings.selected_skin
+    acc.item_widget.select(acc.items.index("Shogun"))
+    acc.handle_actions(["menu_select"])
+    acc.update(0.0)
+    assert acc.settings.selected_skin == acc.cm.SKINS.index("Shogun")

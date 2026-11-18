@@ -185,12 +185,9 @@ class ReplayGhost:
             if snap.players:
                 start_pos = snap.players[0].pos
 
-        try:
-            from scripts.collectableManager import CollectableManager as CM
+        from scripts.collectableManager import CollectableManager as CM
 
-            skin_idx = CM.SKIN_PATHS.index(data.skin)
-        except ValueError:
-            skin_idx = 0
+        skin_idx = CM.skin_index(data.skin)
 
         self.entity = GhostPlayer(self.game, start_pos, (8, 15), 999, skin_idx)
         self.input_map = {entry["tick"]: entry["inputs"] for entry in self.data.inputs}
@@ -297,10 +294,7 @@ class ReplayGhost:
 
         surface.blit(
             tinted,
-            (
-                self.entity.pos[0] - offset[0] + self.entity.anim_offset[0],
-                self.entity.pos[1] - offset[1] + self.entity.anim_offset[1],
-            ),
+            self.entity.sprite_pos(tinted, offset),
         )
 
     def reset(self):

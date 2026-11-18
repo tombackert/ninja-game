@@ -1,8 +1,6 @@
-"""Pixel art generator for the store expansion (new skins & weapon sprites).
+"""Pixel art generator for the store expansion (weapon sprites).
 
-Skins are palette swaps of the `default` player animation set — the same
-technique used for the existing `red` skin — so they match the art style
-and animation frame counts exactly.
+Player skins are drawn by tools/gen_skins.py.
 
 The checkpoint banner (tiles/collectables/checkpoint, furled and hoisted)
 is drawn the same way. `--only checkpoint` writes just those.
@@ -24,82 +22,7 @@ import os
 from PIL import Image
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAYER_DIR = os.path.join(REPO, "data", "images", "entities", "player")
 IMG_DIR = os.path.join(REPO, "data", "images")
-
-# Exact palette of the default skin (verified over all 33 frames).
-BODY = (38, 36, 58)  # suit main
-SHADOW = (20, 16, 32)  # outline / shadow
-HIGHLIGHT = (219, 224, 231)  # face / highlights
-ACCENT = (163, 172, 190)  # armor accents
-SCARF = (196, 44, 54)  # scarf
-
-# skin name -> {default color: replacement}
-SKIN_PALETTES = {
-    "gold": {
-        BODY: (196, 148, 32),
-        SHADOW: (94, 60, 8),
-        HIGHLIGHT: (255, 224, 120),
-        ACCENT: (232, 190, 70),
-        SCARF: (235, 235, 240),
-    },
-    "platinum": {
-        BODY: (150, 160, 172),
-        SHADOW: (62, 70, 82),
-        HIGHLIGHT: (236, 241, 246),
-        ACCENT: (198, 206, 216),
-        SCARF: (52, 96, 168),
-    },
-    "diamond": {
-        BODY: (64, 180, 216),
-        SHADOW: (18, 80, 110),
-        HIGHLIGHT: (215, 248, 255),
-        ACCENT: (140, 226, 244),
-        SCARF: (148, 84, 204),
-    },
-    "assassin": {
-        BODY: (30, 30, 36),
-        SHADOW: (8, 8, 12),
-        HIGHLIGHT: (96, 96, 108),
-        ACCENT: (58, 58, 68),
-        SCARF: (168, 22, 32),
-    },
-    "berserker": {
-        BODY: (122, 44, 32),
-        SHADOW: (56, 16, 12),
-        HIGHLIGHT: (232, 146, 58),
-        ACCENT: (178, 84, 44),
-        SCARF: (28, 22, 22),
-    },
-}
-
-ACTIONS = ["idle", "run", "jump", "slide", "wall_slide"]
-
-
-def swap_palette(img: Image.Image, mapping: dict) -> Image.Image:
-    src = img.convert("RGBA")
-    out = Image.new("RGBA", src.size)
-    data = []
-    for px in src.getdata():
-        rgb, a = px[:3], px[3]
-        data.append(mapping.get(rgb, rgb) + (a,))
-    out.putdata(data)
-    return out
-
-
-def generate_skins() -> None:
-    for skin, mapping in SKIN_PALETTES.items():
-        for action in ACTIONS:
-            src_dir = os.path.join(PLAYER_DIR, "default", action)
-            dst_dir = os.path.join(PLAYER_DIR, skin, action)
-            os.makedirs(dst_dir, exist_ok=True)
-            for name in sorted(os.listdir(src_dir)):
-                if not name.endswith(".png"):
-                    continue
-                img = Image.open(os.path.join(src_dir, name))
-                swap_palette(img, mapping).save(os.path.join(dst_dir, name))
-        print(f"skin '{skin}' generated")
-
 
 # --- Weapon / effect sprites -------------------------------------------------
 # Grid legend: '.' = transparent (black colorkey), letters = palette entries.
@@ -235,13 +158,8 @@ def generate_sprites(only=None) -> None:
 
 
 def make_preview(path: str, scale: int = 8) -> None:
-    """Montage: one idle/run frame per skin plus all weapon sprites."""
+    """Montage of all weapon sprites."""
     cells = []
-    for skin in ["default", "red", *SKIN_PALETTES.keys()]:
-        for action, frame in [("idle", None), ("run", None)]:
-            d = os.path.join(PLAYER_DIR, skin, action)
-            name = sorted(os.listdir(d))[0]
-            cells.append((f"{skin}/{action}", Image.open(os.path.join(d, name)).convert("RGBA")))
     for name in SPRITES:
         cells.append((name, Image.open(os.path.join(IMG_DIR, name)).convert("RGBA")))
 
@@ -267,7 +185,6 @@ if __name__ == "__main__":
     if args.only == "checkpoint":
         generate_sprites(only=CHECKPOINT)
     else:
-        generate_skins()
         generate_sprites()
     if args.preview:
         make_preview(args.preview)

@@ -2,7 +2,7 @@
 
 Builds a disposable sandbox working directory whose data/ contains:
 - symlinks to the repo's static assets (images, maps, music, sfx, ...)
-- fresh copies of the writable JSON save files (test wallet: 50000 coins)
+- fresh copies of the writable JSON save files (test wallet: 80000 coins)
 
 Then spawns tools/items_e2e_bot.py as a real OS process with cwd=sandbox,
 so every relative "data/..." read & write in the game hits the sandbox and
@@ -28,7 +28,7 @@ SYMLINKS = ["images", "maps", "maps-old", "music", "sfx", "thumbnails", "font.tt
 COPIES = ["strings.json", "menu.json", "best_times.json"]
 EMPTY_DIRS = ["saves", "replays"]
 
-TEST_COLLECTABLES = {"coins": 50000}
+TEST_COLLECTABLES = {"coins": 80000}
 
 TEST_SETTINGS = {
     "music_volume": 0.0,

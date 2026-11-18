@@ -24,15 +24,26 @@ projectile deaths, coin economy of ~1 coin per kill plus map coins).
 | 7 | Coin Magnet | 1500 | Attracts coins within 48 px radius (1.8 px/f) | No combat benefit (quality of life / speedrun routing) |
 | 8 | Lucky Charm | 3000 | +1 life on fresh level start | Does not apply on respawn; blocks the gear slot |
 
-### Skins (cosmetic prestige, palette-swap pixel art of the ninja)
+### Skins (cosmetic prestige)
+
+Each skin is its own design drawn over the default ninja's motion
+(tools/gen_skins.py): own silhouette, materials and animated details. The
+store and accessories menus show the full name, a description and an
+animated preview of every move. An owned skin can't be bought twice.
 
 | # | Element | Price | Look |
 |---|---------|-------|------|
-| 9 | Gold Ninja | 2000 | Gold suit, white scarf |
-| 10 | Platinum Ninja | 3000 | Silver suit, blue scarf |
-| 11 | Diamond Ninja | 5000 | Ice-blue suit, purple scarf |
-| 12 | Assassin | 7000 | Near-black suit, crimson scarf |
-| 13 | Berserker | 10000 | Red-brown suit, ember highlights, black scarf |
+| 9 | Homura (Flame Ninja) | 1000 | Hair of flickering fire, rising sparks, glowing headband ends |
+| 10 | Shogun (Golden Samurai) | 2000 | Lacquered helmet with gold V crest, lamellar armor, banner, gold shine |
+| 11 | Chrome (Cyber Ninja) | 3000 | Scanning visor, blinking antenna, energy ribbons, pulsing core, thrusters |
+| 12 | Crystal (Diamond Ninja) | 5000 | Crystal crown and shoulder shard, facets, gem eye, wandering sparkle |
+| 13 | Shadow (Assassin) | 7000 | Deep hood, one blinking red eye, tattered cloak with red lining, dagger |
+| 14 | Oni (Demon) | 10000 | Horned demon mask with fangs, white mane, tiger-skin loincloth |
+| 15 | Kitsune (Fox Spirit) | 12000 | Fox mask and ears, two fluffy tails that curl and stream |
+
+Homura to Oni took over the save slots of Red Ninja, Gold Ninja, Platinum
+Ninja, Diamond Ninja, Assassin and Berserker, so earlier purchases carry
+over (Berserker owners get Oni).
 
 ## Balance Principles
 
