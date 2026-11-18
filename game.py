@@ -1,3 +1,5 @@
+import os
+
 import pygame
 
 from scripts.asset_manager import AssetManager
@@ -31,6 +33,10 @@ from scripts.rng_service import RNGService
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.timer import Timer
+from scripts.utils import BASE_IMG_PATH
+
+# Enemy animations by action: (frames per image, loops); shoot plays once
+ENEMY_ANIMATIONS = {"idle": (6, True), "run": (4, True), "alert": (6, True), "shoot": (6, False)}
 
 
 class Game:
@@ -114,11 +120,19 @@ class Game:
             "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
-        # Each enemy kind is a palette swap of the default enemy (tools/gen_hazard_art.py)
+        # Each enemy kind's own character and animations (tools/gen_enemy_art.py);
+        # the gunner is the default enemy. A kind without an alert or shoot
+        # animation shows its idle one (Enemy.set_action).
         for kind in KINDS:
-            if kind != "gunner":
-                self.assets[f"enemy/{kind}/idle"] = am.get_animation(f"entities/enemy/{kind}/idle", img_dur=6)
-                self.assets[f"enemy/{kind}/run"] = am.get_animation(f"entities/enemy/{kind}/run", img_dur=4)
+            if kind == "gunner":
+                continue
+            for action, (img_dur, loop) in ENEMY_ANIMATIONS.items():
+                if os.path.isdir(os.path.join(BASE_IMG_PATH, "entities", "enemy", kind, action)):
+                    # the jumper's run is one hop, held on its landing pose after
+                    once = (kind, action) == ("jumper", "run")
+                    self.assets[f"enemy/{kind}/{action}"] = am.get_animation(
+                        f"entities/enemy/{kind}/{action}", img_dur=img_dur, loop=loop and not once
+                    )
         # Register every store skin's animation set (all palette swaps of default)
         for skin_path in CollectableManager.SKIN_PATHS:
             base = f"entities/player/{skin_path}"

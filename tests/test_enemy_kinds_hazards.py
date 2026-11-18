@@ -24,7 +24,7 @@ from scripts.enemy_kinds import (  # noqa: E402
     kind_for_variant,
 )
 from scripts.constants import STOMP_BOUNCE_VELOCITY  # noqa: E402
-from scripts.entities import Enemy  # noqa: E402
+from scripts.entities import SHOT_POSE_FRAMES, Enemy  # noqa: E402
 from scripts.hazards import (  # noqa: E402
     CRUMBLE_DELAY,
     CRUMBLE_RETURN,
@@ -102,6 +102,57 @@ def test_game_spawns_each_kind_from_its_spawner(game):
     spawners = g.tilemap.extract(SPAWNER_IDS)
     kinds = [g._spawn_enemy(s, i).kind.name for i, s in enumerate(spawners)]
     assert sorted(kinds) == sorted(KINDS)
+
+
+def _pixels(surface):
+    return pygame.image.tobytes(surface, "RGB")
+
+
+def test_each_kind_has_its_own_character(game):
+    gunner = {_pixels(img) for img in game.assets["enemy/idle"].images}
+    seen = set()
+    for kind in KINDS:
+        if kind == "gunner":
+            continue
+        for action in ("idle", "run"):
+            frames = game.assets[f"enemy/{kind}/{action}"].images
+            assert all(img.get_size() == (14, 18) for img in frames)
+            assert len({_pixels(img) for img in frames}) > 1, f"{kind} {action} does not move"
+        first = _pixels(game.assets[f"enemy/{kind}/idle"].images[0])
+        assert first not in gunner and first not in seen  # not a copy of another kind
+        seen.add(first)
+
+
+def test_turret_scans_locks_on_and_recoils(game):
+    e = enemy_at(game, 39, "turret")
+    game.player.pos[0] = 39 * 16 - TURRET.sight_x - 40  # out of sight
+    e.update(game.tilemap)
+    assert e.action == "idle"
+    game.player.pos[0] = 30 * 16  # in sight
+    e.update(game.tilemap)
+    assert e.action == "alert"
+    for _ in range(TURRET_WINDUP):
+        e.update(game.tilemap)
+    assert e.since_shot == 0 and e.action == "shoot"
+    assert e.animation.images == game.assets["enemy/turret/shoot"].images
+    for _ in range(SHOT_POSE_FRAMES):
+        e.update(game.tilemap)
+    assert e.action == "alert"
+
+
+def test_a_kind_without_an_animation_shows_its_idle(game):
+    jumper = enemy_at(game, 12, "jumper")
+    jumper.set_action("alert")
+    assert jumper.animation.images == game.assets["enemy/jumper/idle"].images
+    gunner = enemy_at(game, 14, "gunner")
+    gunner.set_action("shoot")
+    assert gunner.animation.images == game.assets["enemy/idle"].images
+
+
+def test_one_hop_plays_once_and_a_shot_pose_does_not_loop(game):
+    assert not game.assets["enemy/jumper/run"].loop
+    assert not game.assets["enemy/thrower/shoot"].loop
+    assert game.assets["enemy/patrol/run"].loop
 
 
 @pytest.mark.parametrize("level", [0, 30])

@@ -1,14 +1,4 @@
-"""Pixel art for the enemy kinds and the level hazards.
-
-Enemy kinds (scripts/enemy_kinds.py) are palette swaps of the red default
-enemy, the same technique tools/gen_pixel_art.py uses for the player skins,
-so each kind reads at a glance by its color:
-
-    gunner  red (the original)   patrol  amber   turret  steel
-    chaser  purple               jumper  green   thrower teal
-
-Their spawner tiles (tiles/spawners/<variant>.png, for the editor) are the
-same swaps of spawner 1.
+"""Pixel art for the level hazards (the enemy kinds: tools/gen_enemy_art.py).
 
 Hazards (scripts/hazards.py), 16x16 tiles in the palette of the stone tiles:
 
@@ -31,19 +21,6 @@ from PIL import Image, ImageDraw
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMG_DIR = os.path.join(REPO, "data", "images")
 
-RED = (196, 44, 54)
-DARK_RED = (120, 31, 44)
-
-# kind -> (main color, shade) replacing the default enemy's red and dark red
-ENEMY_PALETTES = {
-    "patrol": ((214, 140, 46), (128, 76, 30)),
-    "turret": ((128, 138, 156), (70, 76, 94)),
-    "chaser": ((150, 62, 196), (84, 34, 114)),
-    "jumper": ((70, 168, 78), (34, 96, 46)),
-    "thrower": ((44, 170, 180), (22, 96, 108)),
-}
-SPAWNER_VARIANT = {"patrol": 2, "turret": 3, "chaser": 4, "jumper": 5, "thrower": 6}
-
 OUTLINE = (20, 16, 32)
 STEEL = (219, 224, 231)
 STEEL_SHADE = (163, 172, 190)
@@ -54,32 +31,6 @@ CLAY = (150, 104, 66)
 CLAY_DARK = (96, 62, 40)
 CLAY_LIGHT = (196, 150, 98)
 EMBER = (232, 106, 36)
-
-
-def swap(img: Image.Image, mapping: dict) -> Image.Image:
-    img = img.convert("RGB")
-    img.putdata([mapping.get(p, p) for p in img.getdata()])
-    return img
-
-
-def enemy_kinds() -> list[str]:
-    written = []
-    base = os.path.join(IMG_DIR, "entities", "enemy")
-    spawner = Image.open(os.path.join(IMG_DIR, "tiles", "spawners", "1.png"))
-    for kind, (main, shade) in ENEMY_PALETTES.items():
-        mapping = {RED: main, DARK_RED: shade}
-        for action in ("idle", "run"):
-            src = os.path.join(base, action)
-            dst = os.path.join(base, kind, action)
-            os.makedirs(dst, exist_ok=True)
-            for name in sorted(os.listdir(src)):
-                if name.endswith(".png"):
-                    swap(Image.open(os.path.join(src, name)), mapping).save(os.path.join(dst, name))
-                    written.append(os.path.join(dst, name))
-        out = os.path.join(IMG_DIR, "tiles", "spawners", f"{SPAWNER_VARIANT[kind]}.png")
-        swap(spawner, mapping).save(out)
-        written.append(out)
-    return written
 
 
 def _rotations(up: Image.Image) -> list[Image.Image]:
@@ -158,7 +109,7 @@ def hazards() -> list[str]:
 
 
 def main() -> None:
-    written = enemy_kinds() + hazards()
+    written = hazards()
     print(f"wrote {len(written)} images")
 
 

@@ -188,6 +188,11 @@ class PhysicsEntity:
         )
 
 
+# Frames an enemy shows its shoot animation after firing (4 images of 6,
+# tools/gen_enemy_art.py); the thrower stands this long (THROW_PAUSE)
+SHOT_POSE_FRAMES = 24
+
+
 class Enemy(PhysicsEntity):
     def __init__(
         self,
@@ -215,8 +220,14 @@ class Enemy(PhysicsEntity):
         if action != self.action:
             self.action = action
             assets = self.game.assets
-            key = f"enemy/{self.kind.name}/{action}"
-            self.animation = (assets[key] if key in assets else assets["enemy/" + action]).copy()
+            # the kind's own animation, else the default enemy's; a kind
+            # without an alert or shoot animation shows its idle one
+            for key in (f"enemy/{self.kind.name}/{action}", f"enemy/{self.kind.name}/idle", f"enemy/{action}"):
+                if key in assets:
+                    break
+            else:
+                key = "enemy/idle"
+            self.animation = assets[key].copy()
 
     def update(self, tilemap, movement=(0, 0)):
         # Delegate behavior to policy
@@ -275,6 +286,10 @@ class Enemy(PhysicsEntity):
 
         if combined_movement[0] != 0:
             self.set_action("run")
+        elif self.since_shot < SHOT_POSE_FRAMES:  # recoil, a throw's follow-through
+            self.set_action("shoot")
+        elif self.awake:  # turret with the player in sight, chaser awake but held up
+            self.set_action("alert")
         else:
             self.set_action("idle")
 
