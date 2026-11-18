@@ -24,6 +24,8 @@ from scripts.constants import (
     HIT_INVULNERABLE_FRAMES,
     HIT_KNOCKBACK_X,
     HIT_KNOCKBACK_Y,
+    STOMP_BOUNCE_VELOCITY,
+    STOMP_MARGIN,
     SWIM_STROKE_COOLDOWN,
     SWIM_STROKE_VELOCITY,
     WALL_JUMP_HORIZONTAL_VEL,
@@ -217,7 +219,6 @@ class Enemy(PhysicsEntity):
             self.animation = (assets[key] if key in assets else assets["enemy/" + action]).copy()
 
     def update(self, tilemap, movement=(0, 0)):
-        rng = RNGService.get()
         # Delegate behavior to policy
         decision = self.policy.decide(self, self.game)
 
@@ -280,22 +281,28 @@ class Enemy(PhysicsEntity):
         # Dash kill & projectile collision checks
         if abs(self.game.player.dashing) >= DASH_MIN_ACTIVE_ABS:
             if self.rect().colliderect(self.game.player.rect()):
-                self.game.screenshake = max(16, self.game.screenshake)
-                if self.services:
-                    self.services.play("hit")
-                else:
-                    self.game.audio.play("hit")
-                # Multiplayer servers credit the killing player; single player
-                # falls back to the global coin counter.
-                award = getattr(self.game, "award_coin", None)
-                if award:
-                    award(getattr(self.game.player, "id", None))
-                else:
-                    self.game.cm.coins += 1
-                spawn_hit_sparks(self.game, self.rect().center)
-                self.game.sparks.append(Spark(self.rect().center, 0, 5 + rng.random()))
-                self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + rng.random()))
+                self.die(self.game.player)
                 return True
+
+    def die(self, killer=None) -> None:
+        """Effects and the coin of a kill (a dash or a stomp); the caller
+        takes the enemy out of game.enemies."""
+        rng = RNGService.get()
+        self.game.screenshake = max(16, self.game.screenshake)
+        if self.services:
+            self.services.play("hit")
+        else:
+            self.game.audio.play("hit")
+        # Multiplayer servers credit the killing player; single player
+        # falls back to the global coin counter.
+        award = getattr(self.game, "award_coin", None)
+        if award:
+            award(getattr(killer, "id", None))
+        else:
+            self.game.cm.coins += 1
+        spawn_hit_sparks(self.game, self.rect().center)
+        self.game.sparks.append(Spark(self.rect().center, 0, 5 + rng.random()))
+        self.game.sparks.append(Spark(self.rect().center, math.pi, 5 + rng.random()))
 
     # Collision with player projectiles handled centrally in ProjectileSystem.update
 
@@ -430,9 +437,41 @@ class Player(PhysicsEntity):
             enemies = getattr(self.game, "enemies", None)
             for enemy in enemies if isinstance(enemies, list) else ():
                 kind = getattr(enemy, "kind", None)
+                if getattr(enemy, "stomped", False) is True:
+                    continue  # the client's copy of an enemy it just stomped
                 if getattr(kind, "contact", False) is True and enemy.rect().colliderect(rect):
                     return "enemy", enemy.rect().centerx
         return None
+
+    def stomp(self, prev_bottom: float) -> bool:
+        """Kill every enemy the player lands on this frame and bounce up.
+
+        Landing on means: moving down and the feet were above the enemy's
+        head (STOMP_MARGIN of slack) before this frame's step, now they are
+        inside it. Any kind dies so, the ones that hurt on touch too (the
+        stomp comes before Player.touch_damage). A game that only predicts
+        (the multiplayer client, game.predicting) bounces but leaves the
+        kill to the server; the enemy is marked so it does not hurt meanwhile.
+        """
+        enemies = getattr(self.game, "enemies", None)
+        if not isinstance(enemies, list) or self.water is not None:
+            return False
+        rect = self.rect()
+        if rect.bottom <= prev_bottom and self.velocity[1] <= 0:
+            return False  # not coming down
+        stomped = [e for e in enemies if prev_bottom <= e.rect().top + STOMP_MARGIN and e.rect().colliderect(rect)]
+        if not stomped:
+            return False
+        predicting = getattr(self.game, "predicting", False) is True
+        for enemy in stomped:
+            if predicting:
+                enemy.stomped = True
+            else:
+                enemy.die(self)
+                enemies.remove(enemy)
+        self.velocity[1] = STOMP_BOUNCE_VELOCITY
+        self.air_time = 5  # in the air, as after a jump
+        return True
 
     def take_hit(self, cause: str, source_x: float | None = None) -> bool:
         """A hit costs a life (an armed shield takes it instead), then the
@@ -484,6 +523,7 @@ class Player(PhysicsEntity):
                 self.velocity[1] = dy / dist * GRAPPLE_PULL_SPEED
             self.grapple_frames += 1
 
+        prev_bottom = self.rect().bottom
         super().update(tilemap, movement=movement)
         if self.water is None and self.velocity[1] > 1 and self.water_flow(tilemap) is not None:
             self._splash()
@@ -534,7 +574,9 @@ class Player(PhysicsEntity):
         else:
             self.breath = BREATH_FRAMES
 
-        # Spikes, a flame or an enemy that hurts on touch cost a life
+        # Landing on an enemy kills it; spikes, a flame or an enemy that
+        # hurts on touch cost a life
+        self.stomp(prev_bottom)
         if self.invulnerable > 0:
             self.invulnerable -= 1
         else:

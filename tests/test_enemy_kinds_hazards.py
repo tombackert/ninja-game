@@ -23,6 +23,7 @@ from scripts.enemy_kinds import (  # noqa: E402
     TURRET,
     kind_for_variant,
 )
+from scripts.constants import STOMP_BOUNCE_VELOCITY  # noqa: E402
 from scripts.entities import Enemy  # noqa: E402
 from scripts.hazards import (  # noqa: E402
     CRUMBLE_DELAY,
@@ -253,6 +254,81 @@ def test_bullets_miss_a_blinking_player(game):
     p.invulnerable = 0
     game.projectiles.update(game.tilemap, [p], [])
     assert p.lives == lives - 1 and p.invulnerable > 0
+
+
+def drop_onto(g, e, vy=3.0):
+    """Put the player just above enemy `e`, falling."""
+    p = g.player
+    p.pos = [e.pos[0], e.pos[1] - 16]
+    p.velocity = [0, vy]
+    p.collisions = {"up": False, "down": False, "right": False, "left": False}
+    return p
+
+
+@pytest.mark.parametrize("kind", ["patrol", "gunner", "turret", "chaser", "jumper", "thrower"])
+def test_landing_on_an_enemy_kills_it_and_bounces(game, kind):
+    e = enemy_at(game, 8, kind)
+    p = drop_onto(game, e)
+    lives, coins = p.lives, game.cm.coins
+    game.step()
+    assert e not in game.enemies
+    assert p.lives == lives and p.invulnerable == 0
+    assert p.velocity[1] == STOMP_BOUNCE_VELOCITY
+    assert game.cm.coins == coins + 1
+
+
+def test_a_bounce_is_lighter_than_a_jump(game):
+    e = enemy_at(game, 8, "patrol")
+    p = drop_onto(game, e)
+    game.step()
+    top = p.pos[1]
+    for _ in range(40):
+        game.step()
+        top = min(top, p.pos[1])
+    bounce = e.pos[1] - 16 - top
+    assert 0 < bounce < 16 * 2  # up a little, less than a jump's height
+
+
+def test_jumping_up_into_a_patrol_is_a_hit_not_a_stomp(game):
+    e = enemy_at(game, 8, "patrol")
+    e.pos[1] -= 40  # up in the air (it does not fall far in one frame)
+    p = game.player
+    p.pos = [e.pos[0], e.pos[1] + 6]  # head inside its feet, going up
+    p.velocity = [0, -3]
+    p.collisions = {"up": False, "down": False, "right": False, "left": False}
+    lives = p.lives
+    game.step()
+    assert e in game.enemies
+    assert p.lives == lives - 1
+
+
+def test_a_predicting_client_bounces_but_leaves_the_kill_to_the_server(game):
+    game.predicting = True
+    e = enemy_at(game, 8, "patrol")
+    p = drop_onto(game, e)
+    lives, coins = p.lives, game.cm.coins
+    game.step()
+    assert e in game.enemies and e.stomped
+    assert p.velocity[1] == STOMP_BOUNCE_VELOCITY
+    for _ in range(5):  # rising out of it: the stomped enemy does not hurt
+        game.step()
+    assert p.lives == lives and game.cm.coins == coins
+
+
+def test_the_server_credits_the_stomper():
+    from scripts.network.headless_game import HeadlessGame
+
+    hg = HeadlessGame(level=0)
+    p = hg.add_player(1)
+    p.pos[1] -= 48  # in the air above its spawn
+    e = Enemy(hg, (p.pos[0], p.pos[1] + 16), (8, 15), 999, kind="patrol")
+    hg.enemies = [e]
+    hg.collectables = {}
+    p.velocity = [0, 3.0]
+    p.air_time = 5
+    hg.simulate_tick()
+    assert e not in hg.enemies
+    assert p.mp_coins == 1 and p.velocity[1] == STOMP_BOUNCE_VELOCITY
 
 
 # --- hazards --------------------------------------------------------------------------------

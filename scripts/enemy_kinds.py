@@ -18,7 +18,8 @@ image (data/images/tiles/spawners/<variant>.png).
 
 "Kills on touch" means a hit like a bullet's: a life lost (Player.take_hit),
 the player thrown back and blinking for a moment, no respawn. A dash kills
-every kind.
+every kind, and so does landing on it from above, which bounces the player
+up a little (Player.stomp): a touch hurts only from the side or below.
 """
 
 from __future__ import annotations

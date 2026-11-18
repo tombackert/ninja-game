@@ -71,6 +71,9 @@ SHIELD_REARM_FRAMES = 600  # ~10 s until next shield charge arms
 HIT_INVULNERABLE_FRAMES = 90  # 1.5 s
 HIT_KNOCKBACK_X = 2.5  # touch hits throw the player away from what hit them ...
 HIT_KNOCKBACK_Y = -2.5  # ... and up
+# Landing on an enemy from above kills it (any kind) and bounces the player up
+STOMP_BOUNCE_VELOCITY = -2.2  # a little lower than a jump (JUMP_VELOCITY)
+STOMP_MARGIN = 4  # px the feet may already be inside the enemy's head last frame
 AIR_JUMP_VELOCITY = -2.7  # moon boots double jump (weaker than ground jump)
 MAGNET_RADIUS = 48  # coin magnet attraction radius
 MAGNET_PULL_SPEED = 1.8  # coin movement toward player per frame

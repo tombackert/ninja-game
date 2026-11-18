@@ -217,6 +217,8 @@ class MultiplayerGameState(State):
         self._game.transition = 0
         self._game.players = []
         self._game.enemies = []
+        # The server kills enemies: a stomp here only bounces (Player.stomp)
+        self._game.predicting = True
 
         # Create network client
         self._client = GameClient(
