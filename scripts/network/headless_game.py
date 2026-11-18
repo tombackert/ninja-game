@@ -40,6 +40,7 @@ from scripts.entities import Enemy, Player
 from scripts.hazards import HazardSystem
 from scripts.entity_id import EntityIDGenerator
 from scripts.projectile_system import ProjectileSystem
+from scripts.safe_start import start_zones
 from scripts.tilemap import Tilemap
 
 
@@ -149,6 +150,9 @@ class HeadlessGame:
             else:
                 kind = kind_for_variant(spawner["variant"])
                 self.enemies.append(Enemy(self, spawner["pos"], (8, 15), self._id_gen.next_id(), kind=kind))
+
+        # The start is safe from enemies (scripts/safe_start.py)
+        self.safe_zones = start_zones(self.tilemap, self._spawn_points)
 
         # Spikes, crumbling blocks and flame jets (deaths by touch in Player.update).
         # Their clock runs on the server tick, which clients see in every snapshot.

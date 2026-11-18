@@ -173,6 +173,7 @@ def test_the_last_life_lost_to_a_bullet_logs_a_hit_and_then_out_of_lives(maps, d
     for _ in range(5):
         gs.update(1 / 60)
     g.player.lives = 1
+    g.safe_zones = []  # away from the safe start
     r = g.player.rect()
     g.projectiles.spawn(r.centerx - 1, r.centery - 1, 0.0, "enemy")
     _until_reload(gs)

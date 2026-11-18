@@ -308,6 +308,7 @@ def test_shield_absorbs_hit_and_consumes_charge(game):
     p.update(game.tilemap, (0, 0))  # arms the shield
     assert p.shield_ready is True
     lives_before = p.lives
+    game.safe_zones = []  # away from the safe start
     game.projectiles.clear()
     game.projectiles.spawn(p.rect().centerx, p.rect().centery, 0.5, "enemy")
     summary = game.projectiles.update(game.tilemap, [p], [])
@@ -323,6 +324,7 @@ def test_hit_without_shield_costs_life(game):
     equip_gear("None")
     p.shield_ready = False
     lives_before = p.lives
+    game.safe_zones = []  # away from the safe start
     game.projectiles.clear()
     game.projectiles.spawn(p.rect().centerx, p.rect().centery, 0.5, "enemy")
     game.projectiles.update(game.tilemap, [p], [])

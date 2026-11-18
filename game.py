@@ -30,6 +30,7 @@ from scripts.particle_system import ParticleSystem
 from scripts.projectile_system import ProjectileSystem
 from scripts.replay import ReplayManager
 from scripts.rng_service import RNGService
+from scripts.safe_start import start_zones
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.timer import Timer
@@ -288,6 +289,8 @@ class Game:
             # Set the current player if there are any players
             if self.players:
                 self.player = self.players[self.playerID]
+            # The start is safe from enemies (scripts/safe_start.py)
+            self.safe_zones = start_zones(self.tilemap, [p.respawn_pos for p in self.players])
         # END LOAD LEVEL
 
         # Systems / collections (post-refactor additions)

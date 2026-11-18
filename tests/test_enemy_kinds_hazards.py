@@ -32,6 +32,7 @@ from scripts.hazards import (  # noqa: E402
     HazardSystem,
     flame_state,
 )
+from scripts.safe_start import SAFE_HEIGHT, start_zones  # noqa: E402
 from scripts.settings import settings  # noqa: E402
 from scripts.tilemap import Tilemap  # noqa: E402
 from tools.worlds import physics as ph  # noqa: E402
@@ -62,6 +63,7 @@ def arena(g, extra=None):
     g.tilemap.offgrid_tiles = []
     g.tilemap.kill_y = g.tilemap.kill_line()
     g.hazards = HazardSystem(g.tilemap)
+    g.safe_zones = []  # no safe start unless a test asks for it (safe_start)
     g.enemies = []
     g.projectiles.clear()
     g.dead = 0
@@ -380,6 +382,98 @@ def test_the_server_credits_the_stomper():
     hg.simulate_tick()
     assert e not in hg.enemies
     assert p.mp_coins == 1 and p.velocity[1] == STOMP_BOUNCE_VELOCITY
+
+
+# --- safe start -----------------------------------------------------------------------------
+
+
+def safe_start(g):
+    """Make where the player stands (x tile 5) the level's start."""
+    g.safe_zones = start_zones(g.tilemap, [g.player.pos])
+    return g.safe_zones[0]
+
+
+def test_start_zone_covers_the_floor_near_the_spawn(game):
+    top = (FLOOR - SAFE_HEIGHT) * 16
+    assert safe_start(game) == pygame.Rect(1 * 16, top, 9 * 16, SAFE_HEIGHT * 16)  # 4 tiles either side
+    arena(game, {(7, FLOOR - 1): {"type": "stone", "variant": 1}})  # a wall at x 7
+    del game.tilemap.tilemap[f"3;{FLOOR}"]  # a gap at x 3
+    assert safe_start(game) == pygame.Rect(4 * 16, top, 3 * 16, SAFE_HEIGHT * 16)
+
+
+def test_nothing_hurts_a_player_at_the_start(game):
+    p = game.player
+    zone = safe_start(game)
+    e = enemy_at(game, 5, "patrol")
+    e.pos = list(p.pos)
+    assert p.touch_damage() is None
+    game.enemies = []
+    lives = p.lives
+    for vx, kind, vy, gravity in ((-2.0, "bullet", 0.0, 0.0), (-1.0, "star", -2.2, 0.08)):
+        game.projectiles.spawn(zone.right + 30, p.rect().centery, vx, "enemy", vy=vy, gravity=gravity, kind=kind)
+        for _ in range(120):
+            game.step()
+        assert not list(game.projectiles)  # gone at the edge of the zone
+    assert p.lives == lives and p.invulnerable == 0
+    p.pos[0] = zone.right + 8  # stepped out: hurts again
+    e = enemy_at(game, 0, "patrol")
+    e.pos = list(p.pos)
+    assert p.touch_damage() == ("enemy", e.rect().centerx)
+
+
+@pytest.mark.parametrize("kind", ["patrol", "gunner", "chaser", "jumper", "thrower"])
+def test_enemies_keep_out_of_the_start(game, kind):
+    zone = safe_start(game)
+    game.player.pos[0] = zone.right + 4  # just outside, so a chaser comes
+    e = enemy_at(game, 14, kind, flip=True)  # facing the start
+    for _ in range(900):
+        e.update(game.tilemap)
+        assert not zone.collidepoint(e.rect().center)
+
+
+@pytest.mark.parametrize("kind", ["gunner", "turret", "thrower", "chaser"])
+def test_enemies_leave_a_player_at_the_start_alone(game, kind):
+    safe_start(game)
+    e = enemy_at(game, 12, kind, flip=True)  # in sight, facing the player
+    x = e.pos[0]
+    for _ in range(600):
+        e.update(game.tilemap)
+    assert not list(game.projectiles)
+    if kind == "chaser":
+        assert e.pos[0] == x  # does not run at them
+    if kind == "gunner":
+        return  # wanders at random: may never face the player again
+    game.safe_zones = []  # the same spot, not the start: attacked
+    for _ in range(600):
+        e.update(game.tilemap)
+    assert list(game.projectiles) or e.pos[0] < x
+
+
+def test_standing_at_the_start_of_any_level_is_safe(game):
+    """Before the safe start, an idle player lost lives in 15 of the 41 levels."""
+    for level in range(41):
+        game.load_level(level)
+        game.replay.ghost = None
+        p = game.player
+        lives = p.lives
+        for _ in range(900):
+            game.step()
+        assert (p.lives, game.dead) == (lives, 0), f"level {level}"
+
+
+def test_the_server_keeps_every_spawn_safe():
+    from scripts.network.headless_game import HeadlessGame
+
+    hg = HeadlessGame(level=0)
+    p = hg.add_player(1)
+    assert len(hg.safe_zones) == len(hg._spawn_points) and hg.safe_zones[0].collidepoint(p.rect().center)
+    e = Enemy(hg, tuple(p.pos), (8, 15), 999, kind="patrol")
+    hg.enemies = [e]
+    hg.collectables = {}
+    lives = p.lives
+    for _ in range(60):
+        hg.simulate_tick()
+    assert p.lives == lives
 
 
 # --- hazards --------------------------------------------------------------------------------

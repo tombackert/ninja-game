@@ -33,6 +33,7 @@ Collision Rules (parity with prior logic):
   * Age > PROJECTILE_LIFETIME_FRAMES: remove.
   * Hit enemy (player owned) or player (enemy owned) while player not dashing
     aggressively: remove, apply damage/effects.
+  * Enemy owned entering a start zone (scripts/safe_start.py): remove.
 
 Tests (added in `tests/test_projectile_system.py`) cover:
   * Lifetime expiry.
@@ -51,6 +52,7 @@ from . import death_log
 from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
 from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
 from .entity_id import EntityIDGenerator
+from .safe_start import in_safe_zone
 
 
 class ProjectileSystem:
@@ -187,6 +189,12 @@ class ProjectileSystem:
                                 removed += 1
                             break
             else:  # enemy owned
+                # The start is safe: enemy shots vanish where they enter it
+                if in_safe_zone(self.game, proj["pos"]):
+                    self._projectiles.remove(proj)
+                    spawn_projectile_sparks(self.game, proj["pos"], proj["vel"][0])
+                    removed += 1
+                    continue
                 # Player damage (skip if heavily dashing similar to old logic)
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
                 for player in players:

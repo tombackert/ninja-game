@@ -14,6 +14,7 @@ from scripts.constants import GRAVITY_ACCEL
 from scripts.enemy_kinds import CLUSTER_HOLD, CLUSTER_RADIUS, DEFAULT, EnemyKind
 from scripts.hazards import SPIKES, HazardSystem
 from scripts.rng_service import RNGService
+from scripts.safe_start import in_safe_zone, player_safe
 
 FEET = 23  # px below the enemy's top where the ground ahead is probed
 PROBE = 7  # px ahead of the enemy's center
@@ -61,11 +62,24 @@ def _spikes_ahead(entity: Any, tilemap: Any, ahead: int = PROBE) -> bool:
     return False
 
 
+def _zone_ahead(entity: Any, ahead: int = PROBE) -> bool:
+    """The point `ahead` px in front of the enemy at body height lies in a
+    start zone it is not in yet (scripts/safe_start.py): enemies keep out."""
+    r = entity.rect()
+    x = r.centerx + (-ahead if entity.flip else ahead)
+    return in_safe_zone(entity.game, (x, r.centery)) and not in_safe_zone(entity.game, r.center)
+
+
 def _walk(entity: Any, tilemap: Any, speed: float) -> float:
-    """One step of walking in the facing direction; turns at walls, edges and
-    spikes. Returns the horizontal movement (0 on a turn)."""
+    """One step of walking in the facing direction; turns at walls, edges,
+    spikes and start zones. Returns the horizontal movement (0 on a turn)."""
     if tilemap.solid_check((entity.rect().centerx + (-PROBE if entity.flip else PROBE), entity.pos[1] + FEET)):
-        if entity.collisions["right"] or entity.collisions["left"] or _spikes_ahead(entity, tilemap):
+        if (
+            entity.collisions["right"]
+            or entity.collisions["left"]
+            or _spikes_ahead(entity, tilemap)
+            or _zone_ahead(entity)
+        ):
             entity.flip = not entity.flip
             return 0
         return -speed if entity.flip else speed
@@ -94,6 +108,11 @@ def _in_sight(kind: EnemyKind, dx: float, dy: float) -> bool:
     return abs(dx) < kind.sight_x and abs(dy) < kind.sight_y
 
 
+def _target(entity: Any) -> bool:
+    """The player may be attacked: not in a start zone (scripts/safe_start.py)."""
+    return not player_safe(entity.game, entity.game.player)
+
+
 class GunnerPolicy(Policy):
     """The classic enemy: wanders a while, stops, fires if it faces the player."""
 
@@ -107,7 +126,7 @@ class GunnerPolicy(Policy):
             if not entity.walking:
                 dx, dy = _to_player(entity)
                 facing = (entity.flip and dx < 0) or (not entity.flip and dx > 0)
-                if facing and _in_sight(kind, dx, dy) and _cluster_clear(entity):
+                if facing and _in_sight(kind, dx, dy) and _target(entity) and _cluster_clear(entity):
                     result["shoot"] = True
                     result["shoot_direction"] = -1 if entity.flip else 1
         elif rng.random() < 0.01:
@@ -138,7 +157,7 @@ class TurretPolicy(Policy):
         dx, dy = _to_player(entity)
         entity.flip = dx < 0
         entity.cooldown = max(0, getattr(entity, "cooldown", 0) - 1)
-        if not _in_sight(kind, dx, dy):
+        if not _in_sight(kind, dx, dy) or not _target(entity):
             entity.awake = False
             return result
         if not getattr(entity, "awake", False):  # the player just came into sight
@@ -167,14 +186,15 @@ class ChaserPolicy(Policy):
             entity.awake = True
         elif abs(dx) > kind.sight_x * CHASER_GIVE_UP or abs(dy) > kind.sight_y * CHASER_GIVE_UP:
             entity.awake = False
-        if not getattr(entity, "awake", False) or abs(dx) < 4:
-            return result
+        if not getattr(entity, "awake", False) or abs(dx) < 4 or not _target(entity):
+            return result  # asleep, there, or the player is safe at the start
         entity.flip = dx < 0
         tilemap = entity.game.tilemap
         blocked = (
             (entity.collisions["left"] if entity.flip else entity.collisions["right"])
             or not _ground_ahead(entity, tilemap)
             or _spikes_ahead(entity, tilemap)
+            or _zone_ahead(entity)
         )
         if not blocked:
             result["movement"] = (-kind.speed if entity.flip else kind.speed, 0)
@@ -202,6 +222,7 @@ class JumperPolicy(Policy):
                 _ground_ahead(entity, tilemap, reach)
                 and not _ground_ahead_blocked(entity, tilemap, reach)
                 and not _spikes_ahead(entity, tilemap, reach)
+                and not _zone_ahead(entity, reach)
             ):
                 break
             entity.flip = not entity.flip
@@ -255,7 +276,7 @@ class ThrowerPolicy(Policy):
         if getattr(entity, "pause", 0) > 0:  # the follow-through of a throw
             entity.pause -= 1
             return result
-        if _in_sight(kind, dx, dy):
+        if _in_sight(kind, dx, dy) and _target(entity):
             if not getattr(entity, "awake", False):  # the player just came into sight
                 entity.awake = True
                 entity.cooldown = max(entity.cooldown, TURRET_WINDUP)

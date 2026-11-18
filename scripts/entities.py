@@ -46,6 +46,7 @@ from scripts.hazards import HazardSystem
 from scripts.particle import Particle
 from scripts.policy_service import PolicyService
 from scripts.rng_service import RNGService
+from scripts.safe_start import player_safe
 from scripts.services import ServiceContainer
 from scripts.settings import settings
 from scripts.spark import Spark
@@ -441,14 +442,14 @@ class Player(PhysicsEntity):
         """What hurts the player where they stand this frame and where it is:
         (cause, x) with cause "spikes" or "flame" (scripts/hazards.py) or
         "enemy" (a kind that hurts on touch, unless the player dashes through
-        it, which kills the enemy), or None."""
+        it, which kills the enemy, or stands in the start zone), or None."""
         rect = self.rect()
         hazards = getattr(self.game, "hazards", None)
         if isinstance(hazards, HazardSystem):
             touch = hazards.touching(rect)
             if touch:
                 return touch[0], touch[1].centerx
-        if abs(self.dashing) < DASH_MIN_ACTIVE_ABS:
+        if abs(self.dashing) < DASH_MIN_ACTIVE_ABS and not player_safe(self.game, self):
             enemies = getattr(self.game, "enemies", None)
             for enemy in enemies if isinstance(enemies, list) else ():
                 kind = getattr(enemy, "kind", None)
