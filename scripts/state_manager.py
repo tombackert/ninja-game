@@ -946,6 +946,7 @@ class _ItemMenuState(State):
     VISIBLE_ROWS = 8
     ROW_SPACING = 52
     STAGE_SCALE = 6  # stage of 96x56 game pixels -> 576x336
+    ICON_SIZE = 44  # list row sprite, at most this many pixels across
     LOCKED_COLOR = "#5A6B80"
     DIM_UNOWNED = False  # grey out what you don't own (only where it can't be used)
     title_key = ""
@@ -977,6 +978,8 @@ class _ItemMenuState(State):
             [], visible_rows=self.VISIBLE_ROWS, spacing=self.ROW_SPACING, font_size=24
         )
         self.preview = SkinPreview()
+        self._scene = None  # the selected weapon's or gear's showcase (scripts/item_showcase.py)
+        self._icons: dict = {}
         self.message: str | None = None
         self.message_timer = 0.0
         self.back: BackButton = BackButton(self.loc.translate("menu.back"))
@@ -1122,9 +1125,22 @@ class _ItemMenuState(State):
             UI.render_ui_img(surface, icon, list_x + 14, y, 0.14)
             selected = idx == widget.selected_index
             dim = self.DIM_UNOWNED and not owned
+            sprite = self._icon(name)
+            if sprite is not None:
+                if dim:
+                    sprite = sprite.copy()
+                    sprite.set_alpha(120)
+                bob = -2 if selected and int(self.preview.ticks // 15) % 2 else 0
+                surface.blit(sprite, sprite.get_rect(center=(list_x + 40 + self.ICON_SIZE // 2, y + bob)))
             color = UI.SELECTOR_COLOR if selected else (self.LOCKED_COLOR if dim else UI.PM_COLOR)
             text_rect = UI.draw_text_with_outline(
-                surface, font, widget.options[idx], list_x + 40, y - font.get_height() // 2, color, scale=3
+                surface,
+                font,
+                widget.options[idx],
+                list_x + 50 + self.ICON_SIZE,
+                y - font.get_height() // 2,
+                color,
+                scale=3,
             )
             info, info_color = self.row_info(name)
             if info:
@@ -1152,7 +1168,8 @@ class _ItemMenuState(State):
 
     def _render_card(self, surface: pygame.Surface, name: str) -> None:
         """Stage in a frame like the level preview, details underneath."""
-        from scripts.collectableManager import ITEM_DESCRIPTIONS, ITEM_ICONS
+        from scripts.collectableManager import ITEM_DESCRIPTIONS
+        from scripts.item_showcase import scene_for
         from scripts.skin_preview import STAGE, wrap_text
 
         UI = self._ui
@@ -1167,14 +1184,16 @@ class _ItemMenuState(State):
         skin = self.cm.SKIN_INFO.get(name)
         if skin is not None:
             self.preview.set_skin(skin.path)
-            title, text, held = skin.title, skin.description, None
+            title, text, scene = skin.title, skin.description, None
         else:
-            # Weapons and gear: the equipped skin shows them off
+            # Weapons and gear: the equipped skin shows them off in action
             self.preview.set_skin(self.cm.SKIN_PATHS[self.settings.selected_skin], showcase=False)
             title, text = name, ITEM_DESCRIPTIONS.get(name, "")
-            held = ITEM_ICONS.get(name) if self.category == "weapons" else None
-        extra = self._stage_extra(name)
-        self.preview.render_stage(surface, pygame.Rect(sx, sy, sw, sh), held=held, extra=extra)
+            if self._scene is None or self._scene.name != name:
+                self._scene = scene_for(name)
+                self.preview.ticks = 0.0
+            scene = self._scene
+        self.preview.render_stage(surface, pygame.Rect(sx, sy, sw, sh), scene=scene)
 
         cx = sx + sw // 2
         y = sy + sh + 34
@@ -1188,42 +1207,28 @@ class _ItemMenuState(State):
             UI.draw_text_with_outline(surface, font, line, cx, y, UI.GAME_UI_COLOR, center=True, scale=2)
             y += 24
 
-    def _stage_extra(self, name: str):
-        """Gear shown on the stage the way it looks in a level."""
-        if name == "Shield":
+    def _icon(self, name: str) -> pygame.Surface | None:
+        """The item's sprite for its list row, scaled up (skins: their ninja)."""
+        from scripts.collectableManager import ITEM_ICONS
+        from scripts.item_fx import image
+        from scripts.skin_preview import _load_frames
 
-            def bubble(stage, feet):
-                # Player._render_shield_bubble around the hitbox center
-                r = 13
-                b = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-                pygame.draw.circle(b, (120, 200, 255, 60), (r, r), r)
-                pygame.draw.circle(b, (170, 220, 250, 150), (r, r), r, 1)
-                stage.blit(b, (feet[0] - r, feet[1] - 8 - r))
-
-            return bubble
-        if name == "Coin Magnet":
-            from scripts.skin_preview import _load_image
-
-            frames = [_load_image(f"collectables/coin/{i}.png") for i in range(10)]
-            ticks = self.preview.ticks
-            cycle, fly = 90, 50  # each coin flies in for `fly` ticks, then respawns
-
-            def coins(stage, feet):
-                # Spinning coins pulled into the ninja's hitbox center, one after another
-                tx, ty = feet[0], feet[1] - 8
-                frame = frames[int(ticks // 6) % len(frames)]  # img_dur=6 as in game.py
-                half = frame.get_width() // 2
-                for i, (dx, dy) in enumerate(((-34, -14), (30, -20), (-8, -22))):
-                    t = ((ticks + i * cycle / 3) % cycle) / fly
-                    if t >= 1:
-                        continue  # collected, waiting to respawn
-                    pull = t * t  # speeds up as it closes in, like the magnet's pull
-                    x = tx + dx * (1 - pull)
-                    y = ty + dy * (1 - pull)
-                    stage.blit(frame, (round(x) - half, round(y) - half))
-
-            return coins
-        return None
+        key = (name, self.settings.selected_skin if name == "Default" else 0)
+        if key in self._icons:
+            return self._icons[key]
+        img = None
+        skin = self.cm.SKIN_INFO.get(name)
+        if name == "Default" and skin is None:
+            skin = self.cm.SKIN_INFO.get(self.cm.SKINS[self.settings.selected_skin])
+        if skin is not None:
+            img = _load_frames(skin.path, "idle")[0]
+        elif name in ITEM_ICONS:
+            img = image(ITEM_ICONS[name])
+        if img is not None:
+            scale = max(1, min(3, self.ICON_SIZE // max(img.get_size())))
+            img = pygame.transform.scale(img, (img.get_width() * scale, img.get_height() * scale))
+        self._icons[key] = img
+        return img
 
 
 class StoreState(_ItemMenuState):

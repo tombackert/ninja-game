@@ -86,20 +86,11 @@ class MPPlayer(Player):
             from scripts.entities import PhysicsEntity
 
             PhysicsEntity.render(self, surf, offset=offset)
-        gun_img = self.game.assets["gun"]
-        if self.flip:
-            surf.blit(
-                pygame.transform.flip(gun_img, True, False),
-                (
-                    self.rect().centerx - 4 - gun_img.get_width() - offset[0],
-                    self.rect().centery - offset[1],
-                ),
-            )
-        else:
-            surf.blit(
-                gun_img,
-                (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]),
-            )
+        from scripts import item_fx
+
+        rect = self.rect().move(-int(offset[0]), -int(offset[1]))
+        since = self._fx_since(self.fire_fx, item_fx.FIRE_FRAMES["Gun"]) if self.fire_fx_kind == "Gun" else None
+        item_fx.weapon(surf, "Gun", rect, self.flip, self.fx_tick, since)
 
 
 class _SilentAudio:

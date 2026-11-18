@@ -59,6 +59,7 @@ class SkinPreview:
     """Plays one skin's showcase; `frame()` is the current 20x22 frame."""
 
     _timelines: dict = {}  # (path, showcase) -> [(frame, ticks)]
+    _anims: dict = {}  # (path, anim) -> frames
     _backdrop: pygame.Surface | None = None
 
     def __init__(self) -> None:
@@ -97,6 +98,17 @@ class SkinPreview:
             t -= dur
         return timeline[-1][0]
 
+    def anim_frame(self, anim: str, ticks: float) -> pygame.Surface | None:
+        """Frame of one move of the current skin at `ticks` (timing as in game.py)."""
+        if self.path is None:
+            return None
+        key = (self.path, anim)
+        frames = SkinPreview._anims.get(key)
+        if frames is None:
+            frames = SkinPreview._anims[key] = _load_frames(self.path, anim)
+        dur = next((d for a, d, _ in SEQUENCE if a == anim), 6)
+        return frames[int(ticks // dur) % len(frames)]
+
     @classmethod
     def backdrop(cls) -> pygame.Surface:
         """Sky and grass of the stage, in game pixels."""
@@ -112,20 +124,20 @@ class SkinPreview:
             cls._backdrop = stage
         return cls._backdrop
 
-    def render_stage(self, surface: pygame.Surface, rect: pygame.Rect, held: str | None = None, extra=None) -> None:
+    def render_stage(self, surface: pygame.Surface, rect: pygame.Rect, held: str | None = None, scene=None) -> None:
         """Draw the stage into `rect` (a multiple of STAGE): the ninja, holding
-        `held` (an image under data/images) like in a level; `extra(stage, feet)`
-        may add more in game pixels (feet = the ninja's bottom center)."""
+        `held` (an image under data/images); or an item's `scene`
+        (scripts/item_showcase.py), which draws the ninja itself."""
         stage = self.backdrop().copy()
-        img = self.frame()
         feet = (STAGE[0] // 2, GROUND_Y)
-        if img is not None:
-            stage.blit(img, (feet[0] - BOX[0] // 2, feet[1] - BOX[1]))
-        if held is not None:
-            # Player._render_held_weapon: 4 px in front of the hitbox center, at its middle
-            stage.blit(_load_image(held), (feet[0] + 4, feet[1] - 8))
-        if extra is not None:
-            extra(stage, feet)
+        if scene is not None:
+            scene.draw(stage, self, self.ticks)
+        else:
+            img = self.frame()
+            if img is not None:
+                stage.blit(img, (feet[0] - BOX[0] // 2, feet[1] - BOX[1]))
+            if held is not None:
+                stage.blit(_load_image(held), (feet[0] + 4, feet[1] - 8))
         surface.blit(pygame.transform.scale(stage, rect.size), rect.topleft)
 
 

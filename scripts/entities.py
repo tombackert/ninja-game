@@ -2,6 +2,7 @@ import math
 
 import pygame
 
+from scripts import item_fx
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
     AIR_JUMP_VELOCITY,
@@ -391,6 +392,15 @@ class Player(PhysicsEntity):
         self.grapple_frames = 0  # frames spent in current pull (safety timeout)
         self.shield_ready = False  # armed shield charge absorbs next hit
         self.shield_rearm = 0  # frames until next charge arms
+        # Looks only (scripts/item_fx.py): frame count and animation timers
+        self.fx_tick = 0
+        self.fire_fx = 0  # frames left of the weapon's fire animation
+        self.fire_fx_kind = None  # weapon it runs for
+        self.grapple_whiff = False  # the last hook found nothing to bite
+        self.shield_break_fx = 0  # frames left of the shield shattering
+        self.moon_fx = 0  # frames left of the moon boots' burst
+        self.moon_fx_pos = (0, 0)
+        self._companion = None  # floating charm's position (follows smoothly)
         # Water world
         self.breath = BREATH_FRAMES  # frames left before drowning, full while the head is dry
         self.invulnerable = 0  # frames left blinking after a hit, nothing hits meanwhile (take_hit)
@@ -424,7 +434,12 @@ class Player(PhysicsEntity):
         except Exception:  # pragma: no cover - defensive
             name = "Default"
         weapon = get_weapon(WEAPON_KEYS.get(name, "none"))
-        return weapon.fire(self)
+        result = weapon.fire(self)
+        if result is not None and name in item_fx.FIRE_FRAMES:
+            self.fire_fx_kind = name
+            self.fire_fx = item_fx.FIRE_FRAMES[name]
+            self.grapple_whiff = name == "Grapple Hook" and not result.spawned
+        return result
 
     # --- Gear helpers (passive store items) ---
     def gear_name(self) -> str:
@@ -443,6 +458,7 @@ class Player(PhysicsEntity):
         game_cm.shield -= 1
         self.shield_ready = False
         self.shield_rearm = SHIELD_REARM_FRAMES
+        self.shield_break_fx = item_fx.SHIELD_BREAK_FRAMES
         spawn_hit_sparks(self.game, self.rect().center)
         return True
 
@@ -569,6 +585,10 @@ class Player(PhysicsEntity):
             self.shoot_cooldown -= 1
         if self.slash_timer > 0:
             self.slash_timer -= 1
+        self.fx_tick += 1
+        for timer in ("fire_fx", "shield_break_fx", "moon_fx"):
+            if getattr(self, timer) > 0:
+                setattr(self, timer, getattr(self, timer) - 1)
         if self.swim_cooldown > 0:
             self.swim_cooldown -= 1
 
@@ -734,12 +754,13 @@ class Player(PhysicsEntity):
         for i in range(count):
             surf.blit(icon, (x + i * step, y))
 
-    # Held-weapon overlay: weapon display name -> (asset key, ownership attr)
-    _HELD_WEAPON_ASSETS = {
-        "Gun": ("gun", "gun"),
-        "Rifle": ("rifle", "rifle"),
-        "Sword": ("sword", "sword"),
-        "Grapple Hook": ("hook", "grapple_hook"),
+    # Weapon in hand: weapon display name -> ownership attr
+    _HELD_WEAPON_ATTRS = {
+        "Gun": "gun",
+        "Rifle": "rifle",
+        "Sword": "sword",
+        "Grapple Hook": "grapple_hook",
+        "Ninja Stars": "ninja_stars",
     }
 
     def blink_hidden(self) -> bool:
@@ -747,88 +768,106 @@ class Player(PhysicsEntity):
         inv = self.invulnerable
         return isinstance(inv, int) and inv > 0 and (inv // 4) % 2 == 1
 
+    def _fx_since(self, left: int, total: int):
+        """Frames since an animation of `total` frames started (None: over)."""
+        return max(0, total - left - 1) if left > 0 else None
+
+    def _owned_gear(self) -> str:
+        """The equipped gear if the player owns it, else "None"."""
+        name = self.gear_name()
+        idef = cm._ITEM_DEFS.get(name)
+        game_cm = getattr(self.game, "cm", None)
+        if idef is None or game_cm is None or getattr(game_cm, idef.attr, 0) <= 0:
+            return "None"
+        return name
+
     def render(self, surf, offset=(0, 0)):
         if self.blink_hidden():
             return
+        ox, oy = int(offset[0]), int(offset[1])
+        rect = self.rect().move(-ox, -oy)
+        gear = self._owned_gear()
+        tick = self.fx_tick
+
+        # Behind the ninja: the floating charm or magnet, the magnet's reach
+        if gear in ("Lucky Charm", "Coin Magnet"):
+            target = item_fx.companion_spot(rect, self.flip, tick)
+            world = (target[0] + ox, target[1] + oy)
+            if self._companion is None or abs(self._companion[0] - world[0]) > 40:
+                self._companion = world
+            else:
+                self._companion = (
+                    self._companion[0] + (world[0] - self._companion[0]) * 0.2,
+                    self._companion[1] + (world[1] - self._companion[1]) * 0.35,
+                )
+            spot = (self._companion[0] - ox, self._companion[1] - oy)
+            if gear == "Coin Magnet":
+                self._render_magnet(surf, rect, spot, ox, oy, tick)
+            else:
+                item_fx.omamori(surf, spot, tick)
+        if gear == "Moon Boots" and self.water is None:
+            charged = self.air_jumps > 0 and self.air_time > 4
+            if charged or self.collisions.get("down"):
+                item_fx.boot_glow(surf, rect, tick, charged)
+
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
+            if gear == "Moon Boots":
+                img = self.animation.img()
+                boots = item_fx.boots_overlay(img)
+                surf.blit(pygame.transform.flip(boots, self.flip, False), self.sprite_pos(img, offset))
 
-        # Grapple rope behind the player sprite additions
-        if self.grapple_point is not None:
-            pygame.draw.line(
-                surf,
-                (200, 205, 215),
-                (self.rect().centerx - offset[0], self.rect().centery - offset[1]),
-                (self.grapple_point[0] - offset[0], self.grapple_point[1] - offset[1]),
-                1,
-            )
+        self._render_held_weapon(surf, rect, tick, ox, oy)
 
-        self._render_held_weapon(surf, offset)
-        self._render_slash_vfx(surf, offset)
-        self._render_shield_bubble(surf, offset)
+        if gear == "Shield":
+            game_cm = getattr(self.game, "cm", None)
+            rearm = 0.0
+            if not self.shield_ready and game_cm is not None and game_cm.shield > 0 and self.shield_rearm > 0:
+                rearm = 1 - self.shield_rearm / SHIELD_REARM_FRAMES
+            broke = self._fx_since(self.shield_break_fx, item_fx.SHIELD_BREAK_FRAMES)
+            item_fx.shield(surf, rect.center, tick, self.shield_ready, rearm, broke)
+        elif self.shield_break_fx:
+            broke = self._fx_since(self.shield_break_fx, item_fx.SHIELD_BREAK_FRAMES)
+            item_fx.shield(surf, rect.center, tick, False, 0.0, broke)
+        if self.moon_fx:
+            since = self._fx_since(self.moon_fx, item_fx.MOON_JUMP_FRAMES)
+            item_fx.moon_jump(surf, (self.moon_fx_pos[0] - ox, self.moon_fx_pos[1] - oy), since)
+        if gear == "Lucky Charm" and tick < item_fx.CHARM_INTRO_FRAMES and self._companion is not None:
+            item_fx.charm_heart(surf, (self._companion[0] - ox, self._companion[1] - oy), tick)
 
-    def _render_held_weapon(self, surf, offset):
+    def _render_magnet(self, surf, rect, spot, ox, oy, tick):
+        from scripts.constants import MAGNET_RADIUS
+
+        coins = getattr(getattr(self.game, "cm", None), "coin_list", None) or []
+        center = rect.center
+        pulling = False
+        for coin in coins:
+            cx = coin.pos[0] + coin.size[0] / 2 - ox
+            cy = coin.pos[1] + coin.size[1] / 2 - oy
+            if (cx - center[0]) ** 2 + (cy - center[1]) ** 2 <= MAGNET_RADIUS**2:
+                pulling = True
+                item_fx.pulled_coin(surf, (cx, cy), center, tick)
+        if pulling:
+            item_fx.magnet_field(surf, center, tick, MAGNET_RADIUS)
+        item_fx.magnet(surf, spot, tick, pulling)
+
+    def _render_held_weapon(self, surf, rect, tick, ox, oy):
         from scripts.collectableManager import CollectableManager as cm
 
         try:
             name = cm.WEAPONS[settings.selected_weapon]
         except (IndexError, TypeError):  # pragma: no cover - defensive
             return
-        entry = self._HELD_WEAPON_ASSETS.get(name)
-        if entry is None:
+        owned_attr = self._HELD_WEAPON_ATTRS.get(name)
+        if owned_attr is None or getattr(self.game.cm, owned_attr, 0) <= 0:
             return
-        asset_key, owned_attr = entry
-        if getattr(self.game.cm, owned_attr, 0) <= 0:
-            return
-        img = self.game.assets.get(asset_key) if hasattr(self.game.assets, "get") else None
-        if img is None:
-            return
-        if self.flip:
-            surf.blit(
-                pygame.transform.flip(img, True, False),
-                (
-                    self.rect().centerx - 4 - img.get_width() - offset[0],
-                    self.rect().centery - offset[1],
-                ),
-            )
-        else:
-            surf.blit(
-                img,
-                (
-                    self.rect().centerx + 4 - offset[0],
-                    self.rect().centery - offset[1],
-                ),
-            )
-
-    def _render_slash_vfx(self, surf, offset):
-        if self.slash_timer <= 0:
-            return
-        img = self.game.assets.get("slash") if hasattr(self.game.assets, "get") else None
-        if img is None:
-            return
-        prect = self.rect()
-        if self.flip:
-            surf.blit(
-                pygame.transform.flip(img, True, False),
-                (prect.left - img.get_width() - 2 - offset[0], prect.centery - img.get_height() // 2 - offset[1]),
-            )
-        else:
-            surf.blit(
-                img,
-                (prect.right + 2 - offset[0], prect.centery - img.get_height() // 2 - offset[1]),
-            )
-
-    def _render_shield_bubble(self, surf, offset):
-        if not self.shield_ready:
-            return
-        radius = 13
-        bubble = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(bubble, (120, 200, 255, 60), (radius, radius), radius)
-        pygame.draw.circle(bubble, (170, 220, 250, 150), (radius, radius), radius, 1)
-        surf.blit(
-            bubble,
-            (self.rect().centerx - radius - offset[0], self.rect().centery - radius - offset[1]),
-        )
+        since = None
+        if self.fire_fx_kind == name:
+            since = self._fx_since(self.fire_fx, item_fx.FIRE_FRAMES[name])
+        grapple = None
+        if self.grapple_point is not None:
+            grapple = ((self.grapple_point[0] - ox, self.grapple_point[1] - oy), self.grapple_frames)
+        item_fx.weapon(surf, name, rect, self.flip, tick, since, grapple, self.grapple_whiff)
 
     def fell_out(self, tilemap) -> bool:
         """Fallen below anything that could still catch the fall (Tilemap.kill_line):
@@ -886,19 +925,13 @@ class Player(PhysicsEntity):
             self.velocity[1] = AIR_JUMP_VELOCITY
             self.air_jumps -= 1
             self.air_time = 5
+            self.moon_fx = item_fx.MOON_JUMP_FRAMES
+            self.moon_fx_pos = self.rect().midbottom
+            # The burst is drawn by item_fx.moon_jump. The draws of the dark
+            # particles it replaced stay, so recorded runs replay the same.
             rng = RNGService.get()
             for _ in range(10):
-                angle = rng.random() * math.pi + math.pi  # downward burst
-                speed = rng.random() * 0.5 + 0.5
-                self.game.particles.append(
-                    Particle(
-                        self.game,
-                        "particle",
-                        self.rect().midbottom,
-                        velocity=[math.cos(angle) * speed, -math.sin(angle) * speed],
-                        frame=rng.randint(0, 7),
-                    )
-                )
+                rng.random(), rng.random(), rng.randint(0, 7)
             return True
 
     def dash(self):

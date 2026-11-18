@@ -109,15 +109,19 @@ ITEM_DESCRIPTIONS = {
     "Lucky Charm": "One extra life at the start of each level.",
 }
 
-# Small sprite shown on an item's card (path under data/images)
+# Sprite beside an item's name in the store and accessories lists
+# (path under data/images, tools/gen_pixel_art.py)
 ITEM_ICONS = {
-    "Gun": "gun.png",
-    "Ammo": "projectile.png",
-    "Rifle": "rifle.png",
+    "Gun": "weapons/pistol.png",
+    "Ammo": "weapons/ammo.png",
+    "Rifle": "weapons/rifle.png",
     "Ninja Stars": "star.png",
-    "Sword": "sword.png",
-    "Grapple Hook": "hook.png",
-    "Coin Magnet": "collectables/coin/0.png",
+    "Sword": "weapons/katana.png",
+    "Grapple Hook": "weapons/hook.png",
+    "Shield": "gear/shield.png",
+    "Moon Boots": "gear/moon_boots.png",
+    "Coin Magnet": "gear/magnet.png",
+    "Lucky Charm": "gear/omamori.png",
 }
 
 # Folder names of the skins replaced by the ones above (old replays name them)

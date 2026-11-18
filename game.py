@@ -113,12 +113,8 @@ class Game:
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
             "checkpoint": am.get_image_frames("tiles/collectables/checkpoint"),
-            "gun": am.get_image("gun.png"),
-            "rifle": am.get_image("rifle.png"),
-            "sword": am.get_image("sword.png"),
-            "slash": am.get_image("slash.png"),
+            "gun": am.get_image("gun.png"),  # the enemies' gun (the ninja's weapons: scripts/item_fx.py)
             "star": am.get_image("star.png"),
-            "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
         # Each enemy kind's own character and animations (tools/gen_enemy_art.py);

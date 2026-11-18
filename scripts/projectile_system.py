@@ -49,7 +49,7 @@ from typing import Any, Dict, Iterator, List, Optional
 import pygame
 
 from . import death_log
-from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
+from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES, PROJECTILE_SPEED
 from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
 from .entity_id import EntityIDGenerator
 from .safe_start import in_safe_zone
@@ -248,16 +248,26 @@ class ProjectileSystem:
 
         Keeps renderer/UI unaware of internal structure details.
         """
+        from scripts import item_fx
+
         for proj in self._projectiles:
+            x, y = proj["pos"]
+            vx, vy = proj["vel"]
             if proj.get("kind") == "star":
-                base = self.game.assets.get("star") if hasattr(self.game.assets, "get") else None
-                if base is None:
-                    base = self.game.assets["projectile"]
-                # Spin while flying
-                img = pygame.transform.rotate(base, (proj["age"] * 20) % 360)
+                # Spinning, with a faint after-image of the turn before
+                angle = (proj["age"] * 20) % 360
+                ghost = item_fx.star_image((angle - 20) % 360, ghost=True)
+                yield ghost, x - vx * 1.5 - ghost.get_width() / 2, y - vy * 1.5 - ghost.get_height() / 2
+                img = item_fx.star_image(angle)
+            elif proj.get("owner") == "player":
+                # The ninja's bullets: head at the position, tracer behind
+                img = item_fx.bullet_image(abs(vx) > PROJECTILE_SPEED + 0.5, vx < 0)
+                head = img.get_width() - 1
+                yield img, (x - head if vx >= 0 else x - 1), y - img.get_height() / 2
+                continue
             else:
                 img = self.game.assets["projectile"]
-            yield img, proj["pos"][0] - img.get_width() / 2, proj["pos"][1] - img.get_height() / 2
+            yield img, x - img.get_width() / 2, y - img.get_height() / 2
 
 
 __all__ = ["ProjectileSystem"]
