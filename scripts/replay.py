@@ -153,6 +153,16 @@ class GhostPlayer(Player):
             if inp == "stop_right":
                 self.input_right = False
 
+    # The ghost moves through the live world but is not part of it: it never
+    # kills an enemy by landing on it and nothing hurts it (no lost life, hit
+    # sound or screenshake). Bounces and knockbacks of the recorded run come
+    # back with the next snapshot correction (ReplayGhost.step).
+    def stomp(self, prev_bottom: float) -> bool:
+        return False
+
+    def take_hit(self, cause: str, source_x: float | None = None) -> bool:
+        return False
+
     def render(self, surf, offset=(0, 0)):
         # Ghost specific render override handled by wrapper
         super().render(surf, offset)

@@ -49,3 +49,26 @@ def test_ghost_resimulation_does_not_touch_world():
     assert ghost.tick == 30
     assert RNGService.get().get_state() == rng_state
     assert g.dead == 0
+
+
+def test_ghost_does_not_kill_enemies_or_get_hurt():
+    g = GameState().game
+    g.load_level(LEVEL)
+    enemy = g.enemies[0]
+    data = ReplayData(level=str(LEVEL), skin="default", seed=0, duration_frames=30)
+    ghost = ReplayGhost(g, data)
+    # Falling onto the enemy's head: a stomp for a real player
+    ghost.entity.pos = [enemy.pos[0], enemy.pos[1] - 16]
+    ghost.entity.velocity = [0, 3]
+    shake = g.screenshake
+    enemies = list(g.enemies)
+    coins = g.cm.coins
+    lives = ghost.entity.lives
+
+    for _ in range(10):
+        ghost.step()
+
+    assert g.enemies == enemies
+    assert g.cm.coins == coins
+    assert ghost.entity.lives == lives
+    assert g.screenshake == shake
