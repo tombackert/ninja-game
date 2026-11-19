@@ -99,18 +99,22 @@ The agent has three parts:
 - **Guide** (`tools/rl/guide.py`). Before training, the planner plans once per stretch from many states around the route:
   - states a few random moves off the route
   - by a flame jet, the beats in which the route would burn
-  - three rounds of the states the agent met but the guide did not know yet
+  - three rounds of the states the agent met but the guide did not know yet, or where it made no progress along the route for a second (the guide's answers there went round in a loop)
+  - two rounds of the states where the way after an attack on an enemy got lost
 
   Plans from those missed states end where they reach the route again. Built once per stretch and cached in `tools/rl/cache/`.
-- **Route action.** One action follows the route, off it the guide, and by a flame the guide's way for the jet's beat. It looks 20 frames ahead along that way at the enemies as the player saw them 200 ms ago: a patrol walks on by its rules, a shot flies on, and a gunner whose walk ends or a turret whose cooldown runs out fires the shot a player expects. If the way runs into one of them or into a burning jet, it waits, dashes through, jumps or backs off.
+- **Route action.** One action follows the route, off it the guide, and by a flame the guide's way for the jet's beat. It looks 20 frames ahead along that way (32 near a jumper) at the enemies as the player saw them 200 ms ago: a patrol walks on by its rules, a jumper hops by its own, a shot flies on, and a gunner whose walk ends or a turret whose cooldown runs out fires the shot a player expects. If the way runs into one of them or into a burning jet, it waits, dashes through, jumps or backs off.
+  - **Kills.** As a player would, it kills an enemy on the way on that is a danger: one that hurts on touch and that the way meets, or an armed one that has the player in sight. It dashes at it or jumps onto it, but only if the attack kills it, the way after it runs into nothing for 72 frames, and the guide leads back to the route from there. Enemies behind are left: going back costs the dash the way on needs. No reward is paid for a kill.
 - **Policy** (PPO, `tools/rl/ppo.py`). It sees the last 4 decisions and chooses between the route action and the 12 moves, so it learns when to leave the way. Half the episodes start at a later waypoint, mostly where the agent fails most.
 
 Level 11, 200 evaluation episodes each (8 cores):
 
 | Stretch | Policy | Route action alone | Route played blind | Guide build | Training |
 |---|---|---|---|---|---|
-| Segments 9-11 (gunners, turrets, a jumper) | 92% | 92% | 0% | 3 min | 6 min |
-| Maze, segments 22-31 (gunners, turrets, patrols, chasers, flame jets) | 96% | 92% | 0% | 7 min | 7 min |
+| Segments 9-11 (gunners, turrets, a jumper) | 95%, 2.6 kills | 97%, 3.3 kills | 0% | 4 min | 6 min |
+| Maze, segments 22-31 (gunners, turrets, patrols, chasers, flame jets) | 94%, 1.5 kills | 92%, 1.4 kills | 0% | 8 min | 10 min |
+
+Kills are per episode. On segments 9-11 the kills halve the route action's last-moment dodges (5.1 to 2.1 per episode, 300 episodes) and bring it to the goal 80 frames sooner, at the same goal rate.
 
 It needs `numpy` and `torch`:
 

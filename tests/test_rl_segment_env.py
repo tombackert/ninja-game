@@ -368,7 +368,7 @@ def test_the_route_action_does_not_look_again_while_its_way_stays_clear(monkeypa
     env.guide = _route_guide(env)
     far = (object(), 10**6, 10**6, False)
     monkeypatch.setattr(env, "_threats", lambda: ([far], [], [], (), 0))  # something to watch, far away
-    monkeypatch.setattr(env, "_paths", lambda threats: [[(10**6, 10**6, 8, 8, True)] * segment_env.LOOK])
+    monkeypatch.setattr(env, "_paths", lambda threats, **k: [[(10**6, 10**6, 8, 8, True)] * segment_env.LOOK])
     looks = []
     real = env._hits
     monkeypatch.setattr(env, "_hits", lambda *a, **k: looks.append(1) or real(*a, **k))
@@ -387,8 +387,8 @@ def test_a_player_expects_the_shot_of_a_gunner_whose_walk_ends():
     armed = [a for a in env._walker_snapshot()[2] if a[0] is gunner]
     shots = env._expected_shots(armed, age=0)
     assert len(shots) == 1
-    x, y, vx, vy, grav, f = shots[0]
-    assert f == 5 and vx > 0 and vy == 0
+    x, y, vx, vy, grav, f, owner = shots[0]
+    assert f == 5 and vx > 0 and vy == 0 and owner is gunner
     path = env._shot_path(x, y, vx, vy, grav, f)
     assert path[3] is None and path[5] is not None  # in the air from frame 6 on
     gunner.flip = True  # facing away: no shot at the player
@@ -397,3 +397,135 @@ def test_a_player_expects_the_shot_of_a_gunner_whose_walk_ends():
     gunner.flip, gunner.walking = False, 0  # standing: it fires when it next walks, unseen
     armed = [a for a in env._walker_snapshot()[2] if a[0] is gunner]
     assert env._expected_shots(armed, age=0) == []
+
+
+def test_the_route_action_knows_where_a_jumper_hops():
+    env = SegmentEnv(11, 9, span=3)
+    env.reset(seed=4)
+    g = env.game
+    jumper = next(e for e in g.enemies if e.kind.name == "jumper")
+    seen = []  # the jumper's state frame by frame, as the route action sees it
+    for _ in range(300):
+        seen.append((jumper.pos[0], jumper.pos[1], jumper.flip, jumper.velocity[1], jumper.cooldown))
+        g.apply_inputs([])
+        g.step()
+    hops = sum(1 for a, b in zip(seen, seen[1:]) if a[3] >= 0 > b[3])
+    assert hops >= 3  # it hopped while we watched
+    errors = []
+    for t in range(len(seen) - 41):
+        hopper = segment_env._Hopper(jumper, *seen[t])
+        for k in range(1, 41):
+            hopper.step()
+            errors.append(abs(hopper.pos[0] - seen[t + k][0]) + abs(hopper.pos[1] - seen[t + k][1]))
+    assert sum(errors) / len(errors) < 1.0
+
+
+class _StandStill:
+    """A guide that has the player stand still wherever they are."""
+
+    flames = None
+
+    def beat(self, *_a):
+        return None
+
+    def move(self, *_a):
+        return (0, False, False)
+
+
+def test_a_dash_through_an_enemy_kills_it_and_its_later_shots(monkeypatch):
+    env = SegmentEnv(LEVEL, 10, span=3)
+    env.reset(seed=0)
+    env.guide = _StandStill()
+    monkeypatch.setattr(env, "_rejoins", lambda *a: True)
+    s = next(st for st in env.route_states if st[segment_env.ph.DASH] == 0)  # the dash is ready
+    m = -1 if s[segment_env.ph.FLIP] else 1
+    look = segment_env.LOOK
+    moves = [(m, False, True)] + [(m, False, False)] * (look - 1)
+    trace = [s]
+    for move in moves:
+        trace.append(segment_env.ph.apply_frame(trace[-1], *move, env.solids)[0])
+    owner = object()
+    x, y = trace[5][0], trace[5][1]  # in the way of the dash
+    body = segment_env._Path([(x, y, 8, 15, True)] * look, owner, hurts=False)
+    # its shot, fired at frame 15, meets the player after the dash
+    shot = segment_env._Path(
+        [None] * 14 + [(st[0], st[1], 4, 4, False) for st in trace[15 : look + 1]], owner, fired=15
+    )
+    assert env._hits(s, moves, [body, shot])  # alive, it fires and hits
+    kills: dict = {}
+    assert not env._hits(s, moves, [body, shot], kills=kills)  # the dash kills it first
+    assert kills[owner] < 15
+    walking = segment_env._Path([(x, y, 8, 15, True)] * look, object())  # one that hurts on touch
+    assert not env._hits(s, moves, [walking])  # dashing through it does not hurt
+
+
+def _gunner_in_the_way(env, dx: float, faces_player: bool):
+    """Level 11 stretch 9 with the player on the route where their dash is
+    ready, and one gunner `dx` px ahead along the route at their height."""
+    env.reset(seed=0)
+    g = env.game
+    k = next(i for i, st in enumerate(env.route_states) if i > 8 and st[segment_env.ph.DASH] == 0)
+    s = env.route_states[k]
+    segment_env.set_phys_state(g.player, s)
+    env.route_idx = k
+    gunner = next(e for e in g.enemies if e.kind.name == "gunner")
+    g.enemies[:] = [gunner]
+    gunner.pos = [s[0] + dx, s[1]]
+    gunner.flip = (dx > 0) == faces_player  # facing left: toward a player on its left
+    gunner.walking = 0  # stands (it fires at the end of its next walk)
+    env._walkers.clear()
+    for _ in range(env.reaction_delay + 2):
+        env._walkers.append(env._walker_snapshot())
+    env.frames = 0
+    env.guide = _StandStill()
+    return s, gunner, env.route_frames[k : k + segment_env.LOOK]
+
+
+def test_the_route_action_kills_a_gunner_in_its_way(monkeypatch):
+    env = SegmentEnv(11, 9, span=3)
+    monkeypatch.setattr(env, "_rejoins", lambda *a: True)
+    s, gunner, ahead = _gunner_in_the_way(env, 50, faces_player=True)
+    attack = env._attack_move(s, env._threats(), ahead)
+    assert attack is not None and any(d for _m, _j, d in attack)  # a dash at it
+    m = attack[-1][0]
+    for move in attack + [(m, False, False)]:  # (enemies move before the player: the kill shows a frame later)
+        env.game.apply_inputs(segment_env._inputs(*move))
+        env.game.step()
+    assert gunner not in env.game.enemies
+    assert env.kills == 1
+
+
+def test_the_route_action_leaves_a_gunner_that_is_no_danger_or_behind(monkeypatch):
+    env = SegmentEnv(11, 9, span=3)
+    monkeypatch.setattr(env, "_rejoins", lambda *a: True)
+    s, _gunner, ahead = _gunner_in_the_way(env, 50, faces_player=False)  # it faces away
+    assert env._attack_move(s, env._threats(), ahead) is None
+    s, _gunner, ahead = _gunner_in_the_way(env, -40, faces_player=True)  # behind: going back costs the dash
+    assert env._attack_move(s, env._threats(), ahead) is None
+
+
+def test_an_attack_must_lead_back_to_the_route(monkeypatch):
+    env = SegmentEnv(11, 9, span=3)
+    monkeypatch.setattr(env, "_rejoins", lambda *a: False)
+    s, _gunner, ahead = _gunner_in_the_way(env, 50, faces_player=True)
+    assert env._attack_move(s, env._threats(), ahead) is None
+
+
+def test_the_guide_build_learns_where_the_way_after_an_attack_gets_lost():
+    env = SegmentEnv(LEVEL, 10, span=3)
+    env.reset(seed=0)
+    env.guide = _route_guide(env)
+    s = env.route_states[0]
+    assert env._rejoins(s, True, 0, 0)  # on the route
+    off = (s[0], s[1] - 200) + s[2:]  # high above it: the guide knows no way from there
+    env.attack_misses = {}
+    assert not env._rejoins(off, False, 0, 0)
+    assert [st for st, _down, _wp, _tick in env.attack_misses.values()] == [off]
+
+
+def test_the_guide_build_plans_from_where_the_route_action_stalls():
+    env = SegmentEnv(LEVEL, 10, span=3)
+    env.guide = _StandStill()  # knows a move everywhere, but it leads nowhere
+    misses, timed, rate = segment_env._guide_misses(env, 0, episodes=3)
+    assert rate == 0.0  # it never knew no way ...
+    assert misses and not timed  # ... but stood still off the route: those states count as missed

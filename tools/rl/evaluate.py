@@ -24,6 +24,7 @@ def _summary(results: list) -> dict:
         "timeout": sum(r["outcome"] == "timeout" for r in results) / n,
         "frames": sum(goals) / len(goals) if goals else float("nan"),
         "waypoints": sum(r["waypoints"] for r in results) / n,
+        "kills": sum(r.get("kills", 0) for r in results) / n,  # per episode
         # of the goals: the planner took over from where the agent arrived
         "handoff": (
             (sum(r.get("handoff", True) for r in results if r["outcome"] == "goal") / len(goals))

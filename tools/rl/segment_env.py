@@ -37,13 +37,18 @@ is exactly on it, else the guide's (by a flame, the guide's way for the beat
 first), else the route's input at the nearest point. Near an enemy that hurts
 on touch, an enemy shot or a flame, it looks LOOK frames ahead along that way,
 with the enemies where they will be as the player saw them `reaction_delay`
-frames ago (a patrol walks on by its own rules, a shot flies on, and a
-gunner whose walk ends or a turret whose cooldown runs out fires the shot a
-player expects): if the way runs into one, it waits, dashes through, jumps
-or backs off for a decision, whichever keeps it clear. A way found clear is
-trusted for RECHECK frames while the player follows it and nothing new
-shows up. Nothing is planned during an episode: the planner
-costs milliseconds per call, the simulation microseconds per frame.
+frames ago (a patrol walks on by its own rules, a jumper hops by its own,
+a shot flies on, and a gunner whose walk ends or a turret whose cooldown
+runs out fires the shot a player expects): if the way runs into one, it
+waits, dashes through, jumps or backs off for a decision, whichever keeps it
+clear. A way found clear is trusted for RECHECK frames while the player
+follows it and nothing new shows up. As a player would, it also kills an
+enemy on the way on that is a danger (one that hurts on touch and that the
+way meets, or an armed one that has the player in sight): a dash at it or a
+jump onto it, if that kills it, the way after it runs into nothing and it
+leads back to the route (see `_attack_move`). No reward is paid for a kill.
+Nothing is planned during an episode: the planner costs milliseconds per
+call, the simulation microseconds per frame.
 
 The observation is a flat float vector (see `obs_size`): the player's state,
 the vector to the next waypoint, the route's next inputs and where it goes,
@@ -84,7 +89,13 @@ import pygame  # noqa: E402
 
 from game import Game  # noqa: E402
 from scripts.ai.behaviors import FEET, PROBE, _spikes_ahead, _zone_ahead, throw_velocity  # noqa: E402
-from scripts.constants import DASH_MIN_ACTIVE_ABS, STOMP_MARGIN  # noqa: E402
+from scripts.constants import (  # noqa: E402
+    DASH_MIN_ACTIVE_ABS,
+    GRAVITY_ACCEL,
+    MAX_FALL_SPEED,
+    STOMP_BOUNCE_VELOCITY,
+    STOMP_MARGIN,
+)
 from scripts.hazards import FLAME_WARN  # noqa: E402
 from scripts.rng_service import RNGService  # noqa: E402
 from scripts.settings import settings  # noqa: E402
@@ -99,7 +110,9 @@ FIXES = {"field": True, "water_key": True, "wait": True}
 GUIDE_ROUNDS = 3  # rounds (at most) of planning from the states the guide did not know ...
 MISS_STOP = True  # plans from them end where they reach the route (see guide._Reach)
 GUIDE_GAIN = 0.03  # ... while the last one cut the share of frames it knew no way on by this much
+ATTACK_ROUNDS = 2  # rounds (at most) of planning from where the way after an attack gets lost
 TIMED_LOOK = 60  # frames the guide's blind way is checked against the flames, for a timed plan
+STALL = 60  # frames without progress along the route after which the state counts as missed too
 # Planning the stretch once (cached): the route builder's tries, none with the
 # dash wall climb, in the agent's own decisions (a move held 4 or 8 frames)
 ROUTE_TRIES = (
@@ -112,8 +125,14 @@ PW, PH = 8, 15  # player hitbox (px), as the planner's physics
 # The route action's look out for enemies that hurt on touch: how far ahead it
 # looks (frames) along its way, and from how far (px) it watches one
 LOOK = 20
+LOOK_HOP = 32  # ... while a jumper is near
+ATTACK_LOOK = 72  # frames an attack on an enemy is looked ahead (a jump onto one at the same height takes ~62)
 WATCH = 96
 RECHECK = 8  # frames a way found clear stays trusted while the player follows it and nothing new shows
+REACH = (96, 24)  # how far off (px, sideways and up or down) an enemy is worth a dash or a jump at it
+BEHIND = 0  # ... and how far back from the way on (px): going back costs the dash the way on needs
+REJOIN = 240  # frames the way after an attack has to get back onto the route or to the next waypoint
+RETRY = 12  # frames before an enemy no attack worked on is looked at again
 GRID_W, GRID_H = 15, 11  # local tile grid around the player (tiles)
 N_ENEMIES = 5
 N_PROJECTILES = 5
@@ -346,6 +365,20 @@ def stretch_guide(level: int, start: int, span: int, env=None, log=print) -> gui
                 )
                 for k, v in plans.items():
                     table.setdefault(k, v)
+        # An attack on an enemy (see SegmentEnv._attack_move) leaves the
+        # route where the rounds above, without enemies, never go: plan from
+        # the states the way after one gets lost in, so it leads back
+        for r in range(ATTACK_ROUNDS):
+            env.guide = guide.Guide(list(table.values()), flames)
+            lost = _attack_misses(env, r)
+            if not lost:
+                break
+            log(f"[guide] {len(table):,} states, attack round {r + 1}: planning from {len(lost):,} states")
+            plans = guide.plan_from(
+                env.solids, env.waypoints, lost, anchors=set(spine), stop=MISS_STOP, max_expand=guide.MISS_EXPAND
+            )
+            for k, v in plans.items():
+                table.setdefault(k, v)
     guide.save(path, key, table, flames)
     log(f"[guide] {len(table):,} states")
     return guide.load(path, key)
@@ -354,7 +387,8 @@ def stretch_guide(level: int, start: int, span: int, env=None, log=print) -> gui
 def _guide_misses(
     env, round_: int, episodes: int = 48, cap: int = 2000, timed_cap: int = 150
 ) -> tuple[list, list, float]:
-    """States the route action meets but the guide does not know, from
+    """States the route action meets but the guide does not know (or where
+    it makes no progress along the route for STALL frames), from
     episodes of the route action with random detours, the world emptied of
     enemies (and in every other episode of flames too): (states it knows no
     way on from, states by a flame it knows no timed way on from, the share
@@ -373,6 +407,7 @@ def _guide_misses(
             env.strip_dangers()
         rate = (0.05, 0.15, 0.3)[e % 3]
         done, found = False, 0
+        best, stalled = env.best, 0
         while not done and found < 60:
             before, timed_before = env.unguided, env.untimed
             _obs, _r, done, _info = env.step(route if rng.random() >= rate else rng.randrange(route))
@@ -380,9 +415,14 @@ def _guide_misses(
                 continue
             p = env.game.player
             s, down = phys_state(p), bool(p.collisions["down"])
-            if env.unguided > before:
+            stalled = 0 if env.best > best else stalled + env.action_repeat
+            best = env.best
+            if env.unguided > before or stalled >= STALL:
+                # (stalled: the guide's answers there, each from a state near
+                # this one, may go round in a loop; a plan from it leads on)
                 misses.setdefault(guide.key(s, down, env.next_wp), (s, down, env.next_wp, 0))
                 found += 1
+                stalled = 0
             b = env.guide.beat(s, env.game.hazards.clock) if flames else None
             tick = env.game.hazards.clock
             # only where the guide's way, blind to the beat, burns now
@@ -397,6 +437,25 @@ def _guide_misses(
         rng.shuffle(starts)
         out.append(starts[:n])
     return out[0], out[1], unknown / max(1, played)
+
+
+def _attack_misses(env, round_: int, episodes: int = 32, cap: int = 1000) -> list:
+    """States the way after an attack gets to and the guide knows no way on
+    from (see SegmentEnv._lost), from episodes of the route action with the
+    enemies in."""
+    rng = random.Random(round_)
+    env.attack_misses = {}
+    try:
+        for e in range(episodes):
+            env.reset(seed=50_000 + round_ * 1000 + e)
+            done = False
+            while not done and len(env.attack_misses) < cap:
+                _obs, _r, done, _info = env.step(env.n_actions - 1)
+        starts = list(env.attack_misses.values())
+    finally:
+        env.attack_misses = None
+    rng.shuffle(starts)
+    return starts[:cap]
 
 
 def handoff_end(waypoints: list, start: int, span: int) -> int:
@@ -476,6 +535,53 @@ def segment_threats(level: int, margin_x: int = 12, margin_y: int = 6) -> list:
         count = sum(1 for x, y in spawns if x0 <= x <= x1 and y0 <= y <= y1)
         out.append((wp.label, n, count))
     return out
+
+
+class _Path(list):
+    """Where an enemy or a shot is at frames 1..LOOK from now (see
+    `SegmentEnv._paths`), and whose it is: `owner`, the enemy (a shot's: the
+    one that fires it; None: not known); `fired`, the frame from now an
+    expected shot leaves the gun (0: it flies already); `hurts`, False for
+    the body of an armed enemy, which does not hurt on touch but dies to a
+    dash or a stomp as any enemy does."""
+
+    __slots__ = ("owner", "fired", "hurts")
+
+    def __init__(self, items, owner=None, fired: int = 0, hurts: bool = True):
+        super().__init__(items)
+        self.owner, self.fired, self.hurts = owner, fired, hurts
+
+
+class _Hopper:
+    """A jumper's hops ahead of time, by its own rules (scripts/ai/behaviors.py,
+    JumperPolicy): on the ground it waits out its cooldown, then hops
+    forward; in the air it keeps going forward and falls. Where it would
+    turn before a hop (a gap, a wall) is not foreseen."""
+
+    def __init__(self, enemy, x: float, y: float, flip: bool, vy: float, cooldown: int):
+        self.tm = enemy.game.tilemap
+        self.kind = enemy.kind
+        self.size = enemy.size
+        self.pos = [x, y]
+        self.flip, self.vy, self.cooldown = flip, vy, cooldown
+        w, h = self.size
+        self.ground = vy >= 0 and bool(self.tm.solid_check((x + w // 2, y + h + 1)))
+
+    def step(self) -> None:
+        kind = self.kind
+        if self.ground:  # waits out its cooldown, then hops
+            self.cooldown = max(0, self.cooldown - 1)
+            if self.cooldown:
+                return
+            self.vy, self.cooldown, self.ground = kind.hop_velocity, kind.hop_period, False
+        w, h = self.size
+        x = self.pos[0] + (-kind.speed if self.flip else kind.speed)
+        y = self.pos[1] + self.vy
+        if self.vy > 0 and self.tm.solid_check((x + w // 2, y + h)):
+            y = (int(y + h) // ph.TS) * ph.TS - h  # lands
+            self.vy, self.ground = 0.0, True
+        self.vy = min(self.vy + GRAVITY_ACCEL, MAX_FALL_SPEED)
+        self.pos = [x, y]
 
 
 class _Walker:
@@ -584,8 +690,13 @@ class SegmentEnv:
         self._dodge: deque = deque()
         self.look = True  # the route action's look ahead (off: it follows the way blind)
         self.expect_shots = True  # it also counts the shots it expects (see _expected_shots)
-        self._memo: dict = {}  # the guide's moves met while looking ahead (see _hits)
+        self.attack = True  # it kills an enemy in the way when that is safe (see _attack_move)
+        self.attack_misses: dict | None = None  # while the guide is built: where an attack's way got lost
+        self._memo: dict = {}  # the guide's moves met while looking ahead (see _hits) ...
         self._clear = (-1, None, {})  # the way last found clear: (until frame, threats, states on it by frame)
+        self._tried: dict = {}  # enemy -> frame an attack on it was last looked for in vain
+        self._rejoined: dict = {}  # (state, down, waypoint, tick) -> whether the guide's way gets back (_rejoins)
+        self._memo_by = None  # the guide these two are of
         if use_guide:
             self.guide = stretch_guide(level, start, self.span, env=self)
 
@@ -610,6 +721,9 @@ class SegmentEnv:
         # ... and so are coins and ammo (each animates every frame)
         for items in (g.cm.coin_list, getattr(g.cm, "ammo_pickups", [])):
             items[:] = [c for c in items if x0 <= c.pos[0] <= x1 and y0 <= c.pos[1] <= y1]
+        self.kills = 0  # enemies the player killed (a dash through one or a stomp)
+        for e in g.enemies:
+            self._count_kills(e)
         # Advance the world with the player standing in the safe start zone
         for _ in range(rng.randrange(self.warmup + 1)):
             g.apply_inputs([])
@@ -638,9 +752,12 @@ class SegmentEnv:
         self.on_route = self.guided = self.unguided = 0
         self.untimed = 0  # route-action frames by a flame the guide had no timed way for
         self.dodged = 0  # route-action decisions that left the way for a walker
+        self.attacked = 0  # route-action decisions that went for an enemy (see _attack_move)
         self._dodge.clear()
-        self._memo.clear()
+        if self._memo_by is not self.guide:  # what the guide says stays true while it is the same
+            self._memo, self._rejoined, self._memo_by = {}, {}, self.guide
         self._clear = (-1, None, {})
+        self._tried.clear()
         self._walkers.clear()
         self._walkers.append(self._walker_snapshot())
         self.timeout = int((self.plan_frames - k) * self.timeout_factor) + 120
@@ -651,6 +768,17 @@ class SegmentEnv:
         self._moves.clear()
         self._moves.extend([-1] * self.stack)
         return self._seen()
+
+    def _count_kills(self, enemy) -> None:
+        """Count it in `kills` when the player kills `enemy` (Enemy.die)."""
+        die = enemy.die
+
+        def counted(killer=None):
+            if killer is self.game.player:
+                self.kills += 1
+            return die(killer)
+
+        enemy.die = counted
 
     def step(self, action: int):
         if self.done:
@@ -710,6 +838,8 @@ class SegmentEnv:
             "guided": self.guided,
             "unguided": self.unguided,
             "dodged": self.dodged,
+            "attacked": self.attacked,
+            "kills": self.kills,
         }
         return (None if self.done else self._seen()), reward, self.done, info
 
@@ -735,7 +865,7 @@ class SegmentEnv:
                 outcome = "goal"
                 break
         self.done = True
-        return {"outcome": outcome, "frames": self.frames, "waypoints": self.next_wp}
+        return {"outcome": outcome, "frames": self.frames, "waypoints": self.next_wp, "kills": self.kills}
 
     def _seen(self) -> np.ndarray:
         """The world as the agent sees it now: `reaction_delay` frames ago,
@@ -838,18 +968,19 @@ class SegmentEnv:
             max(ys) + margin_y * ts,
         )
 
-    def _route_index(self) -> int:
-        """The frame of the plan whose state is nearest the player's now,
-        searched a little behind and ahead of the last one (the route is
-        followed forwards, a detour may cost a few frames)."""
-        p = self.game.player
+    def _route_index(self, s: tuple | None = None) -> int:
+        """The frame of the plan whose state is nearest the player's now (or
+        `s`), searched a little behind and ahead of the last one (the route
+        is followed forwards, a detour may cost a few frames)."""
+        if s is None:
+            s = phys_state(self.game.player)
         lo = max(0, self.route_idx - 30)
         hi = min(len(self.route_frames), self.route_idx + 90)
         tr = self.route_trace[lo : hi + 1]
         d = (
-            (tr[:, 0] - p.pos[0]) ** 2
-            + (tr[:, 1] - p.pos[1]) ** 2
-            + 64.0 * ((tr[:, 2] - p.velocity[0]) ** 2 + (tr[:, 3] - p.velocity[1]) ** 2)
+            (tr[:, 0] - s[ph.X]) ** 2
+            + (tr[:, 1] - s[ph.Y]) ** 2
+            + 64.0 * ((tr[:, 2] - s[ph.VX]) ** 2 + (tr[:, 3] - s[ph.VY]) ** 2)
         )
         return lo + int(np.argmin(d))
 
@@ -916,6 +1047,13 @@ class SegmentEnv:
             return move
         threats = self._threats()
         s = phys_state(self.game.player)
+        if self.attack and (threats[0] or threats[2]):
+            attack = self._attack_move(s, threats, ahead)
+            if attack is not None:
+                self.attacked += 1
+                self._clear = (-1, None, {})
+                self._dodge.extend(attack[1:])
+                return attack[0]
         hz = getattr(self.game, "hazards", None)
         by_flame = hz is not None and self.guide.beat(s, hz.clock) is not None
         if not (threats[0] or threats[1] or threats[2] or by_flame):
@@ -925,11 +1063,13 @@ class SegmentEnv:
         until, seen, states = self._clear
         if self.frames < until and seen == self._threat_key(threats) and states.get(self.frames) == s:
             return move
-        paths = self._paths(threats)
+        # A jumper comes down from above: a way under it shows its danger late
+        look = LOOK_HOP if any(getattr(getattr(w[0], "kind", None), "hop_period", 0) for w in threats[0]) else LOOK
+        paths = self._paths(threats, look=look)
         trace: list = []
-        if self._hits(s, ahead, paths, trace):
+        if self._hits(s, ahead, paths, trace, look=look):
             self._clear = (-1, None, {})
-            dodge = self._dodge_move(paths)
+            dodge = self._dodge_move(paths, look)
             if dodge is not None:
                 self.dodged += 1
                 self._dodge.extend(dodge[1:])
@@ -974,7 +1114,8 @@ class SegmentEnv:
     # --- enemies that hurt on touch ----------------------------------------------
     def _walker_snapshot(self) -> tuple[list, list, list]:
         """The enemies a player watches this frame: those that hurt on touch,
-        (enemy, x, y, facing left); the enemies' shots, (x, y, vx, vy,
+        (enemy, x, y, facing left, vertical speed, frames to its next hop);
+        the enemies' shots, (x, y, vx, vy,
         gravity); and the armed enemies, (enemy, x, y, facing left, frames
         left of its walk, frames to its next shot, awake)."""
         g = self.game
@@ -982,7 +1123,7 @@ class SegmentEnv:
         for e in g.enemies:
             kind = getattr(e, "kind", None)
             if getattr(kind, "contact", False) is True:
-                walkers.append((e, e.pos[0], e.pos[1], e.flip))
+                walkers.append((e, e.pos[0], e.pos[1], e.flip, e.velocity[1], e.cooldown))
             elif getattr(kind, "armed", False):
                 armed.append((e, e.pos[0], e.pos[1], e.flip, e.walking, e.cooldown, e.awake))
         shots = [
@@ -990,7 +1131,7 @@ class SegmentEnv:
         ]
         return walkers, shots, armed
 
-    def _threats(self) -> tuple:
+    def _threats(self, look: int = LOOK) -> tuple:
         """What the player saw `reaction_delay` frames ago near them:
         (walkers, shots, armed enemies whose shot could reach them soon,
         the walkers a frame before that, frames since)."""
@@ -1003,7 +1144,7 @@ class SegmentEnv:
         px, py = self.game.player.pos
         seen = [w for w in seen if id(w[0]) in alive and abs(w[1] - px) <= WATCH and abs(w[2] - py) <= WATCH]
         shots = [sh for sh in shots if abs(sh[0] - px) <= WATCH + 64 and abs(sh[1] - py) <= WATCH]
-        reach = age + LOOK
+        reach = age + look
         armed = [
             a
             for a in armed
@@ -1028,52 +1169,76 @@ class SegmentEnv:
         """See `_paths`, for the threats the player sees now."""
         return self._paths(self._threats())
 
-    def _paths(self, threats: tuple) -> list:
+    def _paths(self, threats: tuple, bodies: bool = False, look: int = LOOK) -> list:
         """Where each touch-hurting enemy and each enemy shot near the player
-        will be in the next LOOK frames ((x, y, w, h, stompable) at frames
-        1..LOOK from now, None once a shot hit a wall), from what the player
-        saw `reaction_delay` frames ago: a patrol walks on by its rules (it
-        turns at walls, edges, spikes and flames), another enemy keeps the
-        velocity it had then, a shot flies on. Enemies that died since are
-        left out. Shots fired since are not seen yet, but the shots a player
-        expects are in (see `_expected_shots`)."""
+        will be in the next `look` frames ((x, y, w, h, body) at frames
+        1..look from now, None once a shot hit a wall; a `_Path` that knows
+        whose it is), from what the player saw `reaction_delay` frames ago:
+        a patrol walks on by its rules (it turns at walls, edges, spikes and
+        flames), another enemy keeps the velocity it had then, a shot flies
+        on. Enemies that died since are left out. Shots fired since are not
+        seen yet, but the shots a player expects are in (see
+        `_expected_shots`). With `bodies`, the armed enemies' bodies too
+        (they do not hurt on touch; a dash or a stomp kills them): a gunner
+        walks on to the end of its walk, the others stand."""
         seen, shots, armed, before, age = threats
         paths = []
-        for e, x, y, flip in seen:
+        for e, x, y, flip, vy, cooldown in seen:
             w, hgt = e.size
-            if e.kind.name == "patrol":
+            if e.kind.hop_period:
+                hopper = _Hopper(e, x, y, flip, vy, cooldown)
+                for _ in range(age):
+                    hopper.step()
+                path = []
+                for _ in range(look):
+                    hopper.step()
+                    path.append((hopper.pos[0], hopper.pos[1], w, hgt, True))
+            elif e.kind.name == "patrol":
                 walker = _Walker(e, x, y, flip)
                 for _ in range(age):
                     walker.step()
                 path = []
-                for _ in range(LOOK):
+                for _ in range(look):
                     walker.step()
                     path.append((walker.pos[0], walker.pos[1], w, hgt, True))
             else:
                 vx = vy = 0.0
-                for e0, x0, y0, _f in before:
+                for e0, x0, y0, *_ in before:
                     if e0 is e:
                         vx, vy = x - x0, y - y0
-                path = [(x + vx * (age + t), y + vy * (age + t), w, hgt, True) for t in range(1, LOOK + 1)]
-            paths.append(path)
+                path = [(x + vx * (age + t), y + vy * (age + t), w, hgt, True) for t in range(1, look + 1)]
+            paths.append(_Path(path, e))
+        if bodies:
+            for e, x, y, flip, walking, _cooldown, _awake in armed:
+                w, hgt = e.size
+                walker = _Walker(e, x, y, flip)
+                path = []
+                for t in range(age + look):
+                    if t < walking and e.kind.policy == "gunner":
+                        walker.step()
+                    if t >= age:
+                        path.append((walker.pos[0], walker.pos[1], w, hgt, True))
+                paths.append(_Path(path, e, hurts=False))
         # Shots fly straight on (a star falls) until they hit a wall
         for x, y, vx, vy, grav in shots:
-            path = self._shot_path(x, y, vx, vy, grav, -age)
+            path = self._shot_path(x, y, vx, vy, grav, -age, look)
             if path is not None:
-                paths.append(path)
-        for x, y, vx, vy, grav, f in self._expected_shots(armed, age) if self.expect_shots else ():
-            path = self._shot_path(x, y, vx, vy, grav, f)
+                paths.append(_Path(path))
+        for x, y, vx, vy, grav, f, e in self._expected_shots(armed, age, look) if self.expect_shots else ():
+            path = self._shot_path(x, y, vx, vy, grav, f, look)
             if path is not None:
-                paths.append(path)
+                paths.append(_Path(path, e, fired=f))
         return paths
 
-    def _shot_path(self, x: float, y: float, vx: float, vy: float, grav: float, f: int) -> list | None:
+    def _shot_path(
+        self, x: float, y: float, vx: float, vy: float, grav: float, f: int, look: int = LOOK
+    ) -> list | None:
         """A shot at (x, y) at frame `f` from now (negative: before now) as
-        it flies on: where it is at frames 1..LOOK (None before it is fired
+        it flies on: where it is at frames 1..look (None before it is fired
         and after it hit a wall); None if it is never there."""
         tm = self.game.tilemap
-        path: list = [None] * LOOK
-        for t in range(f + 1, LOOK + 1):
+        path: list = [None] * look
+        for t in range(f + 1, look + 1):
             vy += grav
             x, y = x + vx, y + vy
             if tm.solid_check((x, y)):
@@ -1082,10 +1247,11 @@ class SegmentEnv:
                 path[t - 1] = (x, y, 4, 4, False)
         return path if any(path) else None
 
-    def _expected_shots(self, armed: list, age: int) -> list:
+    def _expected_shots(self, armed: list, age: int, look: int = LOOK) -> list:
         """The shots a player who knows the enemies expects from what they
         saw `reaction_delay` frames ago, fired since or soon, at where the
-        player is now: (x, y, vx, vy, gravity, frame from now it is fired).
+        player is now: (x, y, vx, vy, gravity, frame from now it is fired,
+        the enemy).
         A gunner fires when its walk ends, if it then faces the player in
         sight (scripts/ai/behaviors.py, GunnerPolicy); a turret or thrower
         that is awake fires each time its cooldown runs out. Whether another
@@ -1098,14 +1264,14 @@ class SegmentEnv:
             kind = e.kind
             fires = []  # (frame from now, x, y, facing left)
             if kind.policy == "gunner":
-                if walking > 0 and walking - age <= LOOK:
+                if walking > 0 and walking - age <= look:
                     w = _Walker(e, x, y, flip)
                     for _ in range(walking):
                         w.step()
                     fires.append((walking - age, w.pos[0], w.pos[1], w.flip))
             elif awake and kind.fire_period > 0:
                 f = max(cooldown, 1) - age
-                while f <= LOOK:
+                while f <= look:
                     fires.append((f, x, y, None))
                     f += kind.fire_period
             for f, ex, ey, left in fires:
@@ -1116,7 +1282,8 @@ class SegmentEnv:
                         continue
                     v = throw_velocity(kind, dx, dy)
                     if v is not None:
-                        out.append((r.centerx + (6 if v[0] > 0 else -6), r.top + 3, v[0], v[1], kind.throw_gravity, f))
+                        sx = r.centerx + (6 if v[0] > 0 else -6)
+                        out.append((sx, r.top + 3, v[0], v[1], kind.throw_gravity, f, e))
                     continue
                 dx, dy = p.pos[0] - ex, p.pos[1] - ey
                 if not (abs(dx) < kind.sight_x and abs(dy) < kind.sight_y):
@@ -1126,16 +1293,32 @@ class SegmentEnv:
                 elif left != (dx < 0):
                     continue  # a gunner fires only the way it faces
                 d = -1 if left else 1
-                out.append((r.centerx + 15 * d, r.centery, d * kind.bullet_speed, 0.0, 0.0, f))
+                out.append((r.centerx + 15 * d, r.centery, d * kind.bullet_speed, 0.0, 0.0, f, e))
         return out
 
-    def _hits(self, s: tuple, moves: list, paths: list, trace: list | None = None) -> bool:
+    def _hits(
+        self,
+        s: tuple,
+        moves: list,
+        paths: list,
+        trace: list | None = None,
+        kills: dict | None = None,
+        target=None,
+        look: int = LOOK,
+    ) -> bool:
         """Whether playing `moves` from `s`, then the guide's way, runs into
         an enemy or shot on its `paths`, into a burning flame jet or to a
-        deadly fall within LOOK frames. Dashing through an enemy or landing
+        deadly fall within `look` frames. Dashing through an enemy or landing
         on it kills it. `trace` gets the states after each frame. The
-        guide's moves are kept for the episode: the looks of the next frames
-        go the same way."""
+        guide's moves are kept while the guide is the same: the looks of the
+        next frames and episodes go the same way. With `kills`, an enemy whose `_Path` the dash or
+        the landing meets dies (into `kills`, with the frame): from then on
+        its body and the shots it would fire later are gone, and a landing
+        bounces the player up as in the game; the guide's way follows the
+        kill of `target`; and where the guide knows no way on, the route's
+        input at its nearest point is played (as the route action does), not
+        taken for clear, and the way counts as a hit if it ends there or
+        does not get back to the route (see `_rejoins`)."""
         guide_ = self.guide
         memo = self._memo
         if len(memo) > 100_000:
@@ -1143,7 +1326,10 @@ class SegmentEnv:
         hz = getattr(self.game, "hazards", None)
         tick = hz.clock if hz is not None else 0
         down, wp = bool(self.game.player.collisions["down"]), self.next_wp
-        for k in range(LOOK):
+        dead = kills if kills is not None else {}  # enemy -> frame it died
+        hurting = [path for path in paths if getattr(path, "hurts", True)]
+        lost = False  # the guide knew no way from the last state
+        for k in range(look):
             if k < len(moves):
                 move = moves[k]
             elif guide_ is None:
@@ -1155,31 +1341,215 @@ class SegmentEnv:
                 if move is False:
                     move = guide_.move(s, down, wp, beat) if beat is not None else None
                     move = memo[mk] = move or guide_.move(s, down, wp)
-                if move is None:
-                    return False
+                if move is None:  # no known way on: a look counts it clear ...
+                    if kills is None:
+                        return False
+                    if target in dead:
+                        self._lost(s, down, wp)
+                    i = self._route_index(s)  # ... an attack plays on as the route action would
+                    move = self.route_frames[i] if i < len(self.route_frames) else (0, False, False)
+                    lost = True
+                else:
+                    lost = False
             bottom = s[ph.Y] + PH
-            s, down, dead = ph.apply_frame(s, *move, self.solids)
+            s, down, dead_fall = ph.apply_frame(s, *move, self.solids)
             if trace is not None:
                 trace.append(s)
-            if dead:
+            if dead_fall:
                 return True
             if guide_ is not None and guide_.flames is not None and guide_.flames.lethal(s, tick + k + 1):
                 return True
-            if abs(s[ph.DASH]) >= DASH_MIN_ACTIVE_ABS:
-                continue
+            dashing = abs(s[ph.DASH]) >= DASH_MIN_ACTIVE_ABS
             x, y = int(s[ph.X]), int(s[ph.Y])
-            for path in paths:
-                if path[k] is None:  # a shot that hit a wall
+            if kills is None:  # a look: only what hurts, nothing dies
+                if dashing:
                     continue
-                ex, ey, ew, eh, body = path[k]
+                for path in hurting:
+                    at = path[k]
+                    if at is None:  # a shot that hit a wall
+                        continue
+                    ex, ey, ew, eh, body = at
+                    ex, ey = int(ex) - 1, int(ey) - 1
+                    if x < ex + ew + 2 and ex < x + PW and y < ey + eh + 2 and ey < y + PH:
+                        if body and s[ph.VY] > 0 and bottom <= ey + 1 + STOMP_MARGIN:
+                            continue  # lands on it: a stomp
+                        return True
+                continue
+            for path in paths:
+                at = path[k]
+                if at is None:  # a shot that hit a wall
+                    continue
+                ex, ey, ew, eh, body = at
+                owner = getattr(path, "owner", None)
+                if dead and owner in dead and (body or path.fired > dead[owner]):
+                    continue  # killed: gone, and fires no more
+                if body and owner is not None:
+                    ix, iy = int(ex), int(ey)
+                    if x < ix + ew and ix < x + PW and y < iy + eh and iy < y + PH:
+                        if dashing or (s[ph.Y] + PH > bottom and bottom <= iy + STOMP_MARGIN):
+                            dead[owner] = k
+                            if owner is target:
+                                moves = moves[: k + 1]  # then the guide's way
+                            if not dashing:  # Player.stomp
+                                s = s[: ph.VY] + (STOMP_BOUNCE_VELOCITY, 5) + s[ph.AIR + 1 :]
+                            continue
+                if dashing or not getattr(path, "hurts", True):
+                    continue
                 ex, ey = int(ex) - 1, int(ey) - 1
                 if x < ex + ew + 2 and ex < x + PW and y < ey + eh + 2 and ey < y + PH:
                     if body and s[ph.VY] > 0 and bottom <= ey + 1 + STOMP_MARGIN:
                         continue  # lands on it: a stomp
                     return True
-        return False
+        if kills is None:
+            return False
+        if target is not None and target not in dead:
+            return True
+        return lost or not self._rejoins(s, down, wp, tick + look)  # an attack must lead back to the route
 
-    def _dodge_move(self, paths: list) -> list | None:
+    def _rejoins(self, s: tuple, down: bool, wp: int, tick: int) -> bool:
+        """Whether the guide's way from `s` (no enemies) gets back onto the
+        route or to waypoint `wp` within REJOIN frames without a deadly fall
+        or flame. The guide's move off its own states is the one of the
+        nearest it knows, which a precise jump of the route (a dash over a
+        chasm) may not forgive; the physics is exact, so playing it out
+        tells. Kept while the guide is the same: the same attacks come up
+        episode after episode."""
+        guide_ = self.guide
+        flames = guide_.flames is not None
+        rk = (s, down, wp, tick if flames else 0)
+        known = self._rejoined.get(rk)
+        if known is not None:
+            return known
+        memo = self._memo
+        lo = self.route_idx - 30
+        goal = self.waypoints[wp] if wp < len(self.waypoints) else None
+        seen = [rk]
+        ok = False
+        for k in range(REJOIN):
+            j = self._route_at.get(s)
+            if (j is not None and j >= lo) or (goal is not None and goal.contains(s, down)):
+                ok = True
+                break
+            beat = guide_.beat(s, tick + k)
+            mk = (s, down, wp, beat)
+            move = memo.get(mk, False)
+            if move is False:
+                move = guide_.move(s, down, wp, beat) if beat is not None else None
+                move = memo[mk] = move or guide_.move(s, down, wp)
+            if move is None:
+                self._lost(s, down, wp)
+                break
+            s, down, dead_fall = ph.apply_frame(s, *move, self.solids)
+            if dead_fall or (flames and guide_.flames.lethal(s, tick + k + 1)):
+                break
+            if not flames:
+                rk = (s, down, wp, 0)
+                known = self._rejoined.get(rk)
+                if known is not None:
+                    ok = known
+                    break
+                seen.append(rk)
+        if len(self._rejoined) > 200_000:
+            self._rejoined.clear()
+        for rk in seen:  # the states on the way lead back (or not) the same way
+            self._rejoined[rk] = ok
+        return ok
+
+    def _lost(self, s: tuple, down: bool, wp: int) -> None:
+        """Note a state the way after an attack gets to and the guide knows
+        no way on from, while the guide is built (see `stretch_guide`)."""
+        if self.attack_misses is not None:
+            self.attack_misses.setdefault(guide.key(s, down, wp), (s, down, wp, 0))
+
+    def _targets(self, s: tuple, threats: tuple) -> list:
+        """The enemies a player would go for now, nearest first, as they
+        saw them `reaction_delay` frames ago: on the way on (ahead along the
+        route, or no more than BEHIND px back), in reach of a dash or a jump
+        (REACH) and a danger. A danger is an enemy that hurts on touch, a
+        gunner that faces the player in sight (it fires when its walk ends),
+        or a turret or thrower that has them in sight (it turns to them). An
+        enemy further back is left: going back for it costs the dash and
+        the time the way on needs."""
+        seen, _shots, armed, _before, _age = threats
+        px, py = s[ph.X], s[ph.Y]
+        ahead = 1 if self._ahead_x(s) >= px else -1
+        out = []
+        for e, x, y, *_ in seen:
+            dx = (x - px) * ahead
+            if -BEHIND <= dx <= REACH[0] and abs(y - py) <= REACH[1]:
+                out.append((abs(dx), e))
+        for e, x, y, flip, _walking, _cooldown, _awake in armed:
+            dx, dy = (x - px) * ahead, py - y
+            if not (-BEHIND <= dx <= REACH[0] and abs(dy) <= REACH[1] and abs(dy) < max(e.kind.sight_y, 16) + 8):
+                continue
+            if e.kind.policy == "gunner" and flip != (px < x):
+                continue  # faces away: no danger
+            out.append((abs(dx), e))
+        return [e for _d, e in sorted(out, key=lambda o: o[0])]
+
+    def _ahead_x(self, s: tuple) -> float:
+        """Where along x the route goes on from the player (LOOK frames on
+        from its nearest point)."""
+        i = min(self.route_idx + LOOK, len(self.route_states) - 1)
+        return self.route_states[i][ph.X]
+
+    def _attack_move(self, s: tuple, threats: tuple, ahead: list) -> list | None:
+        """The inputs that kill an enemy in the way, as a player would: a
+        dash at it, or a jump onto it (holding toward it for a while, then
+        letting go), turning to it first if need be. Only for an enemy that
+        is a danger (see `_targets`; one that hurts on touch only if the way
+        on, `ahead` then the guide's, meets it within ATTACK_LOOK frames;
+        an armed one in sight will fire on the way on), and only if the
+        attack kills it and, from the kill on, the guide's way runs into
+        nothing (its later shots counted out) up to ATTACK_LOOK frames from
+        now and gets back to the route (see `_rejoins`). The inputs end with
+        the kill. None: no such attack."""
+        if self.frames % self.action_repeat:
+            return None  # a player picks a fight when they decide, not mid-move
+        tried = self._tried
+        targets = [e for e in self._targets(s, threats) if tried.get(e, -RETRY) + RETRY <= self.frames]
+        if not targets:
+            return None
+        threats = self._threats(ATTACK_LOOK)
+        paths = self._paths(threats, bodies=True, look=ATTACK_LOOK)
+        for e in targets:
+            body = next((path for path in paths if path.owner is e and path[0][4]), None)
+            if body is None:
+                continue  # died since
+            if body.hurts and not self._hits(s, ahead, [body], look=ATTACK_LOOK):
+                tried[e] = self.frames
+                continue  # hurts on touch, but the way on does not meet it: no need
+            ex = body[-1][0] + body[-1][2] / 2  # its middle when a jump comes down on it
+            m = 1 if body[0][0] + body[0][2] / 2 > s[ph.X] + PW / 2 else -1
+            turn = [(m, False, False)] if s[ph.FLIP] != (m < 0) else []
+            at = ph.apply_frame(s, *turn[0], self.solids)[0] if turn else s
+            for moves in self._attacks(at, m, ex, stomp=not e.kind.hop_period):
+                moves = turn + moves
+                kills: dict = {}
+                if not self._hits(s, moves, paths, kills=kills, target=e, look=ATTACK_LOOK) and e in kills:
+                    return moves[: kills[e] + 1]
+            tried[e] = self.frames  # none worked: the player walks on a little before trying again
+        return None
+
+    def _attacks(self, s: tuple, m: int, ex: float, stomp: bool = True) -> list:
+        """The ways to go for an enemy on side `m` from `s` whose middle will
+        be at x `ex`: a dash (held while it lasts); a jump held toward it
+        about as long as it takes to get above it at walking speed (1 px a
+        frame), then let go (a stomp; not on a jumper, whose hops the look
+        does not foresee); and a jump with a dash in the air."""
+        hold = [(m, False, False)] * ATTACK_LOOK
+        out = []
+        if not s[ph.DASH]:
+            out.append([(m, False, True)] + hold[:12])
+        if stomp and ph.can_jump(s, self.solids) and not dash_climb_press(s, False, self.solids):
+            dx = int(abs(ex - (s[ph.X] + PW / 2)))
+            for h in sorted({max(1, min(60, dx + d)) for d in (-4, 0, 4)}):
+                out.append([(m, True, False)] + hold[: h - 1] + [(0, False, False)] * ATTACK_LOOK)
+            if not s[ph.DASH] and not dash_climb_press(s, True, self.solids):
+                out.append([(m, True, True)] + hold[:12])  # (a jump into a dash is a dash in the air)
+        return out
+
+    def _dodge_move(self, paths: list, look: int = LOOK) -> list | None:
         """A decision's inputs (one move held `action_repeat` frames, jump and
         dash pressed on its first) after which the guide's way runs into no
         enemy and no flame: wait, dash through the nearest enemy, jump, or
@@ -1201,7 +1571,7 @@ class SegmentEnv:
             if jump and dash_climb_press(s, dash, self.solids):
                 continue
             moves = [(m, jump, dash)] + [(m, False, False)] * (n - 1)
-            if not self._hits(s, moves, paths):
+            if not self._hits(s, moves, paths, look=look):
                 return moves
         return None
 

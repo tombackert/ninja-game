@@ -80,7 +80,7 @@ def cmd_eval(args) -> int:
             continue
         print(
             f"  {name:<12} goal {r['goal']:.0%}  death {r['death']:.0%}  timeout {r['timeout']:.0%}  "
-            f"frames to goal {r['frames']:.0f} (plan {report['plan_frames']})"
+            f"kills {r['kills']:.1f}  frames to goal {r['frames']:.0f} (plan {report['plan_frames']})"
             + (f"  planner takes over {r['handoff']:.0%}" if name == "policy" else "")
         )
     for label, goal in report.get("from", []):
