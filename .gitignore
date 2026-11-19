@@ -35,3 +35,7 @@ frame_pacing*.png
 # Rendezvous worker (npm, wrangler local state)
 rendezvous/node_modules/
 rendezvous/.wrangler/
+
+# Trained policies (python -m tools.rl train)
+tools/rl/models/
+tools/rl/cache/

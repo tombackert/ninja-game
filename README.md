@@ -90,6 +90,38 @@ print(info["level_cleared"], info["lives"], info["coins"])
 
 An adapter for RLlib-style training loops is in [examples/train_integration.py](examples/train_integration.py).
 
+### A learned playtester for the fights
+
+The level tools plan every level's route without enemies. `tools/rl` plays one stretch of that route with the enemies, shots and flame jets live, under human limits: a decision every 4 frames, 200 ms reaction delay, no gear or weapon, no dash wall climb. It measures how often a player gets through. A stretch runs from one fixed point of the route to the next, each a waypoint the player stands on; through a maze of mid-air waypoints it plays on to the exit. The evaluation checks that the planner takes over from wherever the agent arrived.
+
+The agent has three parts:
+
+- **Guide** (`tools/rl/guide.py`). Before training, the planner plans once per stretch from many states around the route:
+  - states a few random moves off the route
+  - by a flame jet, the beats in which the route would burn
+  - three rounds of the states the agent met but the guide did not know yet
+
+  Plans from those missed states end where they reach the route again. Built once per stretch and cached in `tools/rl/cache/`.
+- **Route action.** One action follows the route, off it the guide, and by a flame the guide's way for the jet's beat. It looks 20 frames ahead along that way at the enemies as the player saw them 200 ms ago: a patrol walks on by its rules, a shot flies on, and a gunner whose walk ends or a turret whose cooldown runs out fires the shot a player expects. If the way runs into one of them or into a burning jet, it waits, dashes through, jumps or backs off.
+- **Policy** (PPO, `tools/rl/ppo.py`). It sees the last 4 decisions and chooses between the route action and the 12 moves, so it learns when to leave the way. Half the episodes start at a later waypoint, mostly where the agent fails most.
+
+Level 11, 200 evaluation episodes each (8 cores):
+
+| Stretch | Policy | Route action alone | Route played blind | Guide build | Training |
+|---|---|---|---|---|---|
+| Segments 9-11 (gunners, turrets, a jumper) | 92% | 92% | 0% | 3 min | 6 min |
+| Maze, segments 22-31 (gunners, turrets, patrols, chasers, flame jets) | 96% | 92% | 0% | 7 min | 7 min |
+
+It needs `numpy` and `torch`:
+
+```bash
+python -m tools.rl threats 11              # enemies near each segment of the route
+python -m tools.rl train 11 9 --span 3     # guide (once, cached), then PPO on segments 9-11
+python -m tools.rl eval 11 9 --span 3      # goal / death / timeout rate and planner handoff: policy, route action alone, route played blind
+python -m tools.rl eval 11 22 --per-start 50  # ... and the goal rate from every waypoint on: where a long stretch fails
+python -m tools.rl.watch 11 9 --span 3     # watch it in a game window (--video out.mp4 to record)
+```
+
 ## Level editor
 
 ```bash
