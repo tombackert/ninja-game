@@ -54,7 +54,7 @@ from tools.worlds.planner import FieldGoal, _key, dash_climb_press, plan_segment
 
 DECISION = 4  # frames per agent decision
 DURATIONS = (4, 8)  # the planner's moves: one or two decisions
-VERSION = 7
+VERSION = 8
 BEAT = 10  # frames of a flame jet's beat whose plans are searched together
 NEAR = 8 * 16  # px from a jet's nozzle within which the beat counts
 MARGIN = 2  # frames a flame counts as burning before and after it does

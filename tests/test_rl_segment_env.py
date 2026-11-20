@@ -518,9 +518,9 @@ def test_the_guide_build_learns_where_the_way_after_an_attack_gets_lost():
     s = env.route_states[0]
     assert env._rejoins(s, True, 0, 0)  # on the route
     off = (s[0], s[1] - 200) + s[2:]  # high above it: the guide knows no way from there
-    env.attack_misses = {}
+    env.enemy_misses = {}
     assert not env._rejoins(off, False, 0, 0)
-    assert [st for st, _down, _wp, _tick in env.attack_misses.values()] == [off]
+    assert [st for st, _down, _wp, _tick in env.enemy_misses.values()] == [off]
 
 
 def test_the_guide_build_plans_from_where_the_route_action_stalls():
@@ -529,3 +529,118 @@ def test_the_guide_build_plans_from_where_the_route_action_stalls():
     misses, timed, rate = segment_env._guide_misses(env, 0, episodes=3)
     assert rate == 0.0  # it never knew no way ...
     assert misses and not timed  # ... but stood still off the route: those states count as missed
+
+
+def _thrower(env):
+    """Level 19 stretch 24 with only its thrower left, awake."""
+    env.reset(seed=0)
+    g = env.game
+    thrower = next(e for e in g.enemies if e.kind.name == "thrower")
+    g.enemies[:] = [thrower]
+    thrower.awake = True
+    return thrower
+
+
+def test_the_route_action_knows_where_a_thrower_paces():
+    env = SegmentEnv(19, 24, span=3)
+    thrower = _thrower(env)
+    g = env.game
+    thrower.awake = False
+    g.player.pos = [thrower.pos[0] + 2000, thrower.pos[1]]  # out of its sight: it only paces
+    seen = []
+    for _ in range(400):
+        seen.append((thrower.pos[0], thrower.pos[1], thrower.flip))
+        g.apply_inputs([])
+        g.step()
+    turns = sum(1 for a, b in zip(seen, seen[1:]) if a[2] != b[2])
+    assert turns >= 2  # it paced to and fro while we watched
+    errors = []
+    for t in range(len(seen) - 41):
+        walker = segment_env._Walker(thrower, *seen[t])
+        for k in range(1, 41):
+            walker.step()
+            errors.append(abs(walker.pos[0] - seen[t + k][0]))
+    assert sum(errors) / len(errors) < 0.5
+
+
+def test_a_star_comes_down_where_the_player_is_when_it_is_thrown():
+    env = SegmentEnv(19, 24, span=3)
+    thrower = _thrower(env)
+    p = env.game.player
+    thrower.cooldown = 0  # it would throw, but the player is out of its reach
+    p.pos = [thrower.pos[0] + 400, thrower.pos[1]]
+    env._centers.clear()
+    env._centers.extend([p.rect().center] * (env.reaction_delay + 2))
+    armed = [a for a in env._walker_snapshot()[2] if a[0] is thrower]
+    shots = env._expected_shots(armed, age=env.reaction_delay)
+    assert [(vx, vy, f) for _x, _y, vx, vy, _g, f, _e in shots] == [(0.0, 0.0, 2)]  # it holds the star
+    (path,) = env._paths(([], [], armed, [], env.reaction_delay), look=80)
+    assert path.aim is not None and not any(path)  # no flight yet, only the hand
+    r = thrower.rect()
+    for dx in (-60, 50):  # thrown at a player in reach, it comes down where they are
+        cx, cy = r.centerx + dx, r.centery
+        s = (cx - segment_env.PW // 2, cy - segment_env.PH // 2) + (0,) * 10
+        star = env._aimed(path, s, 80)
+        assert star is not None and star.owner is thrower
+        assert min(abs(q[0] + 2 - cx) + abs(q[1] + 2 - cy) for q in star if q) < 8
+    far = (r.centerx + 400, r.centery) + (0,) * 10
+    assert env._aimed(path, far, 80) is None  # out of reach: it waits
+
+
+def test_a_dodge_that_leads_back_to_the_route_comes_first(monkeypatch):
+    env = SegmentEnv(LEVEL, 10, span=3)
+    env.reset(seed=0)
+    back = {(0, True, False)}  # only a jump's way gets back to the route
+
+    def hits(s, moves, paths, *a, lead_back=False, **k):
+        return moves[0] not in back if lead_back else False  # every dodge escapes
+
+    monkeypatch.setattr(env, "_hits", hits)
+    assert env._dodge_move([])[0] == (0, True, False)
+    back.clear()  # none leads back: the first that escapes
+    assert env._dodge_move([])[0] == (0, False, False)
+
+
+class _NoWay(_StandStill):
+    """A guide that knows no way anywhere."""
+
+    def move(self, *_a):
+        return None
+
+
+def test_the_guide_build_learns_where_the_route_action_gets_lost():
+    env = SegmentEnv(LEVEL, 10, span=3)
+    env.reset(seed=0)
+    env.guide = _NoWay()
+    s = env.route_states[0]
+    off = (s[0], s[1] - 40) + s[2:]  # above the route: off it, and the guide knows no way
+    segment_env.set_phys_state(env.game.player, off)
+    env.enemy_misses = {}
+    env._way_move()  # plays the route's input at its nearest point ...
+    assert env.unguided == 1
+    assert [st for st, _down, _wp, _tick in env.enemy_misses.values()] == [off]  # ... and notes where
+
+
+def test_the_route_action_knows_how_a_chaser_runs_at_the_player():
+    env = SegmentEnv(11, 36, span=3)
+    env.reset(seed=0)
+    g = env.game
+    chaser = next(e for e in g.enemies if e.kind.name == "chaser")
+    g.enemies[:] = [chaser]
+    p = g.player
+    p.pos = [chaser.pos[0] - 100, chaser.pos[1]]  # in its sight, on its floor
+    start = (chaser.pos[0], chaser.pos[1], chaser.flip, getattr(chaser, "awake", False))
+    seen = []
+    for _ in range(60):
+        g.apply_inputs([])
+        g.step()
+        seen.append((chaser.pos[0], p.pos[0], p.pos[1]))
+    assert seen[-1][0] < start[0] - 20  # it ran at the player
+    runner = segment_env._Chaser(chaser, *start)
+    errors = []
+    before = (start[0], p.pos[0], p.pos[1])
+    for x, px, py in seen:
+        runner.chase(before[1], before[2])  # (where the player was when it moved)
+        errors.append(abs(runner.pos[0] - x))
+        before = (x, px, py)
+    assert sum(errors) / len(errors) < 1.0
