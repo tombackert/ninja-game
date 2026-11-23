@@ -34,6 +34,8 @@
 - Improve swimming - diving head first (body rotation changes). Air after diving recharges slower than instantly.
 - The new water levels were trivial for Tobi. Must then become much harder later. Question: How can one design levels on which human players get stuck for a very long time? It seems that the search/evaluation does not yet find all possible human inputs when evaluating the levels. There is still optimization potential there!
 - Improve the level menu itself - based on or inspo from Super Mario Bros worlds. Maybe a 2D map in which one can walk through the worlds map? (names and preview thumbnails are done, see docs/campaign.md)
+- Multiplayer UX: make multiplayer properly playable — a level cannot be played end to end yet. Add a start screen (e.g. a countdown until the round starts). Pick a mode: a race where whoever reaches the finish flag first wins and players can fight each other on the way, or co-op like Super Mario Bros (no friendly fire, explore the worlds together)
+- Menu UX: start a world directly from the level menu: Play -> Level Menu -> Play, or Multiplayer -> Server Menu -> Level Menu -> Play. Saves going into the level menu and back to the main menu every time before starting
 
 ## Enemy Kinds & Hazards Follow-ups
 - Difficulty model: enemies and bullets are still not in it (tools/worlds/windows, assess). Next: an exposure term per element (frames in a gunner's or turret's line of fire, frames next to a touch-kill kind) now that each kind has fixed numbers
