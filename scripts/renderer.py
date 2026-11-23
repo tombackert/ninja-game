@@ -33,6 +33,9 @@ from typing import List, Optional
 
 import pygame
 
+# Largest screen shake offset in game pixels (scaled to the window)
+SHAKE_PX = 3
+
 try:  # Local logger (not mandatory for tests)
     from scripts.logger import get_logger  # type: ignore
 except Exception:  # pragma: no cover - fallback when logger absent
@@ -168,11 +171,16 @@ class Renderer:
         # 7. Compute screenshake offset
         import random
 
+        # A short jolt that fades fast: at most SHAKE_PX game pixels right
+        # after a hit, falling off with the square of the time left, so hits
+        # in a row do not keep the picture jittering at full strength
         screenshake_offset = (0, 0)
-        if getattr(game, "screenshake", 0):
+        shake = getattr(game, "screenshake", 0)
+        if shake:
+            amp = SHAKE_PX * min(1.0, shake / 16) ** 2 * target_surface.get_width() / game.BASE_W
             screenshake_offset = (
-                random.random() * game.screenshake - game.screenshake / 2,
-                random.random() * game.screenshake - game.screenshake / 2,
+                round((random.random() * 2 - 1) * amp),
+                round((random.random() * 2 - 1) * amp),
             )
         if seq is not None:
             seq.append("effects_post")
