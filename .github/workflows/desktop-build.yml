@@ -56,10 +56,13 @@ jobs:
 
       - name: Show linked libraries and minimum macOS
         if: runner.os == 'macOS'
+        continue-on-error: true  # diagnostics only; the smoke test decides
         run: |
           app="dist/Ninja Game.app/Contents"
-          otool -L "$app"/Frameworks/libpython3*.dylib
-          for f in "$app/MacOS/Ninja Game" "$app"/Frameworks/libpython3*.dylib; do
+          # libpython3.x.dylib, or "Python" when setup-python provides a framework build
+          lib=$(find "$app/Frameworks" -maxdepth 4 \( -name 'libpython3*.dylib' -o -name Python \) -type f | head -1)
+          otool -L "$lib"
+          for f in "$app/MacOS/Ninja Game" "$lib"; do
             echo "$f: $(lipo -archs "$f"), minos $(otool -l "$f" | awk '/minos/ {print $2; exit}')"
           done
 
