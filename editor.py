@@ -41,6 +41,7 @@ class Editor:
             "large_decor": load_images("tiles/large_decor"),
             "decor": load_images("tiles/decor"),
             "coin": load_images("tiles/collectables/coin"),
+            "heart": load_images("tiles/collectables/heart"),
             "flag": load_images("tiles/collectables/flag"),
             "reef": load_images("tiles/reef"),
             "wreck": load_images("tiles/wreck"),

@@ -77,6 +77,9 @@ STOMP_MARGIN = 4  # px the feet may already be inside the enemy's head last fram
 AIR_JUMP_VELOCITY = -2.7  # moon boots double jump (weaker than ground jump)
 MAGNET_RADIUS = 48  # coin magnet attraction radius
 MAGNET_PULL_SPEED = 1.8  # coin movement toward player per frame
+# Hearts (placed along the route by tools/worlds/hearts.py): one life back, up
+# to the lives the level started with; with full lives a heart pays coins
+HEART_COINS = 10
 SPARK_PARTICLE_SPEED_MAX = 5  # random() * this for spark speed
 SPARK_COUNT_ENEMY_HIT = 30  # sparks spawned when enemy killed or hit
 SPARK_COUNT_DASH_COLLIDE = 30  # sparks spawned when dash collision occurs

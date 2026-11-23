@@ -15,9 +15,10 @@ A hit costs a life without a death (`Player.take_hit`): a bullet or star
 (scripts/projectile_system.py), spikes or a flame (scripts/hazards.py), or
 an enemy kind that hurts on touch (scripts/enemy_kinds.py). It is logged as
 a "hit" event of its own, with its cause. The log also notes the manual
-checkpoint ("save", the P key), the level's clear ("clear") and leaving the
-level unfinished ("quit"), so attempts per element can be counted: every
-attempt ends in a death, a clear or a quit.
+checkpoint ("save", the P key), a heart picked up ("heart": `life` True if
+it gave a life back, False if it paid coins), the level's clear ("clear")
+and leaving the level unfinished ("quit"), so attempts per element can be
+counted: every attempt ends in a death, a clear or a quit.
 
 The log records a human's single-player play only:
 - `app.main()` switches it on (`enable`), unless NINJA_DEATH_LOG=0;
@@ -113,6 +114,14 @@ def record_hit(game, player, absorbed: bool = False, cause: str = "bullet") -> N
     log = _of(game)
     if log is not None and player is getattr(game, "player", None):
         log.record_event("hit", cause=cause, absorbed=bool(absorbed), lives=_lives(player))
+
+
+def record_heart(game, player, life: bool) -> None:
+    """A heart picked up: `life` True if it gave a life back, False if the
+    lives were full and it paid coins instead."""
+    log = _of(game)
+    if log is not None and player is getattr(game, "player", None):
+        log.record_event("heart", life=bool(life), lives=_lives(player))
 
 
 def record_save(game) -> None:

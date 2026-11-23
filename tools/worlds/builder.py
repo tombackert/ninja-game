@@ -177,6 +177,11 @@ class Level:
             if (x, y) not in self.solid:
                 self.coin(x, y)
 
+    def heart(self, x, y):
+        """A heart pickup (one life back) on air tile (x, y); tools/worlds/hearts.py
+        places them along the route by the danger on it."""
+        self._obj(x, y, "heart", 0)
+
     def flag(self, x, y):
         self._obj(x, y, "flag", 0)
 

@@ -153,6 +153,8 @@ class Game:
         self.timer = Timer(self.level)
 
         # Collectable Manager
+        self.start_lives = 3  # lives of the current run's start (Game.load_level)
+        self.hearts_taken: set = set()  # hearts picked up this run (tile px), kept through respawns
         self.cm = CollectableManager(self)
         self.cm.load_collectables()
 
@@ -265,6 +267,9 @@ class Game:
                 gear_name = "None"
             if gear_name == "Lucky Charm" and self.cm.lucky_charm > 0:
                 lives += 1
+            # A new run: hearts take lives back up to this, and all are there again
+            self.start_lives = lives
+            self.hearts_taken = set()
             for spawner in self.tilemap.extract(SPAWNER_IDS):
                 if spawner["variant"] == 0:
                     player = Player(

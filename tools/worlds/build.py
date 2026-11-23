@@ -5,6 +5,8 @@ write data/maps/<id>.json, plan the intended route with the exact physics
 replica (fails loudly at the first unreachable waypoint), check it against
 the flame jets' beat and the crumbling blocks (tools/worlds/hazard_check.py)
 and save the input plan to tools/worlds/plans/<id>.json for the real-game bot.
+The levels in tools/worlds/hearts.py's HEART_LEVELS then get their hearts
+along that route, and the map is saved with them.
 
 With --assess, each level's difficulty is measured right after its route is
 planned: the timing windows of its elements and the calibrated time to the
@@ -26,6 +28,7 @@ import os
 import sys
 
 from tools.worlds import physics as ph
+from tools.worlds.hearts import HEART_LEVELS
 from tools.worlds.planner import simulate
 from tools.worlds.route import plan_route, save_plan
 
@@ -36,6 +39,15 @@ LEVELS = sorted(int(f[6:-3]) for f in os.listdir(LEVELS_DIR) if f.startswith("le
 def build_level(map_id: int):
     mod = importlib.import_module(f"tools.worlds.levels.level_{map_id}")
     return mod.build()
+
+
+def _hearts(lv, frames: list, segments: list) -> None:
+    """Place the hearts along the planned route (tools/worlds/hearts.py) and save the map again."""
+    from tools.worlds.hearts import place
+
+    spots = place(lv, frames, segments)
+    lv.save()
+    print(f"  hearts: {len(spots)} at {spots}")
 
 
 def process_level(map_id: int, args) -> int:
@@ -78,6 +90,8 @@ def process_level(map_id: int, args) -> int:
                 failed = 1
         if res.ok:
             save_plan(map_id, spawn_px, res.frames, lv.route, res.segments)
+            if map_id in HEART_LEVELS:
+                _hearts(lv, res.frames, [(start, n) for _label, start, n, _exp in res.segments])
             if args.assess:
                 from tools.worlds.assess import print_details, profile
                 from tools.worlds.windows import print_summary, profile_map
@@ -89,6 +103,11 @@ def process_level(map_id: int, args) -> int:
                 print_details(r)
         else:
             failed = 1
+    elif map_id in HEART_LEVELS:  # no new plan: the hearts follow the saved one
+        from tools.worlds.route import load_plan
+
+        plan = load_plan(map_id)
+        _hearts(lv, plan["frame_list"], plan["segments"])
     if args.preview:
         os.makedirs(args.preview, exist_ok=True)
         from tools.worlds.preview import render

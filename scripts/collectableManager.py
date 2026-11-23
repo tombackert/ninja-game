@@ -3,7 +3,8 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from scripts.collectables import Collectables
+from scripts import death_log, item_fx
+from scripts.collectables import HEART_IMAGE, Collectables, Heart
 
 COIN_IMAGE_PATH = "collectables/coin.png"
 DATA_FILE = "data/collectables.json"
@@ -197,6 +198,7 @@ class CollectableManager:
 
     def __init__(self, game):
         self.coin_list = []
+        self.hearts: list = []
         self.game = game
         # Unified state fields persisted to JSON
         self.coins = 0
@@ -234,6 +236,15 @@ class CollectableManager:
         for tile in ammo_tiles:
             self.ammo_pickups.append(Collectables(self.game, tile["pos"], self.game.assets["ammo"]))
 
+        # Hearts come back with the level only on a new run, not on a respawn
+        # (falls cost no life, so a heart that came back could be farmed):
+        # the game keeps the ones taken this run (Game.hearts_taken)
+        self.hearts = []
+        taken = getattr(self.game, "hearts_taken", set())
+        for tile in tilemap.extract([("heart", 0)], keep=False):
+            if tuple(tile["pos"]) not in taken:
+                self.hearts.append(Heart(tile["pos"], item_fx.image(HEART_IMAGE)))
+
     def update(self, player_rect):
         self._apply_coin_magnet(player_rect)
         for coin in self.coin_list[:]:
@@ -247,6 +258,27 @@ class CollectableManager:
                 self.ammo_pickups.remove(ammo)
                 self.ammo += 5
                 self.game.audio.play("collect")
+
+        for heart in self.hearts[:]:
+            if heart.update(player_rect):
+                self.hearts.remove(heart)
+                self.take_heart(heart)
+
+    def take_heart(self, heart):
+        """A life back, up to the lives the level started with (with the
+        Lucky Charm one more); with full lives, HEART_COINS coins instead."""
+        from scripts.constants import HEART_COINS
+
+        game = self.game
+        player = game.player
+        game.hearts_taken.add(tuple(heart.pos))
+        life = player.lives < getattr(game, "start_lives", player.lives)
+        if life:
+            player.lives += 1
+        else:
+            self.coins += HEART_COINS
+        death_log.record_heart(game, player, life)
+        game.audio.play("collect")
 
     def _apply_coin_magnet(self, player_rect):
         """Pull nearby coins toward the player when Coin Magnet gear is equipped."""
@@ -274,6 +306,8 @@ class CollectableManager:
     def render(self, surf, offset=(0, 0)):
         for coin in self.coin_list:
             coin.render(surf, offset=offset)
+        for heart in getattr(self, "hearts", []):
+            heart.render(surf, offset=offset)
 
     def load_collectables(self):
         if os.path.exists(DATA_FILE):

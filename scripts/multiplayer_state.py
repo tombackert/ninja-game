@@ -309,6 +309,7 @@ class MultiplayerGameState(State):
         level = self._client.level
         g.level = level
         g.load_level(level)
+        g.cm.hearts = []  # hearts are single-player only: the server knows none
         g.transition = 0
         g.players = []
         g.enemies = []
