@@ -66,6 +66,8 @@ def test_buy_every_item_succeeds_and_persists(game):
     cm = game.cm
     for name, idef in cm._ITEM_DEFS.items():
         cm.coins = idef.price
+        if idef.category == "skin":
+            setattr(cm, idef.attr, 0)  # the test save is a copy of the player's own
         before = getattr(cm, idef.attr)
         assert cm.buy_collectable(name) == "success"
         assert getattr(cm, idef.attr) == before + idef.increment
@@ -81,7 +83,7 @@ def test_buy_every_item_succeeds_and_persists(game):
 def test_buy_without_coins_fails(game):
     cm = game.cm
     cm.coins = 0
-    for name in ("Rifle", "Sword", "Grapple Hook", "Coin Magnet", "Berserker"):
+    for name in ("Rifle", "Sword", "Grapple Hook", "Coin Magnet", "Oni"):
         assert cm.buy_collectable(name) == "not enough coins"
 
 
@@ -308,6 +310,7 @@ def test_shield_absorbs_hit_and_consumes_charge(game):
     p.update(game.tilemap, (0, 0))  # arms the shield
     assert p.shield_ready is True
     lives_before = p.lives
+    game.safe_zones = []  # away from the safe start
     game.projectiles.clear()
     game.projectiles.spawn(p.rect().centerx, p.rect().centery, 0.5, "enemy")
     summary = game.projectiles.update(game.tilemap, [p], [])
@@ -323,6 +326,7 @@ def test_hit_without_shield_costs_life(game):
     equip_gear("None")
     p.shield_ready = False
     lives_before = p.lives
+    game.safe_zones = []  # away from the safe start
     game.projectiles.clear()
     game.projectiles.spawn(p.rect().centerx, p.rect().centery, 0.5, "enemy")
     game.projectiles.update(game.tilemap, [p], [])
@@ -368,8 +372,54 @@ def test_lucky_charm_grants_extra_life(game):
 
 def test_all_skin_assets_registered(game):
     for skin_path in CollectableManager.SKIN_PATHS:
-        for action in ("idle", "run", "jump", "slide", "wall_slide"):
+        for action in ("idle", "run", "jump", "slide", "wall_slide", "swim"):
             assert f"player/{skin_path}/{action}" in game.assets
+
+
+def test_skins_share_the_default_animation_frames(game):
+    # Every skin is drawn over the default motion: same frame counts per action
+    for skin_path in CollectableManager.SKIN_PATHS:
+        for action in ("idle", "run", "jump", "slide", "wall_slide", "swim"):
+            frames = game.assets[f"player/{skin_path}/{action}"].images
+            default = game.assets[f"player/default/{action}"].images
+            assert len(frames) == len(default), (skin_path, action)
+            assert len({img.get_size() for img in frames}) == 1, (skin_path, action)
+
+
+def test_every_skin_has_a_title_and_description():
+    for name in CollectableManager.SKINS:
+        info = CollectableManager.SKIN_INFO[name]
+        assert info.title.startswith(name) or name == "Default"
+        assert info.description
+        assert CollectableManager.display_name(name) == info.title
+
+
+def test_owned_skin_is_not_sold_twice(game):
+    cm = game.cm
+    cm.kitsune = 0
+    cm.coins = 30000
+    assert cm.buy_collectable("Kitsune") == "success"
+    assert cm.buy_collectable("Kitsune") == "already owned"
+    assert cm.kitsune == 1 and cm.coins == 18000
+
+
+def test_replaced_skin_names_map_to_their_successors():
+    # Replays and saves made before the redesign name the old skin folders
+    for old, new in (("red", "homura"), ("berserker", "oni"), ("diamond", "crystal")):
+        assert CollectableManager.SKIN_PATHS[CollectableManager.skin_index(old)] == new
+    assert CollectableManager.skin_index("no-such-skin") == 0
+
+
+def test_large_skin_frames_keep_feet_and_center_on_the_hitbox(game):
+    # A 20x22 frame is drawn centered on the 14x18 box with the same bottom edge
+    p = game.player
+    p.pos = [100, 50]
+    small = pygame.Surface((14, 18))
+    large = pygame.Surface((20, 22))
+    sx, sy = p.sprite_pos(small)
+    lx, ly = p.sprite_pos(large)
+    assert sx + 7 == lx + 10
+    assert sy + 18 == ly + 22
 
 
 def test_player_uses_selected_skin_animation(game):

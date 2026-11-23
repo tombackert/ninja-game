@@ -25,6 +25,8 @@ def build() -> Level:
     lv.coins(4, 37, 8, 2)
     lv.wp(15, 39, 18, 39, ground=True, label="mesa edge")
     pillar_run(lv, [(22, 42), (26, 44), (31, 45), (35, 47), (39, 49), (44, 50), (48, 52)], BOTTOM, label="down pillar")
+    lv.crumble(35, 47)  # weathered sandstone caps give way under a stop
+    lv.crumble(44, 50)
 
     # --- Canyon ledge and a holed chimney back up --------------------------------
     lv.rect(52, 54, 72, BOTTOM)
@@ -33,7 +35,8 @@ def build() -> Level:
         lv.enemy(x, 53)
     lv.decor(58, 53, 5)
     lv.coins(55, 51, 63, 2)
-    holed_chimney(lv, 66, 4, 24, 54, rests=[(1, 44), (-1, 34)], label="canyon chimney")
+    holed_chimney(lv, 66, 4, 24, 54, rests=[(1, 44), (-1, 34)], label="canyon chimney", top=False)
+    lv.crumble(70, 44)  # the lower rest ledge is crumbling
 
     # --- Plateau B and the wall-bounce staircase -------------------------------
     lv.rect(74, 24, 100, BOTTOM)  # two tiles off the chimney's right wall
@@ -63,8 +66,7 @@ def build() -> Level:
     lv.coins(116, 12, 140, 3)
     mz = Maze(lv, 112, 17, 7, 4, seed=1707, dx=5, dy=5, cw=3, ch=3, border=0, extra_edges=3, start=(0, 0))
     lv.carve(112, 15, 114, 16)  # shaft down into cell (0,0)
-    lv.wp(112, 15, 114, 16, label="cave shaft")
-    mz.route((0, 0), (6, 3))
+    mz.route((0, 0), (6, 3), skip={(3, 1), (4, 2)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((0, 0), (6, 3)):
             x, y = mz.cell_xy(c, r)
@@ -88,7 +90,9 @@ def build() -> Level:
         BOTTOM,
         label="canyon pillar",
     )
+    lv.crumble(163, floor + 2)
     crate_chain(lv, [(180, floor + 4, 1)], label="last rock")
+    lv.crumble(180, floor + 4)  # a loose rock: dash on at once
 
     # --- Wall-bounce ladder up cliff F (dash under the wall on to the first ledge) ---
     cliff = 192
@@ -111,7 +115,8 @@ def build() -> Level:
     lv.coins(194, top - 3, 204, 2)
 
     # --- Holed chimney up to the flag -----------------------------------------------
-    holed_chimney(lv, 208, 3, top - 16, top, rests=[(1, top - 8)], label="flag chimney")
+    holed_chimney(lv, 208, 3, top - 16, top, rests=[(1, top - 8)], label="flag chimney", top=False)
+    lv.crumble(211, top - 8)
     slab = top - 16
     lv.rect(215, slab, 222, slab + 1)  # flag slab, two tiles off the chimney
     lv.wp(215, slab - 1, 217, slab - 1, ground=True, label="flag slab")

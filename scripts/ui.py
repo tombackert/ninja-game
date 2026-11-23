@@ -309,6 +309,10 @@ class UI:
         game.tilemap.render(game.display, offset=render_scroll)
         if getattr(game.tilemap, "water", None):
             game.tilemap.render_water_rock(game.display, render_scroll)
+        # Flames of the flame jets (the hazards' other parts are tiles)
+        hazards = getattr(game, "hazards", None)
+        if hazards is not None and getattr(hazards, "jets", None):
+            hazards.render(game.display, render_scroll)
 
         # Enemies
         for enemy in game.enemies:
@@ -374,7 +378,7 @@ class UI:
                 button_color = UI.PM_COLOR
 
             button_text = f"{option}"
-            UI.draw_text_with_outline(
+            rect = UI.draw_text_with_outline(
                 surface=screen,
                 font=font,
                 text=button_text,
@@ -384,6 +388,7 @@ class UI:
                 center=True,
                 scale=3,
             )
+            option_rects.append(rect)
 
         return option_rects
 
@@ -472,8 +477,9 @@ class UI:
     def render_game_ui_element(display, text, x, y, align="left"):
         font = UI.get_font(8)
         if align == "right":
-            text_surface = font.render(text, True, UI.GAME_UI_COLOR)
-            x = x - text_surface.get_width()
+            x = x - font.size(text)[0]
+        elif align == "center":
+            x = x - font.size(text)[0] // 2
         return UI.draw_text_with_outline(
             surface=display,
             font=font,

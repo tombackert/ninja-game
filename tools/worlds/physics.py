@@ -10,7 +10,11 @@ Only movement matters here: enemies and projectiles never push the player,
 so the trajectory depends on the inputs alone.
 
 The level is a `Terrain`: the set of solid tiles, carrying the level's
-water layer ({(tx, ty): flow}, see scripts/water.py) along.
+water layer ({(tx, ty): flow}, see scripts/water.py) and its spikes
+({(tx, ty): [deadly box (x, y, w, h) in px]}, see scripts/hazards.py) along.
+Crumbling blocks and flame jet nozzles are solid tiles here. The model is
+time-blind: a crumbling block never falls and a flame never burns, so a
+route over them is only checked in the real game (tools/worlds/play.py).
 
 State is an immutable tuple so the route planner can hash and branch it:
     (x, y, vx, vy, air_time, jumps, wall_slide, dashing, flip, last_m,
@@ -21,6 +25,7 @@ from __future__ import annotations
 
 from scripts.constants import (
     AIR_TIME_FATAL,
+    FALL_KILL_DEPTH,
     BREATH_FRAMES,
     DASH_DECEL_TRIGGER_FRAME,
     DASH_DURATION_FRAMES,
@@ -42,6 +47,7 @@ from scripts.constants import (
     WATER_MAX_SINK,
     WATER_MOVE_SCALE,
 )
+from scripts.hazards import SPIKES, spike_box
 from scripts.tilemap import NEIGHBOR_OFFSET, PHYSICS_TILES
 
 TS = 16
@@ -53,23 +59,47 @@ _DRY: dict = {}
 
 
 class Terrain(set):
-    """Solid tiles {(tx, ty)} of a level, with its water layer as `.water`."""
+    """Solid tiles {(tx, ty)} of a level, with its water layer as `.water`, its
+    spikes as `.lethal` and the line a fall ends at as `.kill_y` (Tilemap.kill_line)."""
 
-    def __init__(self, solids=(), water=None):
+    def __init__(self, solids=(), water=None, lethal=None):
         super().__init__(solids)
         self.water = water or _DRY
+        if lethal is None:
+            lethal = getattr(solids, "lethal", None)
+        self.lethal = lethal or _DRY
+        self.kill_y = (max(ty for _, ty in self) + FALL_KILL_DEPTH) * TS if self else None
+
+
+def lethal_from_tiles(tiles) -> dict:
+    """{(tx, ty): [deadly boxes]} of the spikes among `tiles` (dicts with type,
+    variant, pos), as scripts/hazards.py places them."""
+    lethal: dict = {}
+    for t in tiles:
+        if t["type"] == SPIKES:
+            tx, ty = t["pos"]
+            lethal.setdefault((tx, ty), []).append(spike_box(tx, ty, t.get("variant", 0), TS))
+    return lethal
 
 
 def solids_from_map(tilemap: dict, water_rows=None) -> Terrain:
-    """Terrain of a map: every physics tile of its `tilemap` dict, and its
-    water layer from the map's `water` runs."""
+    """Terrain of a map: every physics tile of its `tilemap` dict, its spikes
+    and its water layer from the map's `water` runs."""
     from scripts.water import water_from_rows
 
-    out = Terrain(water=water_from_rows(water_rows or []))
-    for tile in tilemap.values():
-        if tile["type"] in PHYSICS_TILES:
-            out.add((tile["pos"][0], tile["pos"][1]))
-    return out
+    solids = [(t["pos"][0], t["pos"][1]) for t in tilemap.values() if t["type"] in PHYSICS_TILES]
+    return Terrain(solids, water_from_rows(water_rows or []), lethal_from_tiles(tilemap.values()))
+
+
+def touches_lethal(x: float, y: float, lethal: dict) -> bool:
+    """Player.touch_damage for spikes: the hitbox at x, y overlaps a deadly box."""
+    rx, ry = _trunc(x), _trunc(y)
+    for tx in range(rx // TS, (rx + PW - 1) // TS + 1):
+        for ty in range(ry // TS, (ry + PH - 1) // TS + 1):
+            for bx, by, bw, bh in lethal.get((tx, ty), ()):
+                if rx < bx + bw and bx < rx + PW and ry < by + bh and by < ry + PH:
+                    return True
+    return False
 
 
 def terrain_from_map(map_data: dict) -> Terrain:
@@ -222,7 +252,11 @@ def step(s: tuple, m: int, solids: set) -> tuple:
         if head_wet:
             jumps = 1
     breath = breath - 1 if head_wet else BREATH_FRAMES
-    dead = air > AIR_TIME_FATAL or breath <= 0
+    kill_y = getattr(solids, "kill_y", None)
+    dead = air > AIR_TIME_FATAL or breath <= 0 or (kill_y is not None and y > kill_y)
+    lethal = getattr(solids, "lethal", None)
+    if lethal and not dead:
+        dead = touches_lethal(x, y, lethal)
     if down:
         air = 0
         jumps = 1

@@ -33,6 +33,7 @@ Collision Rules (parity with prior logic):
   * Age > PROJECTILE_LIFETIME_FRAMES: remove.
   * Hit enemy (player owned) or player (enemy owned) while player not dashing
     aggressively: remove, apply damage/effects.
+  * Enemy owned entering a start zone (scripts/safe_start.py): remove.
 
 Tests (added in `tests/test_projectile_system.py`) cover:
   * Lifetime expiry.
@@ -47,9 +48,11 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import pygame
 
-from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES
-from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
-from .entity_id import EntityIDGenerator
+from scripts import death_log
+from scripts.constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES, PROJECTILE_SPEED
+from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
+from scripts.entity_id import EntityIDGenerator
+from scripts.safe_start import in_safe_zone
 
 
 class ProjectileSystem:
@@ -178,29 +181,27 @@ class ProjectileSystem:
                     for player in players:
                         if getattr(player, "id", None) == proj.get("owner_id"):
                             continue  # never hit the shooter
-                        if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                        if self._can_hit(player, rect):
                             if proj in self._projectiles:
                                 self._projectiles.remove(proj)
-                                if not self._try_absorb(player):
-                                    player.lives -= 1
-                                self.game.audio.play("hit")
-                                self.game.screenshake = max(16, self.game.screenshake)
-                                spawn_hit_sparks(self.game, player.rect().center)
+                                self._hit(player, proj)
                                 hits_player += 1
                                 removed += 1
                             break
             else:  # enemy owned
+                # The start is safe: enemy shots vanish where they enter it
+                if in_safe_zone(self.game, proj["pos"]):
+                    self._projectiles.remove(proj)
+                    spawn_projectile_sparks(self.game, proj["pos"], proj["vel"][0])
+                    removed += 1
+                    continue
                 # Player damage (skip if heavily dashing similar to old logic)
                 rect = pygame.Rect(proj["pos"][0], proj["pos"][1], 4, 4)
                 for player in players:
-                    if abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect):
+                    if self._can_hit(player, rect):
                         if proj in self._projectiles:
                             self._projectiles.remove(proj)
-                            if not self._try_absorb(player):
-                                player.lives -= 1
-                            self.game.audio.play("hit")
-                            self.game.screenshake = max(16, self.game.screenshake)
-                            spawn_hit_sparks(self.game, player.rect().center)
+                            self._hit(player, proj)
                             hits_player += 1
                             removed += 1
                         break
@@ -211,6 +212,29 @@ class ProjectileSystem:
             "hits_enemy": hits_enemy,
             "active": len(self._projectiles),
         }
+
+    @staticmethod
+    def _can_hit(player, rect) -> bool:
+        """A projectile hits a player it touches, unless they dash or still
+        blink from the last hit (Player.take_hit)."""
+        blinking = getattr(player, "invulnerable", 0)
+        if isinstance(blinking, int) and blinking > 0:
+            return False
+        return abs(player.dashing) < DASH_MIN_ACTIVE_ABS and player.rect().colliderect(rect)
+
+    def _hit(self, player, proj) -> None:
+        """Cost `player` a life (Player.take_hit: shield, blinking, log)."""
+        take_hit = getattr(player, "take_hit", None)
+        if callable(take_hit):
+            take_hit("star" if proj.get("kind") == "star" else "bullet")
+            return
+        absorbed = self._try_absorb(player)  # a stand-in player without take_hit
+        if not absorbed:
+            player.lives -= 1
+        death_log.record_hit(self.game, player, absorbed)
+        self.game.audio.play("hit")
+        self.game.screenshake = max(16, self.game.screenshake)
+        spawn_hit_sparks(self.game, player.rect().center)
 
     @staticmethod
     def _try_absorb(player) -> bool:
@@ -224,16 +248,26 @@ class ProjectileSystem:
 
         Keeps renderer/UI unaware of internal structure details.
         """
+        from scripts import item_fx
+
         for proj in self._projectiles:
+            x, y = proj["pos"]
+            vx, vy = proj["vel"]
             if proj.get("kind") == "star":
-                base = self.game.assets.get("star") if hasattr(self.game.assets, "get") else None
-                if base is None:
-                    base = self.game.assets["projectile"]
-                # Spin while flying
-                img = pygame.transform.rotate(base, (proj["age"] * 20) % 360)
+                # Spinning, with a faint after-image of the turn before
+                angle = (proj["age"] * 20) % 360
+                ghost = item_fx.star_image((angle - 20) % 360, ghost=True)
+                yield ghost, x - vx * 1.5 - ghost.get_width() / 2, y - vy * 1.5 - ghost.get_height() / 2
+                img = item_fx.star_image(angle)
+            elif proj.get("owner") == "player":
+                # The ninja's bullets: head at the position, tracer behind
+                img = item_fx.bullet_image(abs(vx) > PROJECTILE_SPEED + 0.5, vx < 0)
+                head = img.get_width() - 1
+                yield img, (x - head if vx >= 0 else x - 1), y - img.get_height() / 2
+                continue
             else:
                 img = self.game.assets["projectile"]
-            yield img, proj["pos"][0] - img.get_width() / 2, proj["pos"][1] - img.get_height() / 2
+            yield img, x - img.get_width() / 2, y - img.get_height() / 2
 
 
 __all__ = ["ProjectileSystem"]

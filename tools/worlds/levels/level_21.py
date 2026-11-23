@@ -51,7 +51,6 @@ def build() -> Level:
     lv.coins(64, 50, 70, 2)
     lv.big_decor(78, 51, 7)
     lv.decor(73, 51, 8)
-    lv.wp(71, SEA, 74, SEA + 2, label="arch surface")
     # Far side: a low ledge to leap out on
     lv.rect(76, SEA - 1, 104, 51)
     lv.wp(76, SEA - 2, 79, SEA - 2, ground=True, label="arch ledge")
@@ -63,6 +62,8 @@ def build() -> Level:
     # --- Pillar hop over open water -------------------------------------------------
     lv.rect(91, 56, 150, BOTTOM)  # floor of the bay, on under the ledge
     pillar_run(lv, [(108, SEA - 2), (112, SEA - 3), (116, SEA - 1), (120, SEA - 3), (124, SEA - 2)], 55)
+    for x in (116, 124):  # loose rocks on two of the pillars: a miss only means a swim
+        lv.crumble(x, SEA - 1 if x == 116 else SEA - 2)
     lv.rect(128, SEA - 2, 133, 55)  # reef table
     lv.wp(128, SEA - 3, 131, SEA - 3, ground=True, label="reef table")
     lv.decor(132, SEA - 3, 10)
@@ -74,11 +75,9 @@ def build() -> Level:
     lv.rect(150, 56, 172, BOTTOM)
     lv.carve(152, 30, 154, SEA + 1)  # breathing hole
     lv.drain(152, 30, 154, SEA - 1)
-    lv.wp(134, SEA + 3, 138, 49, label="tunnel mouth")
     lv.coins(140, 47, 150, 2)
     lv.decor(144, 49, 9)
     lv.decor(149, 49, 11)
-    lv.wp(152, SEA - 2, 154, SEA, label="breathing hole")
     lv.coins(156, 47, 168, 2)
     lv.decor(160, 49, 8)
     lv.decor(166, 49, 9)
@@ -93,7 +92,6 @@ def build() -> Level:
     lv.rect(185, SEA - 1, 200, 49)
     lv.carve(182, SEA - 14, 184, SEA - 1)
     lv.rect(184, SEA - 8, 184, SEA - 8)  # a rest halfway up: this is the intro level
-    lv.wp(182, SEA - 4, 184, SEA - 2, label="chimney")
     lv.rect(186, SEA - 15, 196, SEA - 1)  # the rock
     lv.wp(186, SEA - 16, 188, SEA - 16, ground=True, label="lighthouse rock")
     lv.coins(183, SEA - 10, 183)

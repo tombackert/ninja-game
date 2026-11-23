@@ -14,9 +14,8 @@ reproduces the same files):
 - `particles/bubble`: the bubbles a swimmer breathes out, which also rise
   in up-currents
 - `breath.png`, `breath-low.png`: the breath meter's bubble icons
-- `entities/player/<skin>/swim`: a 4-frame swim cycle for every skin,
-  drawn for the default skin and recolored per skin the way the skins
-  are (palette swaps of default)
+- `entities/player/default/swim`: the default ninja's 4-frame swim cycle
+  (tools/gen_skins.py draws every other skin's from it)
 - sea decor appended to `tiles/decor` and `tiles/large_decor`
 - `background-lagoon.png` (above the sea) and `background-deep.png`
   (under it)
@@ -33,7 +32,6 @@ import argparse
 import math
 import os
 import random
-from collections import Counter
 
 from PIL import Image
 
@@ -569,47 +567,19 @@ SWIM = [
 ]
 
 
-def _skin_palette(skin: str) -> dict:
-    """Default color -> this skin's color, read off the skin's own frames.
-
-    Most skins are exact palette swaps of default; for the hand-drawn ones
-    the most common counterpart of each color wins.
-    """
-    votes: dict = {c: Counter() for c in NINJA.values()}
-    for anim in ("idle", "run", "jump"):
-        d_dir = os.path.join(PLAYER_DIR, "default", anim)
-        s_dir = os.path.join(PLAYER_DIR, skin, anim)
-        for name in sorted(os.listdir(d_dir)):
-            d = Image.open(os.path.join(d_dir, name)).convert("RGB").load()
-            s_img = Image.open(os.path.join(s_dir, name)).convert("RGB")
-            if s_img.size != (14, 18):  # cropped differently (red's run): not aligned
-                continue
-            s = s_img.load()
-            for y in range(18):
-                for x in range(14):
-                    if d[x, y] in votes:
-                        votes[d[x, y]][s[x, y]] += 1
-    return {c: v.most_common(1)[0][0] for c, v in votes.items()}
-
-
 def generate_swim() -> None:
-    skins = sorted(d for d in os.listdir(PLAYER_DIR) if os.path.isdir(os.path.join(PLAYER_DIR, d)))
-    for skin in skins:
-        palette = {k: c for k, c in NINJA.items()}
-        if skin != "default":
-            mapping = _skin_palette(skin)
-            palette = {k: mapping[c] for k, c in NINJA.items()}
-        out = os.path.join(PLAYER_DIR, skin, "swim")
-        os.makedirs(out, exist_ok=True)
-        for i, grid in enumerate(SWIM):
-            img = Image.new("RGBA", (14, 18), (0, 0, 0, 255))
-            px = img.load()
-            for y, row in enumerate(grid):
-                for x, ch in enumerate(row):
-                    if ch in palette:
-                        px[x, y] = palette[ch] + (255,)
-            img.save(os.path.join(out, f"{i}.png"))
-    print(f"swim cycle generated for {len(skins)} skins (4 frames)")
+    """The default skin's swim cycle; run tools/gen_skins.py after it for the others."""
+    out = os.path.join(PLAYER_DIR, "default", "swim")
+    os.makedirs(out, exist_ok=True)
+    for i, grid in enumerate(SWIM):
+        img = Image.new("RGBA", (14, 18), (0, 0, 0, 255))
+        px = img.load()
+        for y, row in enumerate(grid):
+            for x, ch in enumerate(row):
+                if ch in NINJA:
+                    px[x, y] = NINJA[ch] + (255,)
+        img.save(os.path.join(out, f"{i}.png"))
+    print("default swim cycle generated (4 frames)")
 
 
 # --- Backgrounds -------------------------------------------------------------------------
@@ -707,9 +677,8 @@ def make_preview(path: str, scale: int = 6) -> None:
         parts.append(Image.open(os.path.join(IMG_DIR, "particles", "bubble", f"{i}.png")))
     parts.append(Image.open(os.path.join(IMG_DIR, "breath.png")))
     parts.append(Image.open(os.path.join(IMG_DIR, "breath-low.png")))
-    for skin in sorted(d for d in os.listdir(PLAYER_DIR) if os.path.isdir(os.path.join(PLAYER_DIR, d))):
-        for i in range(4):
-            parts.append(Image.open(os.path.join(PLAYER_DIR, skin, "swim", f"{i}.png")).convert("RGB"))
+    for i in range(4):
+        parts.append(Image.open(os.path.join(PLAYER_DIR, "default", "swim", f"{i}.png")).convert("RGB"))
     w = 0
     rows, row, x = [], [], 0
     for p in parts:

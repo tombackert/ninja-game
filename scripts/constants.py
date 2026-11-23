@@ -66,13 +66,20 @@ GRAPPLE_ARRIVE_DIST = 6  # release distance to anchor
 
 # Gear (passive items)
 SHIELD_REARM_FRAMES = 600  # ~10 s until next shield charge arms
+# A hit (bullet, star, spikes, flame, an enemy that hurts on touch) costs a
+# life, then the player blinks this long and nothing hits them
+HIT_INVULNERABLE_FRAMES = 90  # 1.5 s
+HIT_KNOCKBACK_X = 2.5  # touch hits throw the player away from what hit them ...
+HIT_KNOCKBACK_Y = -2.5  # ... and up
+# Landing on an enemy from above kills it (any kind) and bounces the player up
+STOMP_BOUNCE_VELOCITY = -2.2  # a little lower than a jump (JUMP_VELOCITY)
+STOMP_MARGIN = 4  # px the feet may already be inside the enemy's head last frame
 AIR_JUMP_VELOCITY = -2.7  # moon boots double jump (weaker than ground jump)
 MAGNET_RADIUS = 48  # coin magnet attraction radius
 MAGNET_PULL_SPEED = 1.8  # coin movement toward player per frame
-ENEMY_SHOOT_BASE = 1.15  # base enemy projectile speed factor
-ENEMY_DIRECTION_BASE = 0.35  # base enemy walking direction magnitude
-ENEMY_DIRECTION_SCALE_LOG = 0.8  # scale for log(level+1) when walking
-ENEMY_SHOOT_SCALE_LOG = 0.59  # scale for log(level+1) when shooting
+# Hearts (placed along the route by tools/worlds/hearts.py): one life back, up
+# to the lives the level started with; with full lives a heart pays coins
+HEART_COINS = 10
 SPARK_PARTICLE_SPEED_MAX = 5  # random() * this for spark speed
 SPARK_COUNT_ENEMY_HIT = 30  # sparks spawned when enemy killed or hit
 SPARK_COUNT_DASH_COLLIDE = 30  # sparks spawned when dash collision occurs
@@ -84,6 +91,7 @@ RESPAWN_DEAD_THRESHOLD = 40  # frames until respawn when dead animation
 TRANSITION_MAX = 30  # max positive transition value
 TRANSITION_START = -30  # starting negative transition value
 AIR_TIME_FATAL = 420  # frames in air before considered 'dead'
+FALL_KILL_DEPTH = 4  # a fall kills once the player is this many tiles below the level's lowest solid tile
 
 # Camera
 CAMERA_EASE_FRAMES = 30  # each frame covers 1/N of the remaining distance ("classic")

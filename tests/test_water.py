@@ -62,6 +62,9 @@ def pool(g, flow=0, surface=SURFACE):
         tm.tilemap[f"21;{y}"] = _solid(21, y)
     tm.water = {(x, y): flow for x in range(1, 21) for y in range(surface, FLOOR)}
     tm._water_renderer = None
+    # The fall-out line still belongs to the level the Game loaded; move it under
+    # the pool floor, as Tilemap.load does for a real map.
+    tm.kill_y = tm.kill_line()
     g.flags = []
     p = g.player
     p.pos = [160.0, (SURFACE + 5) * 16.0]  # well under the surface

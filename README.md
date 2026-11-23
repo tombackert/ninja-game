@@ -30,11 +30,12 @@ That's it: Python 3.10+ is the only requirement (pygame-ce is installed automati
 ## Features
 
 - **Tight platforming**: double jump, wall-slide and wall-jump, and a dash that kills enemies on contact
+- **Checkpoints**: a banner halfway through a level; touch it and a fall sends you back there, not to the start
 - **Ghost replays**: every run is recorded, so you can race a ghost of your best (or last) run
 - **Multiplayer**: host from the menu and friends join by IP, with server-authoritative UDP netcode, client-side prediction and interpolation ([details](docs/multiplayer.md))
 - **Store & accessories**: spend coins on 5 weapons (gun, rifle, ninja stars, sword, grapple hook), 4 gear items (shield, moon boots, coin magnet, lucky charm) and 6 skins
-- **25+ levels** across sky, cave, desert, Mars and water worlds, with best times per level, plus a **level editor** to build your own
-- **Water world**: swim with strokes, ride currents and geysers, dodge drains and come up for air before your breath runs out (levels 21-25)
+- **40 levels** across sky, cave, desert, Mars and water worlds, with best times per level, plus a **level editor** to build your own
+- **Water world**: swim with strokes, ride currents and geysers, dodge drains and come up for air before your breath runs out (levels 21-25 and 36-40)
 - **Deterministic simulation**: a seeded RNG and a single `step()` drive live play, replays, netcode prediction and training alike
 - **Gym-style RL environment**: `reset()` / `step()`, feature observations and shaped rewards, headless
 - **Performance HUD** (F1): frame times, hitches and entity counts in real time
@@ -88,6 +89,44 @@ print(info["level_cleared"], info["lives"], info["coins"])
 ```
 
 An adapter for RLlib-style training loops is in [examples/train_integration.py](examples/train_integration.py).
+
+### A learned playtester for the fights
+
+The level tools plan every level's route without enemies. `tools/rl` plays one stretch of that route with the enemies, shots and flame jets live, under human limits: a decision every 4 frames, 200 ms reaction delay, no gear or weapon, no dash wall climb. It measures how often a player gets through. A stretch runs from one fixed point of the route to the next, each a waypoint the player stands on; through a maze of mid-air waypoints it plays on to the exit. The evaluation checks that the planner takes over from wherever the agent arrived.
+
+The agent has three parts:
+
+- **Guide** (`tools/rl/guide.py`). Before training, the planner plans once per stretch from many states around the route:
+  - states a few random moves off the route
+  - by a flame jet, the beats in which the route would burn
+  - three rounds of the states the agent met but the guide did not know yet, or where it made no progress along the route for a second (the guide's answers there went round in a loop)
+  - two rounds of the states where the route action with the enemies in got lost (after a dodge, or on the way after an attack)
+
+  Plans from those missed states end where they reach the route again. Built once per stretch and cached in `tools/rl/cache/`.
+- **Route action.** One action follows the route, off it the guide, and by a flame the guide's way for the jet's beat. It looks 20 frames ahead along that way (32 near a jumper or a star) at the enemies as the player saw them 200 ms ago: a patrol walks on by its rules, a jumper hops by its own, a chaser runs at the player, a shot flies on, and a gunner whose walk ends or a turret whose cooldown runs out fires the shot a player expects. A thrower paces, and throws once its cooldown has run out and the player is in reach; its star comes down where the player is then, on each way the look tries. Where the guide knows no way, the look plays what the route action does there. If the way runs into an enemy, a shot or a burning jet, it waits, dashes through, jumps or backs off, preferring a dodge whose way leads back to the route.
+  - **Kills.** As a player would, it kills an enemy on the way on that is a danger: one that hurts on touch and that the way meets, or an armed one that has the player in sight. It dashes at it or jumps onto it, but only if the attack kills it, the way after it runs into nothing for 72 frames, and the guide leads back to the route from there. Enemies behind are left: going back costs the dash the way on needs. No reward is paid for a kill.
+- **Policy** (PPO, `tools/rl/ppo.py`). It sees the last 4 decisions and chooses between the route action and the 12 moves, so it learns when to leave the way. Half the episodes start at a later waypoint, mostly where the agent fails most.
+
+Level 11, 200 evaluation episodes each (8 cores):
+
+| Stretch | Policy | Route action alone | Route played blind | Guide build | Training |
+|---|---|---|---|---|---|
+| Segments 9-11 (gunners, turrets, a jumper) | 95%, 2.6 kills | 97%, 3.3 kills | 0% | 4 min | 6 min |
+| Maze, segments 22-31 (gunners, turrets, patrols, chasers, flame jets) | 94%, 1.5 kills | 92%, 1.4 kills | 0% | 8 min | 10 min |
+
+Over 20 fight stretches of levels 11-34 (300 episodes each, the route action alone), the goal rate has a median of 96% and is below 90% on 5 stretches; guides take 1-19 min to build (2 h for all 20). Where it stays low, the danger has to be timed earlier than the look sees: a jump past a thrower whose star is on its way (level 20, segments 0-2: 70%), a climb into a turret's bullet from behind (level 14, segments 31-33: 76%). A specialist policy gained 6-28 points over the route action on such stretches (measured before the star, chaser and dodge fixes).
+
+Kills are per episode. On segments 9-11 the kills halve the route action's last-moment dodges (5.1 to 2.1 per episode, 300 episodes) and bring it to the goal 80 frames sooner, at the same goal rate.
+
+It needs `numpy` and `torch`:
+
+```bash
+python -m tools.rl threats 11              # enemies near each segment of the route
+python -m tools.rl train 11 9 --span 3     # guide (once, cached), then PPO on segments 9-11
+python -m tools.rl eval 11 9 --span 3      # goal / death / timeout rate and planner handoff: policy, route action alone, route played blind
+python -m tools.rl eval 11 22 --per-start 50  # ... and the goal rate from every waypoint on: where a long stretch fails
+python -m tools.rl.watch 11 9 --span 3     # watch it in a game window (--video out.mp4 to record)
+```
 
 ## Level editor
 
@@ -197,12 +236,16 @@ python -m tools.bench --save     # record this run as the new baseline (BENCHMAR
 
 ### Building the worlds
 
-Levels 11-25 are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
+Levels 11 and up are built from code in `tools/worlds/levels/` and proven playable start to flag with the game's exact physics:
 
 ```bash
 python -m tools.worlds.build 14 --preview out/   # write the map, plan its route, render an overview
+python -m tools.worlds.build 14 --assess         # ... and measure it right away: hard sections, time to clear
+python -m tools.worlds.stills 14 --out out/      # stills of the real game along the route: how it looks to a player
 python -m tools.worlds.play 14 --video           # play it in the real game window: menu, keyboard, live enemies
 python -m tools.worlds.assess 9 14 --resample    # compare its difficulty with level 9
+python -m tools.worlds.assess 14 --windows       # timing window per element, minutes and deaths to the first clear
+python -m tools.worlds.assess 14 --sections --playtime  # the previous metric: which sections make it hard, where players die
 python -m tools.worlds.check_physics --maps 21 22 --route  # the physics replica against the real game
 python tools/gen_world_tiles.py                  # redraw the sand and mars tiles, decor and skies
 python tools/gen_water_world.py                  # redraw the water world: tiles, water, decor, swim cycle, skies

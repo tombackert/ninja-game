@@ -29,6 +29,7 @@ def build() -> Level:
     lv.wp(8, 13, 10, 13, ground=True, label="start rock")
     lv.rect(11, FLOOR, 140, BOTTOM)
     crate_chain(lv, [(14, SEA - 1, 2), (20, SEA - 1, 2), (26, SEA - 1, 3)], t="wreck", label="debris")
+    lv.crumble(20, SEA - 1, 21)  # rotten planks: they sink under a stop
     lv.big_decor(18, FLOOR - 1, 6)
     lv.big_decor(25, FLOOR - 1, 6)
     lv.big_decor(31, FLOOR - 1, 8)  # the galleon's anchor
@@ -47,21 +48,22 @@ def build() -> Level:
     # Hatch in the main deck, room A (flooded)
     lv.carve(44, 22, 46, 23)
     lv.wp(44, 18, 46, 21, label="deck hatch")
-    lv.wp(44, 24, 46, 27, label="upper hold")
+    lv.wp(44, 24, 46, 27, label="upper hold", guide=True)
     lv.coins(40, 29, 52, 3)
     lv.enemy(50, 30)
     # Room B, behind the first beam: air under the deck
     lv.drain(55, 24, 83, 25)
     lv.wp(56, 28, 60, 30, label="under the beam")
-    lv.wp(58, 25, 62, 26, label="trapped air")
+    lv.wp(58, 25, 62, 26, label="trapped air", guide=True)
     lv.coins(64, 28, 80, 4)
 
     # Hatch down into the cargo hold
     lv.carve(76, 31, 78, 32)
-    lv.wp(76, 31, 78, 33, label="cargo hatch")
+    lv.wp(76, 31, 78, 33, label="cargo hatch", guide=True)
     for x, y, w, h in ((66, 36, 2, 2), (70, 35, 2, 3), (86, 36, 3, 2), (92, 34, 2, 4), (100, 36, 2, 2)):
         box(lv, x, y, w, h, t="wreck")  # crates
     lv.big_decor(81, 37, 9)  # treasure
+    lv.spikes(89, 37, 91)  # broken iron between the crates
     lv.coins(80, 35, 84, 2)
     lv.coins(95, 35, 99, 2)
     lv.enemy(97, 37)
@@ -72,7 +74,7 @@ def build() -> Level:
     # the hatch up into the stern cabin lets it out), then up into the cabin
     lv.drain(85, 24, 107, 25)
     lv.carve(104, 31, 106, 32)
-    lv.wp(104, 31, 106, 32, label="hatch up")
+    lv.wp(104, 31, 106, 32, label="hatch up", guide=True)
     lv.wp(103, 25, 107, 26, label="room C air")
     lv.wp(109, 27, 112, 30, label="under the third beam")
     lv.enemy(114, 30)
@@ -82,7 +84,7 @@ def build() -> Level:
     lv.carve(104, 12, 116, 21)  # cabin
     lv.carve(110, 22, 112, 23)  # hatch from room C
     lv.drain(104, 12, 116, SEA - 1)
-    lv.wp(110, 20, 112, 23, label="cabin hatch")
+    lv.wp(110, 20, 112, 23, label="cabin hatch", guide=True)
     lv.rect(113, SEA - 1, 116, SEA - 1, "wreck")  # ledge in the cabin
     lv.wp(113, SEA - 2, 116, SEA - 2, ground=True, label="cabin ledge")
     lv.coins(105, 13, 109, 2)

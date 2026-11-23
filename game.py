@@ -1,8 +1,13 @@
+import os
+
 import pygame
 
 from scripts.asset_manager import AssetManager
 from scripts.audio_service import AudioService
 from scripts.clouds import Clouds
+from scripts.checkpoints import celebrate as celebrate_checkpoint
+from scripts.checkpoints import find_checkpoints
+from scripts.checkpoints import touch as touch_checkpoint
 from scripts.collectableManager import CollectableManager
 from scripts.constants import (
     CALM_CAMERA_BAND_Y,
@@ -16,16 +21,23 @@ from scripts.constants import (
 )
 from scripts.displayManager import DisplayManager
 from scripts.entities import Enemy, Player
+from scripts.enemy_kinds import KINDS, SPAWNER_IDS, kind_for_variant
 from scripts.entity_id import EntityIDGenerator
+from scripts.hazards import HazardSystem
 from scripts.keyboardManager import KeyboardManager
 from scripts.particle import Particle
 from scripts.particle_system import ParticleSystem
 from scripts.projectile_system import ProjectileSystem
 from scripts.replay import ReplayManager
 from scripts.rng_service import RNGService
+from scripts.safe_start import start_zones
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.timer import Timer
+from scripts.utils import BASE_IMG_PATH
+
+# Enemy animations by action: (frames per image, loops); shoot plays once
+ENEMY_ANIMATIONS = {"idle": (6, True), "run": (4, True), "alert": (6, True), "shoot": (6, False)}
 
 
 class Game:
@@ -84,6 +96,9 @@ class Game:
             "mars": am.get_image_frames("tiles/mars"),
             "reef": am.get_image_frames("tiles/reef"),
             "wreck": am.get_image_frames("tiles/wreck"),
+            "spikes": am.get_image_frames("tiles/spikes"),
+            "crumble": am.get_image_frames("tiles/crumble"),
+            "flamejet": am.get_image_frames("tiles/flamejet"),
             "water/surface": am.get_image_frames("water/surface"),
             "player": am.get_image("entities/player.png"),
             "background": am.get_image("background-big.png"),
@@ -97,14 +112,24 @@ class Game:
             "breath-low": am.get_image("breath-low.png"),
             "coin": am.get_animation("collectables/coin", img_dur=6),
             "flag": am.get_image_frames("tiles/collectables/flag"),
-            "gun": am.get_image("gun.png"),
-            "rifle": am.get_image("rifle.png"),
-            "sword": am.get_image("sword.png"),
-            "slash": am.get_image("slash.png"),
+            "checkpoint": am.get_image_frames("tiles/collectables/checkpoint"),
+            "gun": am.get_image("gun.png"),  # the enemies' gun (the ninja's weapons: scripts/item_fx.py)
             "star": am.get_image("star.png"),
-            "hook": am.get_image("hook.png"),
             "projectile": am.get_image("projectile.png"),
         }
+        # Each enemy kind's own character and animations (tools/gen_enemy_art.py);
+        # the gunner is the default enemy. A kind without an alert or shoot
+        # animation shows its idle one (Enemy.set_action).
+        for kind in KINDS:
+            if kind == "gunner":
+                continue
+            for action, (img_dur, loop) in ENEMY_ANIMATIONS.items():
+                if os.path.isdir(os.path.join(BASE_IMG_PATH, "entities", "enemy", kind, action)):
+                    # the jumper's run is one hop, held on its landing pose after
+                    once = (kind, action) == ("jumper", "run")
+                    self.assets[f"enemy/{kind}/{action}"] = am.get_animation(
+                        f"entities/enemy/{kind}/{action}", img_dur=img_dur, loop=loop and not once
+                    )
         # Register every store skin's animation set (all palette swaps of default)
         for skin_path in CollectableManager.SKIN_PATHS:
             base = f"entities/player/{skin_path}"
@@ -128,6 +153,8 @@ class Game:
         self.timer = Timer(self.level)
 
         # Collectable Manager
+        self.start_lives = 3  # lives of the current run's start (Game.load_level)
+        self.hearts_taken: set = set()  # hearts picked up this run (tile px), kept through respawns
         self.cm = CollectableManager(self)
         self.cm.load_collectables()
 
@@ -159,8 +186,11 @@ class Game:
         self.timer.reset()
         path = "data/maps/" + str(map_id) + ".json"
         if respawn and self.tilemap.loaded_path == path:
-            # Tiles only change by extraction (spawners, pickups): put those
-            # back instead of parsing the map file again (up to ~45 ms)
+            # Tiles only change by extraction (spawners, pickups) and by
+            # crumbling blocks: put those back instead of parsing the map
+            # file again (up to ~45 ms)
+            if getattr(self, "hazards", None) is not None:
+                self.hazards.restore()
             self.tilemap.restore_extracted()
         else:
             self.tilemap.load(path)
@@ -181,6 +211,12 @@ class Game:
         for tile in flag_tiles:
             flag_rect = pygame.Rect(tile["pos"][0], tile["pos"][1], 16, 16)
             self.flags.append(flag_rect)
+
+        # Spikes, crumbling blocks and flame jets
+        self.hazards = HazardSystem(self.tilemap)
+
+        # Checkpoints (their banners stay hoisted through a respawn: the tiles are kept)
+        self.checkpoints = find_checkpoints(self.tilemap)
 
         self.leaf_spawners = []
         for tree in self.tilemap.extract([("large_decor", 2)], keep=True):
@@ -213,9 +249,9 @@ class Game:
                 player.velocity = [0, 0]  # Reset velocity too for safety
                 player.breath = BREATH_FRAMES
                 player.swim_cooldown = 0
-            for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
-                if spawner["variant"] == 1:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
+            for spawner in self.tilemap.extract(SPAWNER_IDS):
+                if spawner["variant"] != 0:
+                    self.enemies.append(self._spawn_enemy(spawner, id_gen.next_id()))
         else:
             # Capture RNG state at start of level
             self.level_rng_state = rng.get_state()
@@ -231,7 +267,10 @@ class Game:
                 gear_name = "None"
             if gear_name == "Lucky Charm" and self.cm.lucky_charm > 0:
                 lives += 1
-            for spawner in self.tilemap.extract([("spawners", 0), ("spawners", 1)]):
+            # A new run: hearts take lives back up to this, and all are there again
+            self.start_lives = lives
+            self.hearts_taken = set()
+            for spawner in self.tilemap.extract(SPAWNER_IDS):
                 if spawner["variant"] == 0:
                     player = Player(
                         self,
@@ -245,12 +284,14 @@ class Game:
                     player.air_time = 0
                     self.players.append(player)
                 else:
-                    self.enemies.append(Enemy(self, spawner["pos"], (8, 15), id_gen.next_id()))
+                    self.enemies.append(self._spawn_enemy(spawner, id_gen.next_id()))
             self.saves = 1
 
             # Set the current player if there are any players
             if self.players:
                 self.player = self.players[self.playerID]
+            # The start is safe from enemies (scripts/safe_start.py)
+            self.safe_zones = start_zones(self.tilemap, [p.respawn_pos for p in self.players])
         # END LOAD LEVEL
 
         # Systems / collections (post-refactor additions)
@@ -278,6 +319,10 @@ class Game:
             except Exception:
                 pass
 
+    def _spawn_enemy(self, spawner, entity_id):
+        """The enemy of a spawner tile; its variant names the kind (scripts/enemy_kinds.py)."""
+        return Enemy(self, spawner["pos"], (8, 15), entity_id, kind=kind_for_variant(spawner["variant"]))
+
     def apply_inputs(self, inputs):
         """Map input names (left/right/jump/dash/shoot) onto the player."""
         self.movement = [False, False]
@@ -304,6 +349,11 @@ class Game:
         self.tick += 1
         self.screenshake = max(0, self.screenshake - 1)
 
+        # Hazards first: their clock is this tick for everything below
+        hazards = getattr(self, "hazards", None)
+        if hazards is not None:
+            hazards.update(self.players, self)
+
         self.projectiles.update(self.tilemap, self.players, self.enemies)
         self.clouds.update()
 
@@ -311,6 +361,8 @@ class Game:
             kill = enemy.update(self.tilemap, (0, 0))
             if kill:
                 self.enemies.remove(enemy)
+        if hazards is not None:
+            hazards.burn_enemies(self.enemies, self)
 
         if not self.dead:
             for idx, player in enumerate(self.players):
@@ -319,6 +371,11 @@ class Game:
                     player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 else:
                     player.update(self.tilemap, (0, 0))
+            if not self.dead:  # a checkpoint is no use to a player who just died
+                for player in self.players:
+                    reached = touch_checkpoint(self.checkpoints, player)
+                    if reached is not None and player is self.player:
+                        celebrate_checkpoint(self, reached)
 
         self.particle_system.update()
         self.spawn_leaves()

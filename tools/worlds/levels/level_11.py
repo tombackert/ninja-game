@@ -1,9 +1,11 @@
 """Level 11 - Sky Ruins (grass islands, stone ruins).
 
 Pillar run over the void, a 7-tile dash chasm, a 4-wide wall-jump chimney
-up a ruined tower, floating box stairs, a ruin labyrinth whose low
-corridors cap every jump, a 5-wide chimney between two sky spires and a
-fortress gauntlet before the flag island.
+up a ruined tower, floating box stairs (two of them crumbling clay, the
+campaign's first crumbling blocks), a ruin labyrinth whose low corridors
+cap every jump and whose old traps vent flames from the ceilings, a 5-wide
+chimney between two sky spires and a fortress gauntlet under ceiling spikes
+before more crumbling crates and the flag island.
 """
 
 from tools.worlds.builder import Level, Maze, box, perforate, pillar
@@ -75,10 +77,15 @@ def build() -> Level:
     lv.enemy(101, 55)
     lv.enemy(104, 55)
     lv.wp(104, 55, 106, 55, ground=True, label="bridge end")
-    # mostly single crates: 3-tile gaps, rising up to 2 per jump
+    # mostly single crates: 3-tile gaps, rising up to 2 per jump. The two level
+    # ones are loose clay: they fall half a second after a landing, so the
+    # hop across them has to keep going (the first crumbling blocks)
     stairs = [(110, 54, 2), (115, 52, 1), (119, 51, 1), (123, 49, 1), (127, 49, 1), (131, 47, 2), (136, 45, 1)]
     for bx, by, w in stairs:
-        box(lv, bx, by, w, 2)
+        if bx in (123, 127):
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, w, 2)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, bx + w - 1, by - 1, ground=True, label=f"crate {bx}")
 
@@ -89,7 +96,7 @@ def build() -> Level:
     lv.rect(139, entry_y, 141, entry_y + 1)
     mz.open_to(0, 4, "left")
     lv.wp(139, entry_y - 1, 141, entry_y - 1, ground=True, label="maze porch")
-    mz.route((0, 4), (8, 0))
+    mz.route((0, 4), (8, 0), skip={(0, 1), (0, 2), (1, 3), (2, 1), (3, 1), (4, 0), (6, 0), (7, 0)})
     mz.open_to(8, 0, "right")
     for c, r in mz.dead_ends():
         if (c, r) in ((0, 4), (8, 0)):
@@ -103,6 +110,9 @@ def build() -> Level:
             if (c + r) % 2 == 1 and c > 0 and lv.is_solid(x + 1, y + 3) and enemies < 20:
                 lv.enemy(x + 1, y + 2)
                 enemies += 1
+
+    # the old city's traps: vents in the ceilings of a few cells burn down to the floor on a beat
+    mz.vents((0, 4), (8, 0), 3, phases=(96, 40, 66))
 
     # --- Spire section: drop to island C, 5-wide chimney between spires --
     ex = mz.bounds[2] + 1
@@ -136,6 +146,7 @@ def build() -> Level:
     lv.rect(fx, fy, fx + 26, fy + 2)  # floor
     lv.rect(fx + 3, fy - 4, fx + 26, fy - 3)  # ceiling (corridor 2 tall)
     lv.rect(fx + 26, fy - 4, fx + 26, fy - 1)
+    lv.spikes(fx + 8, fy - 2, fx + 13, facing="down")  # the fortress's ceiling spikes: no jumping here
     lv.carve(fx + 26, fy - 2, fx + 26, fy - 1)  # exit
     for x in (fx + 7, fx + 11, fx + 15, fx + 19, fx + 23):
         lv.enemy(x, fy - 1)
@@ -144,7 +155,10 @@ def build() -> Level:
     # Single crates with 4-tile gaps (late jumps or dashes), then the flag island
     crates = [(fx + 30, fy + 1), (fx + 35, fy + 2), (fx + 40, fy + 1), (fx + 45, fy + 3), (fx + 50, fy + 2)]
     for bx, by in crates:
-        box(lv, bx, by, 1, 1)
+        if bx in (fx + 35, fx + 50):
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, 1, 1)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, ground=True, label=f"sky crate {bx}")
     gx = fx + 55

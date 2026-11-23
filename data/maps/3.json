@@ -14502,16 +14502,16 @@
                 ]
             },
             "-19;-62": {
-                "type": "stone",
-                "variant": 2,
+                "type": "crumble",
+                "variant": 0,
                 "pos": [
                     -19,
                     -62
                 ]
             },
             "-20;-62": {
-                "type": "stone",
-                "variant": 1,
+                "type": "crumble",
+                "variant": 0,
                 "pos": [
                     -20,
                     -62
@@ -14534,7 +14534,7 @@
                 ]
             },
             "-22;-68": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     -22,
@@ -14887,7 +14887,7 @@
             },
             "-7;-27": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     -7,
                     -27
@@ -14935,7 +14935,7 @@
             },
             "-14;-27": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     -14,
                     -27
@@ -16413,14 +16413,6 @@
                     -60
                 ]
             },
-            "-20;-63": {
-                "type": "decor",
-                "variant": 0,
-                "pos": [
-                    -20,
-                    -63
-                ]
-            },
             "-11;-72": {
                 "type": "decor",
                 "variant": 0,
@@ -16902,7 +16894,7 @@
                 ]
             },
             "8;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     8,
@@ -16934,7 +16926,7 @@
                 ]
             },
             "11;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     11,
@@ -16942,7 +16934,7 @@
                 ]
             },
             "10;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     10,
@@ -17022,7 +17014,7 @@
                 ]
             },
             "9;-47": {
-                "type": "stone",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     9,
@@ -17047,7 +17039,7 @@
             },
             "4;14": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     4,
                     14
@@ -17055,7 +17047,7 @@
             },
             "7;14": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     7,
                     14
@@ -17071,7 +17063,7 @@
             },
             "26;-2": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 3,
                 "pos": [
                     26,
                     -2
@@ -17079,7 +17071,7 @@
             },
             "13;-7": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     13,
                     -7
@@ -17095,7 +17087,7 @@
             },
             "27;-14": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     27,
                     -14
@@ -17119,7 +17111,7 @@
             },
             "-13;-60": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     -13,
                     -60

@@ -26,6 +26,7 @@ def build() -> Level:
     lv.coins(4, 67, 10, 2)
     lv.wp(12, 69, 14, 69, ground=True, label="island edge")
     crate_chain(lv, [(18, 70, 2), (23, 69, 1), (27, 69, 1), (32, 68, 1), (36, 67, 2)], label="moat crate")
+    lv.crumble(27, 69)  # a rotten crate in the moat
 
     # --- Castle body: floor slab, outer wall with gate, inner block ----------
     lv.rect(40, 67, 115, 70)
@@ -43,12 +44,15 @@ def build() -> Level:
         lv.wp(px - 4, 64, px - 1, 66, ground=True, label=f"murder hole {px}")
     for x in (46, 49, 57, 60, 67, 77, 80, 87, 97, 101):
         lv.enemy(x, 66)
+    # murder holes in the gallery's ceiling pour fire down to the floor
+    lv.flamejet(55, 63, "down", on=40)
+    lv.flamejet(85, 63, "down", on=40, phase=79)
     lv.wp(99, 64, 103, 66, ground=True, label="gallery end")
 
     # --- East balcony and a holed chimney up the outer wall ---------------------
     lv.enemy(105, 66)
     lv.coins(104, 64, 106)
-    holed_chimney(lv, 107, 3, 30, 67, rests=[(1, 56), (-1, 45)], label="outer wall chimney")
+    holed_chimney(lv, 107, 3, 30, 67, rests=[(1, 56), (-1, 45)], label="outer wall chimney", top=False)
 
     # --- Battlement walk (row 30) heading west: pits and merlons ---------------
     lv.wp(100, 29, 103, 29, ground=True, label="battlements east")
@@ -57,6 +61,8 @@ def build() -> Level:
         lv.rect(px + 5, 28, px + 6, 29)  # merlon right after each pit
         lv.coin(px + 1, 28)
         lv.wp(px - 3, 29, px - 1, 29, ground=True, label=f"battlement pit {px}")
+    for px in (80, 56):  # spiked pits
+        lv.spikes(px, 35, px + 2)
     for x in (100, 89, 84, 77, 65, 64, 53, 49):
         lv.enemy(x, 29)
     lv.coins(46, 27, 100, 4)
@@ -66,6 +72,7 @@ def build() -> Level:
     lv.carve(44, 27, 47, 29)  # door from the battlements
     zigzag(lv, 41, 29, sections=5, height=5, inner=3, offset=2, label="tower zigzag")
     lv.carve(41, 2, 43, 4)  # out on to the roof
+    lv.flamejet(40, 17, "right", period=150, on=30)  # a trap vent across the third piece
     for i in range(5):
         lv.coin(42 + (2 if i % 2 else 0), 27 - 5 * i)
     lv.wp(44, 1, 47, 1, ground=True, label="tower roof")
@@ -87,6 +94,9 @@ def build() -> Level:
         (104, 7, 1),
     ]
     crate_chain(lv, bridge, label="sky crate")
+    for bx, by, _w in bridge:
+        if bx in (70, 95):  # two crates have rotted through
+            lv.crumble(bx, by)
     keep_x = 113
     lv.rect(keep_x, 10, keep_x + 13, 12)
     for i in range(1, 5):

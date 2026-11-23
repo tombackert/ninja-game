@@ -52,6 +52,8 @@ def build() -> Level:
     rim = tops[50]
     for x, top in [(53, rim + 1), (58, rim - 1), (62, rim), (66, rim - 2)]:
         pillar(lv, x, top, BOTTOM)
+        if x == 62:  # a weathered sandstone cap: it gives way under a stop
+            lv.crumble(x, top)
         lv.coin(x, top - 2)
         lv.wp(x, top - 1, ground=True, label=f"canyon pillar {x}")
     # crack: two sandstone towers with a 3-wide gap and two rest ledges
@@ -107,6 +109,7 @@ def build() -> Level:
         if k in (1, 2, 3, 4, 6):
             lv.enemy(face + 4, foot - sh - 1)
 
+    lv.spikes(124, plateau - sh * 6 - 1, 125)  # the pyramid's guards: spikes under the jump to step 6
     for k in range(steps):  # coins over the steps, once every block stands
         lv.coins(px0 + sw * k + 1, plateau - sh * (k + 1) - 3, px0 + sw * k + 3)
 
@@ -116,7 +119,7 @@ def build() -> Level:
     lv.carve(shaft_x, apex_y, shaft_x + 2, low_y - 1)  # drop from the apex to the lowest gallery
     lv.wp(shaft_x, apex_y - 1, shaft_x + 2, apex_y - 1, label="pyramid apex")
     # climb back up through the galleries to the east door at the top
-    mz.route((4, 2), (9, 0))
+    mz.route((4, 2), (9, 0), skip={(4, 0), (4, 1), (6, 0), (6, 1), (7, 0), (7, 1)})
     ex, ey = mz.cell_xy(9, 0)
     lv.carve(ex + 3, ey, 196, ey + 2)  # east door, out on to step 2
     lv.wp(179, ey, 183, ey + 2, ground=True, label="east door")
@@ -132,6 +135,8 @@ def build() -> Level:
                 lv.enemy(x + 1, y + 2)
                 placed += 1
 
+    mz.vents((4, 2), (9, 0), 2)  # tomb traps
+
     # --- Oasis: sandstone pillars across wide quicksand --------------------------
     otops = dunes(lv, 205, 244, 50, 1.2, 4.0, phase=2.0)
     for px0, px1, pillars in [(213, 226, [(216, -1), (220, 1), (224, -1)]), (233, 244, [(236, 0), (240, -2)])]:
@@ -139,7 +144,10 @@ def build() -> Level:
         base = otops[px0 - 1]
         lv.wp(px0 - 3, otops[px0 - 3] - 2, px0 - 1, otops[px0 - 1] - 1, ground=True, label=f"before quicksand {px0}")
         for x, dy in pillars:
-            pillar(lv, x, base + dy, BOTTOM)
+            if x == 236:  # a stone floating on the quicksand, it sinks
+                lv.crumble(x, base + dy)
+            else:
+                pillar(lv, x, base + dy, BOTTOM)
             lv.coin(x, base + dy - 2)
             lv.wp(x, base + dy - 1, ground=True, label=f"oasis pillar {x}")
     for x, v in [(207, 4), (229, 5)]:
@@ -162,10 +170,10 @@ def build() -> Level:
     perforate(lv, 252, mesa + 1, g - 7, solid=2, gap=1)
     lv.rect(248, 39, 248, 39)  # rest ledges
     lv.rect(251, 29, 251, 29)
+    lv.crumble(248, 39)  # the lower rest ledge is weathered sandstone
     lv.wp(248, g - 3, 251, g - 1, ground=True, label="obelisk chimney base")
     lv.wp(248, 38, 248, 38, ground=True, label="obelisk rest 1")
     lv.wp(251, 28, 251, 28, ground=True, label="obelisk rest 2")
-    lv.wp(247, mesa - 1, 252, mesa - 1, label="obelisk tops")
     lv.coins(249, 44, 250)
     lv.coins(249, 34, 250)
     lv.coins(249, 23, 250)

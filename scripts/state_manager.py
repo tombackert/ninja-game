@@ -30,7 +30,7 @@ from typing import List, Sequence
 import pygame
 
 from scripts.logger import get_logger
-from scripts.ui_widgets import ScrollableListWidget
+from scripts.ui_widgets import BackButton, PointerRouter, ScrollableListWidget
 
 _state_log = get_logger("state")
 
@@ -68,6 +68,32 @@ class State:
     def render(self, surface: pygame.Surface) -> None:  # pragma: no cover - default no-op
         pass
 
+    # Mouse (see ui_widgets.PointerRouter) --------------------------
+    def pointer_widgets(self) -> Sequence[ScrollableListWidget]:
+        """The lists the mouse can point at; none by default."""
+        return ()
+
+    def pointer_select(self, widget: ScrollableListWidget, index: int) -> None:
+        """The pointer is on row `index` of `widget` (hover or press)."""
+        widget.select(index)
+
+    def pointer_activate(self, widget: ScrollableListWidget, button: int) -> None:
+        """A row of `widget` was clicked (it is already selected); the left button confirms it."""
+        if button == 1:
+            self.handle_actions(["menu_select"])
+
+    def pointer_scroll(self, widget: ScrollableListWidget, steps: int) -> None:
+        """The wheel turned `steps` rows (positive = down) over or beside `widget`."""
+        widget.step(steps)
+
+    # A submenu's clickable "back" (bottom left); None where Esc does not go back
+    back: BackButton | None = None
+
+    def pointer_back(self) -> None:
+        """The back button or the mouse's thumb back button: same as Esc."""
+        if self.back is not None:
+            self.handle_actions(["menu_quit"])
+
 
 class StateManager:
     """Stack-based state manager.
@@ -80,6 +106,8 @@ class StateManager:
 
     def __init__(self) -> None:
         self._stack: List[State] = []
+        self.pointer = PointerRouter()
+        self._pointer_state: State | None = None  # the state the pointer last worked on
         _state_log.debug("StateManager init (empty stack)")
 
     # Introspection -------------------------------------------------
@@ -128,6 +156,10 @@ class StateManager:
     # Loop dispatch -------------------------------------------------
     def handle(self, events: Sequence[pygame.event.Event]) -> None:
         if self.current:
+            if self.current is not self._pointer_state:
+                self._pointer_state = self.current
+                self.pointer.reset()
+            self.pointer.process(self.current, events)
             self.current.handle(events)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
@@ -186,6 +218,9 @@ class MenuState(State):
         self.next_state: str | None = None  # for submenu transitions
         self._ui = UI
 
+    def pointer_widgets(self):
+        return (self.list_widget,)
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
             if act == "menu_up":
@@ -236,14 +271,50 @@ class MenuState(State):
         )
 
 
+def opaque_surface(size: tuple[int, int]) -> pygame.Surface:
+    """A buffer without an alpha channel, for composing a screen's backdrop.
+
+    A plain `pygame.Surface(size)` takes the window's format, which on macOS
+    is ARGB: blending a translucent overlay onto it leaves the alpha below
+    255, and outlined text blitted over such pixels shows its whole box
+    (the window ignores the alpha). 24 bits have no alpha to lose.
+    """
+    return pygame.Surface(size, 0, 24)
+
+
+def fresh_game_state(level) -> "GameState":
+    """A new run of `level` from its start, with full lives and a fresh timer.
+
+    A named map (str, app.py --map) is loaded by name; a campaign level is
+    selected in the settings first, as the menu's Play does.
+    """
+    if isinstance(level, str):
+        return GameState(level=level)
+    from scripts.settings import settings
+
+    settings.selected_level = level
+    return GameState()
+
+
 class GameState(State):
     name = "GameState"
 
-    def __init__(self) -> None:
+    def __init__(self, level=None) -> None:
         from game import Game
 
         # Underlying Game object (entities, systems, assets)
         self._game = Game(fullscreen=False)
+        if level is not None:
+            # A map outside the campaign, by name (data/maps/<name>.json; app.py --map):
+            # the menu and the settings only know numbered levels
+            self._game.level = level
+            self._game.load_level(level)
+        # Death log (scripts/death_log.py): only when app.main() switched it on
+        from scripts import death_log
+
+        log = death_log.current()
+        if log is not None:
+            log.bind(self._game)
         # Allow renderer to query state flags (performance HUD toggle) without tight coupling
         try:
             setattr(self._game, "state_ref", self)
@@ -253,6 +324,7 @@ class GameState(State):
         self._accum = 0.0  # placeholder for future fixed timestep accumulator
         self._initialized_audio = False
         self.request_pause = False
+        self.game_over = False  # the last life is gone: GameOverState took over
         # Performance HUD (timings + counts) toggle (F1) - start disabled to match legacy debug overlay test expectation
         self.perf_enabled = False
         # Backward-compatible alias for existing test referencing debug_overlay
@@ -288,6 +360,14 @@ class GameState(State):
 
     def on_exit(self, next_state: "State | None") -> None:  # pragma: no cover - simple persistence
         # Persist collectables & best times when leaving game state entirely (not just pausing).
+        try:
+            from scripts import death_log
+
+            # (a game over already ended the attempt with its death line)
+            if not self._game.endpoint and not self.game_over:
+                death_log.record_quit(self._game)
+        except Exception:  # pragma: no cover - logging never blocks leaving
+            pass
         try:
             self._game.cm.save_collectables()
             # Commit any pending replay if we finished a level?
@@ -348,6 +428,7 @@ class GameState(State):
         g.timer.update(g.level)
 
         # --- Level completion (endpoint is set by Game.step's flag check) ---
+        from scripts import death_log
         from scripts.constants import (
             DEAD_ANIM_FADE_START,
             RESPAWN_DEAD_THRESHOLD,
@@ -364,6 +445,7 @@ class GameState(State):
 
                 if replay_mgr:
                     replay_mgr.commit_run(new_best=is_new_best)
+                death_log.record_clear(g)
 
                 # Identify next level
                 levels = list_levels()
@@ -373,7 +455,9 @@ class GameState(State):
                     current_level_index = 0
 
                 next_level = None
-                if current_level_index < len(levels) - 1:
+                if g.level not in levels:
+                    pass  # a named map outside the campaign: nothing comes after it, nothing unlocks
+                elif current_level_index < len(levels) - 1:
                     next_level = levels[current_level_index + 1]
                     # Unlock next level
                     from scripts.progress_tracker import get_progress_tracker
@@ -404,27 +488,28 @@ class GameState(State):
             g.update_camera()
 
         # --- Death / respawn handling ---
+        # Every death ends here, so the death log writes its line here, once
+        # per death; the places where a death starts only name the cause.
         # (Note: legacy attribute 'lifes' renamed to 'lives' internally; we access both defensively.)
         player_lives_attr = getattr(g.player, "lives", getattr(g.player, "lifes", 0))
         if player_lives_attr < 1:
             g.dead += 1
+            death_log.set_cause(g, "out_of_lives")  # unless R or a fall named one first
         if g.dead:
             g.dead += 1
             if g.dead >= DEAD_ANIM_FADE_START:
                 g.transition = min(TRANSITION_MAX, g.transition + 1)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr >= 1:
-                if replay_mgr:
-                    try:
-                        replay_mgr.abort_current_run()
-                    except Exception:
-                        pass
+                # (load_level starts the replay recording over: nothing to abort here)
+                death_log.record_death(g, restart=False)
                 g.load_level(g.level, player_lives_attr, respawn=True)
             if g.dead > RESPAWN_DEAD_THRESHOLD and player_lives_attr < 1:
-                if replay_mgr:
-                    try:
-                        replay_mgr.abort_current_run()
-                    except Exception:
-                        pass
+                death_log.record_death(g, restart=True)
+                if self.manager:
+                    self.game_over = True
+                    self.manager.set(GameOverState(level=g.level))
+                    return
+                # Without a state manager (tests, headless drivers) the level starts over
                 g.load_level(g.level)
 
         # --- Input (legacy direct keyboard polling) ---
@@ -460,25 +545,16 @@ class PauseState(State):
     name = "PauseState"
 
     def __init__(self) -> None:
-        from scripts.ui_widgets import ScrollableListWidget
         from scripts.localization import LocalizationService
 
         self.loc = LocalizationService.get()
         self._ticks = 0
         self.closed = False
         self.return_to_menu = False
+        self.restart_requested = False  # app.py starts the level over (fresh_game_state)
         self.quit_requested = False
         self._underlying: State | None = None  # set in on_enter
-        self.options_keys = [
-            "menu.resume",
-            "menu.menu",
-        ]  # 'Menu' reused? "menu.menu" -> "Menu" (implied context) or "level_complete.menu"?
-        # Let's use "level_complete.menu" for "Menu" button
-        self.options_keys = ["menu.resume", "level_complete.menu"]
-
-        self.widget = ScrollableListWidget(
-            [self.loc.translate(k) for k in self.options_keys], visible_rows=3, spacing=60, font_size=30
-        )
+        self._set_options(["menu.resume", "menu.restart", "level_complete.menu"])
         self.bg: pygame.Surface | None = None
         # Background image (menu backdrop) for pause overlay decoration
         try:
@@ -491,9 +567,24 @@ class PauseState(State):
         # change, so it is composed once instead of re-rendered every frame.
         self._backdrop: pygame.Surface | None = None
 
+    def _set_options(self, keys: list[str]) -> None:
+        from scripts.ui_widgets import ScrollableListWidget
+
+        self.options_keys = keys
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in keys], visible_rows=3, spacing=60, font_size=30
+        )
+
+    @property
+    def can_restart(self) -> bool:
+        """Only a single-player level can start over (a multiplayer world is shared)."""
+        return self._underlying is None or isinstance(self._underlying, GameState)
+
     def on_enter(self, previous: "State | None") -> None:  # capture underlying
         self._underlying = previous
         self.pause_start_ticks = pygame.time.get_ticks()
+        if not self.can_restart:
+            self._set_options([k for k in self.options_keys if k != "menu.restart"])
 
     def on_exit(self, next_state: "State | None") -> None:
         # Calculate pause duration and offset the game timer so elapsed time remains correct
@@ -501,6 +592,9 @@ class PauseState(State):
             duration = pygame.time.get_ticks() - self.pause_start_ticks
             if hasattr(self._underlying.game, "timer"):
                 self._underlying.game.timer.adjust_for_pause(duration)
+
+    def pointer_widgets(self):
+        return (self.widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
@@ -513,11 +607,17 @@ class PauseState(State):
             elif act == "pause_menu":  # legacy direct key -> menu
                 self.return_to_menu = True
                 self.closed = True
+            elif act == "pause_restart" and self.can_restart:  # R
+                self.restart_requested = True
+                self.closed = True
             elif act == "menu_select":
                 # Use index to match key logic
                 idx = self.widget.selected_index
                 key = self.options_keys[idx]
                 if key == "menu.resume":
+                    self.closed = True
+                elif key == "menu.restart":
+                    self.restart_requested = True
                     self.closed = True
                 elif key == "level_complete.menu":
                     self.return_to_menu = True
@@ -615,7 +715,18 @@ class PauseState(State):
 
 
 class LevelsState(State):
+    """Level select: the level names on the left, the selected level's
+    preview, chapter, setting and best time on the right.
+
+    A locked level's preview is pixelated and dimmed under a padlock: the
+    colours tell the world, the level itself stays a surprise.
+    """
+
     name = "LevelsState"
+
+    VISIBLE_ROWS = 9
+    ROW_SPACING = 52
+    THUMB_SCALE = 2  # thumbnails are 320x180 game pixels -> 640x360 on the 1280x720 menu
 
     def __init__(self) -> None:
         from scripts.displayManager import DisplayManager
@@ -641,17 +752,70 @@ class LevelsState(State):
             self.index = self.levels.index(selected)
         else:
             self.index = 0
+        from scripts.level_info import level_name
+
         self.widget = ScrollableListWidget(
-            [f"Level {lvl:<2}" for lvl in self.levels],
-            visible_rows=5,
-            spacing=50,
-            font_size=30,
+            [level_name(lvl) for lvl in self.levels],
+            visible_rows=self.VISIBLE_ROWS,
+            spacing=self.ROW_SPACING,
+            font_size=24,
         )
         self.widget.selected_index = self.index
+        self.widget._ensure_visible()
+        self.best_times = self._load_best_times()
+        self._thumbs: dict = {}  # (level, locked) -> scaled preview surface
         self.message: str | None = None
         self.message_timer: float = 0.0
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
+
+    @staticmethod
+    def _load_best_times() -> dict:
+        import json
+
+        from scripts.timer import BEST_TIMES_FILE
+
+        try:
+            with open(BEST_TIMES_FILE) as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return {}
+        times = {}
+        for key, val in data.items():
+            t = val.get("time") if isinstance(val, dict) else val
+            if isinstance(t, (int, float)):
+                times[key] = t
+        return times
+
+    def _best_time_text(self, level) -> str:
+        t = self.best_times.get(str(level))
+        if t is None:
+            return "--:--.--"
+        t = int(t)
+        return f"{t // 60000 % 60:02}:{t // 1000 % 60:02}.{t % 1000 // 10:02}"
+
+    def _thumbnail(self, level, locked: bool, size: tuple[int, int]) -> pygame.Surface:
+        key = (level, locked, size)
+        if key not in self._thumbs:
+            from scripts.level_info import thumbnail_path
+
+            path = thumbnail_path(level)
+            surf = pygame.Surface(size)
+            if path is None:
+                surf.fill((24, 26, 44))
+            else:
+                img = pygame.image.load(path)
+                if locked:  # only the colours of the world show through
+                    img = pygame.transform.scale(img, (img.get_width() // 10, img.get_height() // 10))
+                surf = pygame.transform.scale(img, size)
+                if locked:
+                    surf.fill((90, 90, 110), special_flags=pygame.BLEND_RGB_MULT)
+            self._thumbs[key] = surf
+        return self._thumbs[key]
+
+    def pointer_widgets(self):
+        return (self.widget,)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
@@ -666,11 +830,13 @@ class LevelsState(State):
 
     def update(self, dt: float) -> None:
         if self.enter:
+            from scripts.level_info import level_name
+
             lvl = self.levels[self.widget.selected_index]
             # Use tracker authoritative unlock state
             if self.progress.is_unlocked(lvl):
                 self.settings.selected_level = lvl
-                self.message = self.loc.translate("menu.selected", lvl)
+                self.message = self.loc.translate("menu.selected", level_name(lvl))
             else:
                 self.message = self.loc.translate("menu.locked")
             self.message_timer = 1.0  # seconds
@@ -681,55 +847,117 @@ class LevelsState(State):
                 self.message = None
 
     def render(self, surface: pygame.Surface) -> None:
+        from scripts.level_info import level_info, level_name
+
         UI = self._ui
+        W, H = surface.get_size()
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, self.loc.translate("menu.select_level"), surface.get_width() // 2, 160)
-        # Decorate selected & owned indicator with padlocks at side
-        self.widget.render(surface, surface.get_width() // 2, 260)
-        # Draw padlocks
+        UI.render_menu_title(surface, self.loc.translate("menu.select_level"), W // 2, 60)
+
+        # Level list (left): padlock, name; the selection in the highlight colour
+        font = UI.get_font(self.widget.font_size)
+        list_x, list_y = int(W * 0.03), 150
+        self.widget.clear_hit_rects()
         for i in range(self.widget.visible_rows):
             idx = self.widget._scroll_offset + i
             if idx >= len(self.levels):
                 break
             lvl = self.levels[idx]
-            icon = "data/images/padlock-o.png" if self.progress.is_unlocked(lvl) else "data/images/padlock-c.png"
-            UI.render_ui_img(
-                surface,
-                icon,
-                surface.get_width() // 2 + 150,
-                260 + (i * self.widget.spacing),
-                0.15,
+            y = list_y + i * self.widget.spacing
+            unlocked = self.progress.is_unlocked(lvl)
+            icon = "data/images/padlock-o.png" if unlocked else "data/images/padlock-c.png"
+            UI.render_ui_img(surface, icon, list_x + 14, y, 0.14)
+            if idx == self.widget.selected_index:
+                color = UI.SELECTOR_COLOR
+            else:
+                color = UI.PM_COLOR if unlocked else "#5A6B80"
+            text_y = y - font.get_height() // 2
+            text_rect = UI.draw_text_with_outline(
+                surface, font, self.widget.options[idx], list_x + 40, text_y, color, scale=3
             )
+            # The padlock belongs to the row too
+            self.widget.record_row(idx, text_rect.union(pygame.Rect(list_x, text_rect.top, 1, text_rect.height)))
+        # scroll hints
+        if self.widget._scroll_offset > 0:
+            UI.render_menu_ui_element(surface, "...", list_x + 40, list_y - 50)
+        if self.widget._scroll_offset + self.widget.visible_rows < len(self.levels):
+            last_y = list_y + self.widget.visible_rows * self.widget.spacing
+            UI.render_menu_ui_element(surface, "...", list_x + 40, last_y - 30)
+
+        # Preview (right)
+        if self.levels:
+            lvl = self.levels[self.widget.selected_index]
+            info = level_info(lvl)
+            unlocked = self.progress.is_unlocked(lvl)
+            tw, th = 320 * self.THUMB_SCALE * W // 1280, 180 * self.THUMB_SCALE * H // 720
+            tx, ty = W - tw - int(W * 0.02), 120
+            frame = pygame.Rect(tx - 4, ty - 4, tw + 8, th + 8)
+            pygame.draw.rect(surface, (22, 24, 48), frame)
+            pygame.draw.rect(surface, UI.SELECTOR_COLOR if unlocked else "#5A6B80", frame, 3)
+            surface.blit(self._thumbnail(lvl, not unlocked, (tw, th)), (tx, ty))
+            if not unlocked:
+                UI.render_ui_img(surface, "data/images/padlock-c.png", tx + tw // 2, ty + th // 2, 0.5)
+            cx = tx + tw // 2
+            y = ty + th + 30
+            if info.chapter:
+                chapter = f"Chapter {info.chapter}: {info.chapter_name}"
+                UI.draw_text_with_outline(surface, UI.get_font(15), chapter, cx, y, UI.PM_COLOR, center=True, scale=2)
+                y += 30
+            if info.setting:
+                for line in self._wrap(info.setting, UI.get_font(15), tw):
+                    UI.draw_text_with_outline(
+                        surface, UI.get_font(15), line, cx, y, UI.GAME_UI_COLOR, center=True, scale=2
+                    )
+                    y += 24
+            best = f"{self.loc.translate('level_complete.best', self._best_time_text(lvl))}"
+            UI.draw_text_with_outline(surface, UI.get_font(15), best, cx, y + 8, UI.PM_COLOR, center=True, scale=2)
+
         UI.render_menu_ui_element(
             surface,
-            f"{self.loc.translate('menu.current')}: {self.settings.selected_level}",
+            f"{self.loc.translate('menu.current')}: {level_name(self.settings.selected_level)}",
             20,
             20,
         )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("menu.back_hint"),
-            20,
-            surface.get_height() - 40,
-        )
+        self.back.render(surface)
         if self.message:
-            UI.render_menu_msg(
-                surface,
-                self.message,
-                surface.get_width() // 2,
-                surface.get_height() - 120,
-            )
+            UI.render_menu_msg(surface, self.message, W // 2, H - 60)
+
+    @staticmethod
+    def _wrap(text: str, font, width: int) -> list[str]:
+        lines: list[str] = []
+        for word in text.split():
+            if lines and font.size(lines[-1] + " " + word)[0] <= width:
+                lines[-1] += " " + word
+            else:
+                lines.append(word)
+        return lines
 
 
-class StoreState(State):
-    name = "StoreState"
+class _ItemMenuState(State):
+    """Store and accessories: a hub with the categories (weapons, gear,
+    skins), each opening its own page laid out like the level select: the
+    items on the left, the selected one's stage and details on the right.
+
+    Esc / back leaves a category page for the hub, and the hub for the main
+    menu. Subclasses list a category's items and say what ENTER does.
+    """
+
+    CATEGORIES = ("weapons", "gear", "skins")
+    VISIBLE_ROWS = 8
+    ROW_SPACING = 52
+    STAGE_SCALE = 6  # stage of 96x56 game pixels -> 576x336
+    ICON_SIZE = 44  # list row sprite, at most this many pixels across
+    LOCKED_COLOR = "#5A6B80"
+    DIM_UNOWNED = False  # grey out what you don't own (only where it can't be used)
+    title_key = ""
 
     def __init__(self) -> None:
         from scripts.collectableManager import CollectableManager
         from scripts.displayManager import DisplayManager
-        from scripts.settings import settings
-        from scripts.ui import UI
         from scripts.localization import LocalizationService
+        from scripts.settings import settings
+        from scripts.skin_preview import SkinPreview
+        from scripts.ui import UI
 
         self.loc = LocalizationService.get()
         self.dm = DisplayManager()
@@ -738,159 +966,96 @@ class StoreState(State):
         self._ui = UI
         self.settings = settings
         self.cm = CollectableManager(None)
-        self.options_raw = list(self.cm.ITEMS.keys())
-        # Build formatted options with aligned prices
-        max_len = max(len(o) for o in self.options_raw)
-        self.options = [f"{o.ljust(max_len)}  ${self.cm.ITEMS[o]:<6}" for o in self.options_raw]
-        self.widget = ScrollableListWidget(self.options, visible_rows=5, spacing=50, font_size=30)
-        self.message: str | None = None
-        self.message_timer = 0.0
-        self.request_back = False
-        self.enter = False
-
-    def handle_actions(self, actions: Sequence[str]) -> None:
-        for a in actions:
-            if a == "menu_up":
-                self.widget.move_up()
-            elif a == "menu_down":
-                self.widget.move_down()
-            elif a == "menu_select":
-                self.enter = True
-            elif a in ("menu_back", "menu_quit"):
-                self.request_back = True
-
-    def update(self, dt: float) -> None:
-        if self.enter:
-            opt = self.options[self.widget.selected_index]
-            name = opt.split("$")[0].strip()
-            result = self.cm.buy_collectable(name)
-            if result == "success":
-                self.message = self.loc.translate("store.buy_success", name, self.cm.ITEMS[name])
-            elif result == "not enough coins":
-                self.message = self.loc.translate("store.not_enough")
-            elif result == "not purchaseable":
-                self.message = self.loc.translate("store.not_purchaseable")
-            else:
-                self.message = result
-            self.message_timer = 1.5
-            self.enter = False
-        if self.message_timer > 0:
-            self.message_timer -= dt
-            if self.message_timer <= 0:
-                self.message = None
-
-    def render(self, surface: pygame.Surface) -> None:
-        UI = self._ui
-        UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, self.loc.translate("store.title"), surface.get_width() // 2, 160)
-        self.widget.render(surface, surface.get_width() // 2, 260)
-        # Padlocks indicating purchaseable status
-        for i in range(self.widget.visible_rows):
-            idx = self.widget._scroll_offset + i
-            if idx >= len(self.options_raw):
-                break
-            item_name = self.options_raw[idx]
-            icon = "data/images/padlock-o.png" if self.cm.is_purchaseable(item_name) else "data/images/padlock-c.png"
-            UI.render_ui_img(
-                surface,
-                icon,
-                surface.get_width() // 2 + 350,
-                260 + (i * self.widget.spacing),
-                0.15,
-            )
-        # Coins + item amount of selected
-        sel_name = self.options_raw[self.widget.selected_index]
-        UI.render_menu_ui_element(surface, f"${self.cm.coins}", 20, 20)
-        UI.render_menu_ui_element(
-            surface,
-            f"{sel_name}: {self.cm.get_amount(sel_name)}",
-            surface.get_width() - 20,
-            20,
-            "right",
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(f"accessories.{c}") for c in self.CATEGORIES],
+            visible_rows=len(self.CATEGORIES),
+            spacing=90,
+            font_size=30,
         )
-        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
-        if self.message:
-            UI.render_menu_msg(
-                surface,
-                self.message,
-                surface.get_width() // 2,
-                surface.get_height() - 120,
-            )
-
-
-class AccessoriesState(State):
-    name = "AccessoriesState"
-
-    def __init__(self) -> None:
-        from scripts.collectableManager import CollectableManager
-        from scripts.displayManager import DisplayManager
-        from scripts.settings import settings
-        from scripts.ui import UI
-        from scripts.localization import LocalizationService
-
-        self.loc = LocalizationService.get()
-        self.dm = DisplayManager()
-        self.display = pygame.Surface((self.dm.BASE_W, self.dm.BASE_H), pygame.SRCALPHA)
-        self.bg = pygame.image.load("data/images/background-big.png")
-        self._ui = UI
-        self.settings = settings
-        self.cm = CollectableManager(None)
-        self.weapons = list(self.cm.WEAPONS)
-        self.gear = list(self.cm.GEAR)
-        self.skins = list(self.cm.SKINS)
-        self.weapon_widget = ScrollableListWidget(self.weapons, visible_rows=4, spacing=50, font_size=30)
-        self.gear_widget = ScrollableListWidget(self.gear, visible_rows=4, spacing=50, font_size=30)
-        self.skin_widget = ScrollableListWidget(self.skins, visible_rows=4, spacing=50, font_size=30)
-        self.active_panel = 0  # 0 weapons, 1 gear, 2 skins
-        self.request_back = False
-        self.enter = False
+        self.category: str | None = None  # None: the hub
+        self.items: list[str] = []
+        self.item_widget = ScrollableListWidget(
+            [], visible_rows=self.VISIBLE_ROWS, spacing=self.ROW_SPACING, font_size=24
+        )
+        self.preview = SkinPreview()
+        self._scene = None  # the selected weapon's or gear's showcase (scripts/item_showcase.py)
+        self._icons: dict = {}
         self.message: str | None = None
         self.message_timer = 0.0
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
+        self.request_back = False
+        self.enter = False
 
-    def _active_widget(self):
-        return (self.weapon_widget, self.gear_widget, self.skin_widget)[self.active_panel]
+    # Subclass hooks ------------------------------------------------
+    def items_of(self, category: str) -> list[str]:
+        raise NotImplementedError
+
+    def initial_index(self, category: str) -> int:
+        return 0
+
+    def activate(self, name: str) -> None:
+        raise NotImplementedError
+
+    def row_info(self, name: str) -> tuple[str, object]:
+        """Text and colour at the right end of an item's row."""
+        raise NotImplementedError
+
+    def status(self, name: str) -> tuple[str, object]:
+        """The selected item's status line (price, owned, equipped)."""
+        raise NotImplementedError
+
+    def hub_info(self, category: str) -> str:
+        """Small line under a category on the hub."""
+        raise NotImplementedError
+
+    # Shared helpers ------------------------------------------------
+    def owned(self, name: str) -> bool:
+        return self.cm.get_amount(name) > 0
+
+    def label(self, name: str) -> str:
+        """Short name for the list; the card shows the full one."""
+        return name
+
+    def open_category(self, category: str) -> None:
+        self.category = category
+        self.items = self.items_of(category)
+        self.item_widget.set_options([self.label(n) for n in self.items])
+        self.item_widget.select(self.initial_index(category))
+
+    def say(self, text: str, seconds: float = 1.5) -> None:
+        self.message = text
+        self.message_timer = seconds
+
+    # State ---------------------------------------------------------
+    def _active(self) -> ScrollableListWidget:
+        return self.item_widget if self.category else self.widget
+
+    def pointer_widgets(self):
+        return (self._active(),)
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         for a in actions:
             if a == "menu_up":
-                self._active_widget().move_up()
+                self._active().move_up()
             elif a == "menu_down":
-                self._active_widget().move_down()
+                self._active().move_down()
             elif a == "menu_select":
                 self.enter = True
             elif a in ("menu_back", "menu_quit"):
-                self.request_back = True
-            elif a == "accessories_switch":
-                self.active_panel = (self.active_panel + 1) % 3
+                if self.category:
+                    self.category = None
+                    self.message = None
+                else:
+                    self.request_back = True
 
     def update(self, dt: float) -> None:
+        self.preview.update(dt)
         if self.enter:
-            if self.active_panel == 0:  # weapons
-                idx = self.weapon_widget.selected_index
-                name = self.weapons[idx]
-                if self.cm.get_amount(name) > 0:
-                    self.settings.selected_weapon = idx
-                    self.message = self.loc.translate("accessories.equipped", name)
-                else:
-                    self.message = self.loc.translate("accessories.locked", name)
-            elif self.active_panel == 1:  # gear
-                idx = self.gear_widget.selected_index
-                name = self.gear[idx]
-                if self.cm.get_amount(name) > 0:
-                    self.settings.selected_gear = idx
-                    self.message = self.loc.translate("accessories.equipped", name)
-                else:
-                    self.message = self.loc.translate("accessories.locked", name)
-            else:
-                idx = self.skin_widget.selected_index
-                name = self.skins[idx]
-                if self.cm.get_amount(name) > 0:
-                    self.settings.selected_skin = idx
-                    self.message = self.loc.translate("accessories.equipped", name)
-                else:
-                    self.message = self.loc.translate("accessories.locked", name)
-            self.message_timer = 1.0
             self.enter = False
+            if self.category is None:
+                self.open_category(self.CATEGORIES[self.widget.selected_index])
+            elif self.items:
+                self.activate(self.items[self.item_widget.selected_index])
         if self.message_timer > 0:
             self.message_timer -= dt
             if self.message_timer <= 0:
@@ -898,76 +1063,273 @@ class AccessoriesState(State):
 
     def render(self, surface: pygame.Surface) -> None:
         UI = self._ui
-        w = surface.get_width()
+        W, H = surface.get_size()
         UI.render_menu_bg(surface, self.display, self.bg)
-        UI.render_menu_title(surface, self.loc.translate("accessories.title"), w // 2, 120)
-        panel_x = [w // 2 - 500, w // 2, w // 2 + 500]
-        UI.render_menu_subtitle(surface, self.loc.translate("accessories.weapons"), panel_x[0], 260)
-        UI.render_menu_subtitle(surface, self.loc.translate("accessories.gear"), panel_x[1], 260)
-        UI.render_menu_subtitle(surface, self.loc.translate("accessories.skins"), panel_x[2], 260)
-        panels = [
-            (self.weapon_widget, self.weapons),
-            (self.gear_widget, self.gear),
-            (self.skin_widget, self.skins),
-        ]
-        for px, (widget, names) in zip(panel_x, panels):
-            widget.render(surface, px, 330)
-            # Padlock = ownership indicator (open when owned/equippable)
-            for i in range(widget.visible_rows):
-                idx = widget._scroll_offset + i
-                if idx >= len(names):
-                    break
-                owned = self.cm.get_amount(names[idx]) > 0
-                icon = "data/images/padlock-o.png" if owned else "data/images/padlock-c.png"
-                UI.render_ui_img(
-                    surface,
-                    icon,
-                    px + 200,
-                    330 + (i * widget.spacing),
-                    0.15,
-                )
+        if self.category is None:
+            self._render_hub(surface)
+        else:
+            self._render_page(surface)
         UI.render_menu_ui_element(surface, self.loc.translate("accessories.coins", self.cm.coins), 20, 20)
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("accessories.equipped_weapon", self.cm.WEAPONS[self.settings.selected_weapon]),
-            20,
-            40,
-        )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("accessories.equipped_gear", self.cm.GEAR[self.settings.selected_gear]),
-            20,
-            60,
-        )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("accessories.equipped_skin", self.cm.SKINS[self.settings.selected_skin]),
-            20,
-            80,
-        )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("accessories.tab_hint"),
-            surface.get_width() // 2 - 90,
-            surface.get_height() - 70,
-        )
-        UI.render_menu_ui_element(
-            surface,
-            self.loc.translate("menu.back_hint"),
-            surface.get_width() // 2 - 50,
-            surface.get_height() - 40,
-        )
+        self.back.render(surface)
         if self.message:
-            UI.render_menu_msg(
+            UI.render_menu_msg(surface, self.message, W // 2, H - 60)
+
+    def _render_hub(self, surface: pygame.Surface) -> None:
+        UI = self._ui
+        W, H = surface.get_size()
+        UI.render_menu_title(surface, self.loc.translate(self.title_key), W // 2, 170)
+        top = 300
+        self.widget.render(surface, W // 2, top)
+        font = UI.get_font(15)
+        for i, category in enumerate(self.CATEGORIES):
+            UI.draw_text_with_outline(
                 surface,
-                self.message,
-                surface.get_width() // 2,
-                surface.get_height() - 120,
+                font,
+                self.hub_info(category),
+                W // 2,
+                top + i * self.widget.spacing + 34,
+                UI.GAME_UI_COLOR,
+                center=True,
+                scale=2,
             )
-        # Highlight active panel title
-        highlight_rect = pygame.Surface((300, 40), pygame.SRCALPHA)
-        highlight_rect.fill((255, 255, 255, 40))
-        surface.blit(highlight_rect, (panel_x[self.active_panel] - 150, 250))
+        UI.draw_text_with_outline(
+            surface,
+            UI.get_font(15),
+            self.loc.translate("store.hub_hint"),
+            W // 2,
+            H - 32,
+            UI.GAME_UI_COLOR,
+            center=True,
+            scale=2,
+        )
+
+    def _render_page(self, surface: pygame.Surface) -> None:
+        UI = self._ui
+        W, H = surface.get_size()
+        UI.render_menu_title(surface, self.loc.translate(f"accessories.{self.category}"), W // 2, 60)
+
+        # Items (left): padlock, name, and at the row's end its price or state
+        font = UI.get_font(self.item_widget.font_size)
+        info_font = UI.get_font(15)
+        list_x, list_y, list_w = int(W * 0.03), 150, 560
+        widget = self.item_widget
+        widget.clear_hit_rects()
+        for i in range(widget.visible_rows):
+            idx = widget._scroll_offset + i
+            if idx >= len(self.items):
+                break
+            name = self.items[idx]
+            y = list_y + i * widget.spacing
+            owned = self.owned(name)
+            icon = "data/images/padlock-o.png" if owned else "data/images/padlock-c.png"
+            UI.render_ui_img(surface, icon, list_x + 14, y, 0.14)
+            selected = idx == widget.selected_index
+            dim = self.DIM_UNOWNED and not owned
+            sprite = self._icon(name)
+            if sprite is not None:
+                if dim:
+                    sprite = sprite.copy()
+                    sprite.set_alpha(120)
+                bob = -2 if selected and int(self.preview.ticks // 15) % 2 else 0
+                surface.blit(sprite, sprite.get_rect(center=(list_x + 40 + self.ICON_SIZE // 2, y + bob)))
+            color = UI.SELECTOR_COLOR if selected else (self.LOCKED_COLOR if dim else UI.PM_COLOR)
+            text_rect = UI.draw_text_with_outline(
+                surface,
+                font,
+                widget.options[idx],
+                list_x + 50 + self.ICON_SIZE,
+                y - font.get_height() // 2,
+                color,
+                scale=3,
+            )
+            info, info_color = self.row_info(name)
+            if info:
+                surf_w = info_font.size(info)[0]
+                UI.draw_text_with_outline(
+                    surface,
+                    info_font,
+                    info,
+                    list_x + list_w - surf_w,
+                    y - info_font.get_height() // 2,
+                    UI.SELECTOR_COLOR if selected else info_color,
+                    scale=2,
+                )
+            row = text_rect.union(pygame.Rect(list_x, text_rect.top, list_w, text_rect.height))
+            widget.record_row(idx, row)
+        if widget._scroll_offset > 0:
+            UI.render_menu_ui_element(surface, "...", list_x + 40, list_y - 50)
+        if widget._scroll_offset + widget.visible_rows < len(self.items):
+            UI.render_menu_ui_element(surface, "...", list_x + 40, list_y + widget.visible_rows * widget.spacing - 30)
+
+        if not self.items:
+            return
+        name = self.items[widget.selected_index]
+        self._render_card(surface, name)
+
+    def _render_card(self, surface: pygame.Surface, name: str) -> None:
+        """Stage in a frame like the level preview, details underneath."""
+        from scripts.collectableManager import ITEM_DESCRIPTIONS
+        from scripts.item_showcase import scene_for
+        from scripts.skin_preview import STAGE, wrap_text
+
+        UI = self._ui
+        W, H = surface.get_size()
+        sw, sh = STAGE[0] * self.STAGE_SCALE, STAGE[1] * self.STAGE_SCALE
+        sx, sy = W - sw - int(W * 0.04), 120
+        owned = self.owned(name)
+        frame = pygame.Rect(sx - 4, sy - 4, sw + 8, sh + 8)
+        pygame.draw.rect(surface, (22, 24, 48), frame)
+        pygame.draw.rect(surface, UI.SELECTOR_COLOR if owned else self.LOCKED_COLOR, frame, 3)
+
+        skin = self.cm.SKIN_INFO.get(name)
+        if skin is not None:
+            self.preview.set_skin(skin.path)
+            title, text, scene = skin.title, skin.description, None
+        else:
+            # Weapons and gear: the equipped skin shows them off in action
+            self.preview.set_skin(self.cm.SKIN_PATHS[self.settings.selected_skin], showcase=False)
+            title, text = name, ITEM_DESCRIPTIONS.get(name, "")
+            if self._scene is None or self._scene.name != name:
+                self._scene = scene_for(name)
+                self.preview.ticks = 0.0
+            scene = self._scene
+        self.preview.render_stage(surface, pygame.Rect(sx, sy, sw, sh), scene=scene)
+
+        cx = sx + sw // 2
+        y = sy + sh + 34
+        UI.draw_text_with_outline(surface, UI.get_font(24), title, cx, y, UI.PM_COLOR, center=True, scale=3)
+        y += 38
+        status, color = self.status(name)
+        UI.draw_text_with_outline(surface, UI.get_font(15), status, cx, y, color, center=True, scale=2)
+        y += 32
+        font = UI.get_font(15)
+        for line in wrap_text(font, text, sw):
+            UI.draw_text_with_outline(surface, font, line, cx, y, UI.GAME_UI_COLOR, center=True, scale=2)
+            y += 24
+
+    def _icon(self, name: str) -> pygame.Surface | None:
+        """The item's sprite for its list row, scaled up (skins: their ninja)."""
+        from scripts.collectableManager import ITEM_ICONS
+        from scripts.item_fx import image
+        from scripts.skin_preview import _load_frames
+
+        key = (name, self.settings.selected_skin if name == "Default" else 0)
+        if key in self._icons:
+            return self._icons[key]
+        img = None
+        skin = self.cm.SKIN_INFO.get(name)
+        if name == "Default" and skin is None:
+            skin = self.cm.SKIN_INFO.get(self.cm.SKINS[self.settings.selected_skin])
+        if skin is not None:
+            img = _load_frames(skin.path, "idle")[0]
+        elif name in ITEM_ICONS:
+            img = image(ITEM_ICONS[name])
+        if img is not None:
+            scale = max(1, min(3, self.ICON_SIZE // max(img.get_size())))
+            img = pygame.transform.scale(img, (img.get_width() * scale, img.get_height() * scale))
+        self._icons[key] = img
+        return img
+
+
+class StoreState(_ItemMenuState):
+    name = "StoreState"
+    title_key = "store.title"
+
+    def items_of(self, category: str) -> list[str]:
+        kind = {"weapons": "weapon", "gear": "gear", "skins": "skin"}[category]
+        return [n for n, idef in self.cm._ITEM_DEFS.items() if idef.category == kind]
+
+    def stackable(self, name: str) -> bool:
+        idef = self.cm.get_item_def(name)
+        return idef is not None and idef.category != "skin" and idef.increment > 1 or name == "Shield"
+
+    def row_info(self, name: str):
+        UI = self._ui
+        if self.owned(name) and not self.stackable(name):
+            return self.loc.translate("store.owned"), UI.GAME_UI_COLOR
+        return f"${self.cm.ITEMS[name]}", UI.PM_COLOR
+
+    def status(self, name: str):
+        UI = self._ui
+        price = self.cm.ITEMS[name]
+        if self.stackable(name):
+            return self.loc.translate("store.stack_status", price, self.cm.get_amount(name)), UI.PM_COLOR
+        if self.owned(name):
+            return self.loc.translate("store.owned"), UI.GAME_UI_COLOR
+        return self.loc.translate("store.buy_status", price), UI.SELECTOR_COLOR
+
+    def hub_info(self, category: str) -> str:
+        items = [n for n in self.items_of(category) if not self.stackable(n)]
+        owned = sum(1 for n in items if self.owned(n))
+        return self.loc.translate("store.owned_count", owned, len(items))
+
+    def activate(self, name: str) -> None:
+        title = self.cm.display_name(name)
+        result = self.cm.buy_collectable(name)
+        if result == "success":
+            self.say(self.loc.translate("store.buy_success", title, self.cm.ITEMS[name]))
+        elif result == "not enough coins":
+            self.say(self.loc.translate("store.not_enough"))
+        elif result == "not purchaseable":
+            self.say(self.loc.translate("store.not_purchaseable"))
+        elif result == "already owned":
+            self.say(self.loc.translate("store.already_owned", title))
+        else:
+            self.say(result)
+
+
+class AccessoriesState(_ItemMenuState):
+    name = "AccessoriesState"
+    title_key = "accessories.title"
+    DIM_UNOWNED = True
+
+    def _slots(self, category: str):
+        """(names, settings attribute) of an equip slot."""
+        return {
+            "weapons": (self.cm.WEAPONS, "selected_weapon"),
+            "gear": (self.cm.GEAR, "selected_gear"),
+            "skins": (self.cm.SKINS, "selected_skin"),
+        }[category]
+
+    def items_of(self, category: str) -> list[str]:
+        return list(self._slots(category)[0])
+
+    def equipped(self, category: str) -> str:
+        names, attr = self._slots(category)
+        return names[getattr(self.settings, attr)]
+
+    def _open_category(self) -> str:
+        """The category page that is open (rows exist only there, not in the hub)."""
+        assert self.category is not None
+        return self.category
+
+    def initial_index(self, category: str) -> int:
+        return getattr(self.settings, self._slots(category)[1])
+
+    def row_info(self, name: str):
+        if name == self.equipped(self._open_category()):
+            return self.loc.translate("accessories.status_equipped"), self._ui.GAME_UI_COLOR
+        return "", None
+
+    def status(self, name: str):
+        UI = self._ui
+        if name == self.equipped(self._open_category()):
+            return self.loc.translate("accessories.status_equipped"), UI.GAME_UI_COLOR
+        if self.owned(name):
+            return self.loc.translate("accessories.status_owned"), UI.SELECTOR_COLOR
+        return self.loc.translate("accessories.status_locked", self.cm.ITEMS[name]), self.LOCKED_COLOR
+
+    def hub_info(self, category: str) -> str:
+        return self.cm.display_name(self.equipped(category))
+
+    def activate(self, name: str) -> None:
+        names, attr = self._slots(self._open_category())
+        title = self.cm.display_name(name)
+        if self.owned(name):
+            setattr(self.settings, attr, names.index(name))
+            self.say(self.loc.translate("accessories.equipped", title), 1.0)
+        else:
+            self.say(self.loc.translate("accessories.locked", title), 1.0)
 
 
 class OptionsState(State):
@@ -985,9 +1347,17 @@ class OptionsState(State):
         self.bg = pygame.image.load("data/images/background-big.png")
         self._ui = UI
         self.settings = settings
-        self.widget = ScrollableListWidget([], visible_rows=5, spacing=50, font_size=30)
+        self.widget = ScrollableListWidget([], visible_rows=6, spacing=50, font_size=30)
+        self.back: BackButton = BackButton(self.loc.translate("menu.back"))
         self.request_back = False
         self.enter = False
+
+    def pointer_widgets(self):
+        return (self.widget,)
+
+    def pointer_activate(self, widget, button: int) -> None:
+        """Left click steps the value forward, right click back (like the arrow keys)."""
+        self.handle_actions(["options_right" if button == 1 else "options_left"])
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         from scripts.settings import CAMERA_STYLES
@@ -1019,6 +1389,9 @@ class OptionsState(State):
                     step = -1 if a == "options_left" else 1
                     i = CAMERA_STYLES.index(self.settings.camera_style)
                     self.settings.camera_style = CAMERA_STYLES[(i + step) % len(CAMERA_STYLES)]
+                elif idx == 5:
+                    # app.py switches the window when the setting changes
+                    self.settings.fullscreen = not self.settings.fullscreen
 
     def update(self, dt: float) -> None:
         # Refresh options list each frame to reflect current values
@@ -1031,6 +1404,10 @@ class OptionsState(State):
             self.loc.translate("options.ghosts", ghosts_status),
             self.loc.translate("options.ghost_mode", self.settings.ghost_mode.upper()),
             self.loc.translate("options.camera", self.settings.camera_style.upper()),
+            self.loc.translate(
+                "options.fullscreen",
+                self.loc.translate("options.on") if self.settings.fullscreen else self.loc.translate("options.off"),
+            ),
         ]
 
     def render(self, surface: pygame.Surface) -> None:
@@ -1038,7 +1415,7 @@ class OptionsState(State):
         UI.render_menu_bg(surface, self.display, self.bg)
         UI.render_menu_title(surface, self.loc.translate("options.title"), surface.get_width() // 2, 160)
         self.widget.render(surface, surface.get_width() // 2, 260)
-        UI.render_menu_ui_element(surface, self.loc.translate("menu.back_hint"), 20, surface.get_height() - 40)
+        self.back.render(surface)
 
 
 class LevelCompleteState(State):
@@ -1079,6 +1456,9 @@ class LevelCompleteState(State):
         )
         self.enter = False
 
+    def pointer_widgets(self):
+        return (self.widget,)
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         for act in actions:
             if act == "menu_up":
@@ -1100,10 +1480,7 @@ class LevelCompleteState(State):
                     self.manager.set(GameState())
             elif choice_key == "level_complete.replay":
                 if self.manager:
-                    from scripts.settings import settings
-
-                    settings.selected_level = self.current_level
-                    self.manager.set(GameState())
+                    self.manager.set(fresh_game_state(self.current_level))
             elif choice_key == "level_complete.menu":
                 if self.manager:
                     self.manager.set(MenuState())
@@ -1123,6 +1500,9 @@ class LevelCompleteState(State):
 
         # Title
         UI.render_menu_title(surface, self.loc.translate("level_complete.title"), surface.get_width() // 2, 80)
+        from scripts.level_info import level_name
+
+        UI.render_menu_subtitle(surface, level_name(self.current_level), surface.get_width() // 2, 150)
 
         # Stats
         y_start = 320
@@ -1165,3 +1545,97 @@ class LevelCompleteState(State):
 
         # Hints
         UI.render_menu_ui_element(surface, self.loc.translate("menu.enter_hint"), 20, surface.get_height() - 40)
+
+
+class GameOverState(State):
+    """Shown when the last life is gone: try the level again or go to the menu.
+
+    Input is ignored for a moment after it appears, so a jump or a click
+    from the last seconds of play does not pick an option by accident.
+    """
+
+    name = "GameOverState"
+    INPUT_DELAY = 0.6  # seconds
+
+    def __init__(self, level) -> None:
+        from scripts.localization import LocalizationService
+        from scripts.ui import UI
+
+        self.loc = LocalizationService.get()
+        self.level = level
+        self._ui = UI
+        self.options_keys = ["game_over.retry", "level_complete.menu"]
+        self.widget = ScrollableListWidget(
+            [self.loc.translate(k) for k in self.options_keys], visible_rows=2, spacing=50, font_size=30
+        )
+        self.bg: pygame.Surface | None = None
+        try:
+            self.bg = pygame.image.load("data/images/background-big.png")
+        except Exception:  # pragma: no cover - asset optional in tests
+            pass
+        self._backdrop: pygame.Surface | None = None  # background + red veil, built once per size
+        self._age = 0.0
+        self.enter = False
+
+    @property
+    def accepts_input(self) -> bool:
+        return self._age >= self.INPUT_DELAY
+
+    def pointer_widgets(self):
+        return (self.widget,)
+
+    def handle_actions(self, actions: Sequence[str]) -> None:
+        if not self.accepts_input:
+            return
+        for act in actions:
+            if act == "menu_up":
+                self.widget.move_up()
+            elif act == "menu_down":
+                self.widget.move_down()
+            elif act == "menu_select":
+                self.enter = True
+            elif act in ("menu_quit", "menu_back"):
+                self.widget.selected_index = self.options_keys.index("level_complete.menu")
+                self.enter = True
+
+    def update(self, dt: float) -> None:
+        self._age += dt
+        if not self.enter:
+            return
+        self.enter = False
+        if self.manager is None:
+            return
+        if self.options_keys[self.widget.selected_index] == "game_over.retry":
+            self.manager.set(fresh_game_state(self.level))
+        else:
+            self.manager.set(MenuState())
+
+    def render(self, surface: pygame.Surface) -> None:
+        UI = self._ui
+        size = surface.get_size()
+        if self._backdrop is None or self._backdrop.get_size() != size:
+            self._backdrop = opaque_surface(size)
+            if self.bg is not None:
+                self._backdrop.blit(pygame.transform.scale(self.bg, size), (0, 0))
+            veil = pygame.Surface(size, pygame.SRCALPHA)
+            veil.fill((60, 0, 0, 170))
+            self._backdrop.blit(veil, (0, 0))
+        surface.blit(self._backdrop, (0, 0))
+
+        from scripts.level_info import level_name
+
+        cx = size[0] // 2
+        UI.draw_text_with_outline(
+            surface=surface,
+            font=UI.get_font(50),
+            text=self.loc.translate("game_over.title"),
+            x=cx,
+            y=140,
+            text_color=(220, 40, 40),
+            center=True,
+            scale=3,
+        )
+        UI.render_menu_subtitle(surface, level_name(self.level), cx, 240)
+        UI.render_menu_msg(surface, self.loc.translate("game_over.subtitle"), cx, 310)
+        self.widget.render(surface, cx, 400)
+        UI.render_menu_ui_element(surface, self.loc.translate("menu.enter_hint"), 20, size[1] - 40)

@@ -98,7 +98,7 @@ TIMELINE: list[Shot | Card] = [
     Shot(level=5, start=2368, frames=52, caption="5 WEAPONS TO UNLOCK", weapon="Ninja Stars", fire=(2376,)),
     Shot(level=3, start=80, frames=40, caption="5 WEAPONS TO UNLOCK", weapon="Sword", fire=(94,)),
     Shot(level=4, start=3120, frames=50, caption="5 WEAPONS TO UNLOCK", weapon="Grapple Hook", fire=(3132,)),
-    Shot(level=26, start=32, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
+    Shot(level=2, start=130, frames=115, caption="PLAY WITH FRIENDS", rival="last", skin=2, weapon="Gun"),
     Shot(level=4, start=1570, frames=45, caption="25+ LEVELS"),
     Shot(level=6, start=825, frames=45, caption="25+ LEVELS"),
     Shot(level=5, start=2070, frames=45, caption="25+ LEVELS"),
@@ -177,11 +177,11 @@ def plan_replay(level: int) -> dict:
 class Run:
     """A replay's inputs, rebuilt into what the player actually did."""
 
-    def __init__(self, level: int, kind: str = "best"):
+    def __init__(self, level: int, kind: str = "best", path: str | None = None):
         if kind == "plan":
             self.data = plan_replay(level)
         else:
-            with open(os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
+            with open(path or os.path.join(REPLAYS, f"{level}-{kind}.json")) as f:
                 self.data = json.load(f)
         self.snaps = {int(t): s["players"][0] for t, s in self.data["snapshots"].items() if s.get("players")}
         self.events = self._events(self.data["inputs"])

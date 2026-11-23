@@ -20,6 +20,10 @@ gemini*
 data/saves/
 data/replays/
 data/netlogs/
+data/deaths/
+
+# Tool output (level checks, their caches)
+out/
 data/online.json
 data/collectables.json
 data/best_times.json
@@ -33,3 +37,7 @@ frame_pacing*.png
 # Rendezvous worker (npm, wrangler local state)
 rendezvous/node_modules/
 rendezvous/.wrangler/
+
+# Trained policies (python -m tools.rl train)
+tools/rl/models/
+tools/rl/cache/

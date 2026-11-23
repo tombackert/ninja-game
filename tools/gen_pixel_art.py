@@ -1,13 +1,17 @@
-"""Pixel art generator for the store expansion (new skins & weapon sprites).
+"""Pixel art generator for the store's weapons and gear.
 
-Skins are palette swaps of the `default` player animation set — the same
-technique used for the existing `red` skin — so they match the art style
-and animation frame counts exactly.
+Player skins are drawn by tools/gen_skins.py.
 
-Weapon sprites are small hand-authored pixel grids in the scale of the
-existing `gun.png` (5x3) / `projectile.png` (6x4). Pure black (0,0,0) is
-the transparency colorkey used by AssetManager, so sprites avoid it except
-for intentionally transparent pixels.
+The checkpoint banner (tiles/collectables/checkpoint, furled and hoisted)
+is drawn the same way. `--only checkpoint` writes just those.
+
+Weapons and gear (data/images/weapons, data/images/gear, star.png) are
+hand-authored pixel grids with a dark outline so they read against every
+background at the ninja's 14x18 scale. The sword slash (weapons/slash) is
+computed: a crescent that sweeps from top to bottom over 4 frames.
+scripts/item_fx.py draws them on the ninja, in a level and in the store.
+Pure black (0,0,0) is the transparency colorkey used by AssetManager, so
+sprites avoid it except for intentionally transparent pixels.
 
 Usage:
     python tools/gen_pixel_art.py [--preview /path/to/montage.png]
@@ -16,173 +20,349 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import os
 
 from PIL import Image
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAYER_DIR = os.path.join(REPO, "data", "images", "entities", "player")
 IMG_DIR = os.path.join(REPO, "data", "images")
-
-# Exact palette of the default skin (verified over all 33 frames).
-BODY = (38, 36, 58)  # suit main
-SHADOW = (20, 16, 32)  # outline / shadow
-HIGHLIGHT = (219, 224, 231)  # face / highlights
-ACCENT = (163, 172, 190)  # armor accents
-SCARF = (196, 44, 54)  # scarf
-
-# skin name -> {default color: replacement}
-SKIN_PALETTES = {
-    "gold": {
-        BODY: (196, 148, 32),
-        SHADOW: (94, 60, 8),
-        HIGHLIGHT: (255, 224, 120),
-        ACCENT: (232, 190, 70),
-        SCARF: (235, 235, 240),
-    },
-    "platinum": {
-        BODY: (150, 160, 172),
-        SHADOW: (62, 70, 82),
-        HIGHLIGHT: (236, 241, 246),
-        ACCENT: (198, 206, 216),
-        SCARF: (52, 96, 168),
-    },
-    "diamond": {
-        BODY: (64, 180, 216),
-        SHADOW: (18, 80, 110),
-        HIGHLIGHT: (215, 248, 255),
-        ACCENT: (140, 226, 244),
-        SCARF: (148, 84, 204),
-    },
-    "assassin": {
-        BODY: (30, 30, 36),
-        SHADOW: (8, 8, 12),
-        HIGHLIGHT: (96, 96, 108),
-        ACCENT: (58, 58, 68),
-        SCARF: (168, 22, 32),
-    },
-    "berserker": {
-        BODY: (122, 44, 32),
-        SHADOW: (56, 16, 12),
-        HIGHLIGHT: (232, 146, 58),
-        ACCENT: (178, 84, 44),
-        SCARF: (28, 22, 22),
-    },
-}
-
-ACTIONS = ["idle", "run", "jump", "slide", "wall_slide"]
-
-
-def swap_palette(img: Image.Image, mapping: dict) -> Image.Image:
-    src = img.convert("RGBA")
-    out = Image.new("RGBA", src.size)
-    data = []
-    for px in src.getdata():
-        rgb, a = px[:3], px[3]
-        data.append(mapping.get(rgb, rgb) + (a,))
-    out.putdata(data)
-    return out
-
-
-def generate_skins() -> None:
-    for skin, mapping in SKIN_PALETTES.items():
-        for action in ACTIONS:
-            src_dir = os.path.join(PLAYER_DIR, "default", action)
-            dst_dir = os.path.join(PLAYER_DIR, skin, action)
-            os.makedirs(dst_dir, exist_ok=True)
-            for name in sorted(os.listdir(src_dir)):
-                if not name.endswith(".png"):
-                    continue
-                img = Image.open(os.path.join(src_dir, name))
-                swap_palette(img, mapping).save(os.path.join(dst_dir, name))
-        print(f"skin '{skin}' generated")
-
 
 # --- Weapon / effect sprites -------------------------------------------------
 # Grid legend: '.' = transparent (black colorkey), letters = palette entries.
 SPRITE_COLORS = {
-    "K": (75, 78, 90),  # gun metal dark
-    "G": (120, 124, 138),  # gun metal light
-    "B": (110, 70, 35),  # wood
-    "S": (200, 205, 215),  # steel / blade
-    "W": (245, 248, 252),  # white tip / gleam
-    "H": (140, 96, 40),  # hilt
-    "Y": (214, 168, 44),  # gold guard
-    "C": (170, 220, 250),  # slash cyan
-    "D": (16, 40, 64),  # dark blue-ish (visible on black via colorkey offset)
+    "Y": (214, 168, 44),  # gold finial
+    "W": (245, 248, 252),  # banner emblem
+    "P": (92, 62, 38),  # pole wood, shadow side
+    "Q": (150, 108, 62),  # pole wood, lit side
+    "R": (78, 80, 94),  # stone base, dark
+    "T": (126, 128, 142),  # stone base, light
+    "A": (118, 114, 126),  # furled cloth
+    "a": (80, 76, 90),  # furled cloth, folds
+    "E": (40, 184, 158),  # banner teal
+    "e": (22, 118, 104),  # banner teal, shade
+    "L": (148, 236, 212),  # banner teal, light
 }
 
-SPRITES = {
-    # Long barrel + angled stock; reads as a rifle beside the 14x18 ninja.
-    "rifle.png": [
-        ".KGGGGGGGGG",
-        "BBKKKKKGG..",
-        "BB.........",
+SPRITES: dict = {}
+
+
+_POLE = "....QP.........."
+_BASE = ["...RTTR.........", "..RTTTTR........", "..RRRRRR........"]
+# Checkpoint banner (16x32, drawn from its top-left; the lower half stands
+# on the ground): 0 furled at the foot of the pole, 1 hoisted once touched.
+CHECKPOINT = {
+    "tiles/collectables/checkpoint/0.png": [
+        "....aa..........",
+        "....aa..........",
+    ]
+    + [_POLE] * 17
+    + [
+        "....QPAa........",
+        "....QPAAa.......",
+        "....QPAaAa......",
+        "....QPAAaA......",
+        "....QPaAAa......",
+        "....QPAaAa......",
+        "....QPAAa.......",
+        "....QPAa........",
+        "....QPa.........",
+        _POLE,
+    ]
+    + _BASE,
+    "tiles/collectables/checkpoint/1.png": [
+        "....YY..........",
+        "....YY..........",
+        "....QPLEEEEEEEe.",
+        "....QPLEEEEEEEe.",
+        "....QPLEEWWEEEe.",
+        "....QPLEWLLWEEe.",
+        "....QPLEWLLWEEe.",
+        "....QPLEEWWEEEe.",
+        "....QPLEEEEEEEe.",
+        "....QPLEEEEEEEe.",
+        "....QPLEEEeEEEe.",
+        "....QPLEEe.eEEe.",
+        "....QPLEe...eEe.",
+        "....QPLe.....ee.",
+    ]
+    + [_POLE] * 15
+    + _BASE,
+}
+SPRITES.update(CHECKPOINT)
+
+# --- Weapons and gear --------------------------------------------------------
+# Own palette: a dark outline (O) around shaded metal, wood, lacquer and gold.
+ITEM_COLORS = {
+    "O": (26, 22, 38),  # outline
+    "K": (62, 66, 84),  # steel, shadow
+    "G": (112, 120, 140),  # steel
+    "S": (176, 186, 206),  # steel, lit
+    "W": (244, 248, 255),  # gleam
+    "B": (92, 54, 30),  # wood, shadow
+    "b": (150, 96, 52),  # wood
+    "Y": (240, 190, 60),  # gold
+    "y": (170, 116, 30),  # gold, shadow
+    "M": (255, 238, 150),  # gold, lit
+    "R": (200, 40, 52),  # lacquer red
+    "r": (120, 20, 36),  # lacquer red, shadow
+    "N": (80, 190, 255),  # energy blue
+    "n": (40, 96, 190),  # deep blue
+    "C": (150, 232, 255),  # cyan glow
+    "c": (64, 150, 222),  # cyan, shadow
+    "L": (226, 222, 255),  # moon silver
+    "l": (160, 152, 214),  # moon silver, shadow
+    "h": (110, 150, 70),  # crate green
+    "g": (70, 100, 48),  # crate green, shadow
+    "w": (244, 232, 204),  # target cream
+}
+
+ITEM_SPRITES = {
+    # Pistol, held at the grip (x2, y4)
+    "weapons/pistol.png": [
+        ".OOOOOOOO.",
+        "OSWWWSSSSO",
+        "OGGGGGGGKO",
+        "OKKbKOOOO.",
+        ".ObbOKO...",
+        ".OBbOO....",
+        ".OBBO.....",
+        "..OO......",
     ],
-    # Katana held forward: brown hilt, gold guard, steel blade, white tip.
-    "sword.png": [
-        "...........W",
-        "..YSSSSSSSW.",
-        "HHY.........",
+    # Rifle: scope, long barrel, wooden stock against the shoulder
+    "weapons/rifle.png": [
+        ".......OOOOOO.....",
+        "......ONWSSSKO....",
+        "OO.....OOKKOO.....",
+        "ObOO..OOOOOOOOOOOO",
+        "ObbbOOGSWWSSSSSSWO",
+        "ObbbbbGGGGGGGGGGKO",
+        "OBBbbbKKKKOKKOOOOO",
+        "OBBBOOOKbOOOKO....",
+        "OOOO..OBbO.OO.....",
+        "......OBO.........",
+        "......OO..........",
     ],
-    # Crescent slash VFX (rendered ~6 frames after a swing).
-    "slash.png": [
-        ".....CC.",
-        "...CCWC.",
-        "..CWWC..",
-        ".CWWC...",
-        ".CWC....",
-        ".CWC....",
-        ".CWWC...",
-        "..CWWC..",
-        "...CCWC.",
-        ".....CC.",
+    # Katana: red-wrapped hilt, gold guard, blade with a gleaming edge
+    "weapons/katana.png": [
+        ".....OO..........",
+        ".OOOOYOOOOOOOOO..",
+        "ORrRrYOWSSSSSSSWO",
+        "OrRrRYOGGGGGGGOO.",
+        ".OOOOYOOOOOOOO...",
+        ".....OO..........",
     ],
-    # 4-point shuriken; rotated at render time while flying.
+    # Grappling hook pointing forward: gold rope ring, three prongs
+    "weapons/hook.png": [
+        "......OO...",
+        ".....OWSO..",
+        "......OOSO.",
+        "OOOOOOOOOSO",
+        "OYOGSSSSSWO",
+        "OOOOOOOOOSO",
+        "......OOSO.",
+        ".....OGKO..",
+        "......OO...",
+    ],
+    # Shuriken (players and throwing enemies); spins in flight
     "star.png": [
-        "...W...",
-        "...S...",
-        "...S...",
-        "WSSKSSW",
-        "...S...",
-        "...S...",
-        "...W...",
+        "....O....",
+        "...OWO...",
+        "...OSO...",
+        ".OOOSGOO.",
+        "OWSSOGGKO",
+        ".OOGGKOO.",
+        "...OKO...",
+        "...OKO...",
+        "....O....",
     ],
-    # Grapple hook claw (rope is drawn as a line in code).
-    "hook.png": [
-        ".S...S.",
-        ".S...S.",
-        ".SS.SS.",
-        "..SSS..",
-        "...S...",
-        "...K...",
+    # Ammo crate (store card)
+    "weapons/ammo.png": [
+        ".OWO.OWO.OWO.",
+        ".OYO.OYO.OYO.",
+        "OOyOOOyOOOyOO",
+        "OhhhhhhhhhhgO",
+        "OhOOOOOOOOOgO",
+        "OhOWWWWWWWOgO",
+        "OhOOOOOOOOOgO",
+        "OhhhhhhhhhhgO",
+        "OgggggggggggO",
+        "OOOOOOOOOOOOO",
+    ],
+    # Straw target the store's weapon cards shoot at
+    "weapons/target.png": [
+        "..OOOO..",
+        ".OwwwwO.",
+        "OwRRRRwO",
+        "OwRwwRwO",
+        "OwRwwRwO",
+        "OwRRRRwO",
+        ".OwwwwO.",
+        "..OOOO..",
+        "...ObO..",
+        "...ObO..",
+        "...ObO..",
+        "...OBO..",
+        "...ObO..",
+        "..OBbBO.",
+        ".OBBBBBO",
+    ],
+    # Shield crest (store icon; in a level it is a bubble)
+    "gear/shield.png": [
+        "OOOOOOOOO",
+        "OWWCCCCcO",
+        "OWCNNNNcO",
+        "OCNNWNNcO",
+        "OCNWWWNcO",
+        "OCNNWNNcO",
+        ".OcNNNcO.",
+        ".OccNccO.",
+        "..OcncO..",
+        "...OcO...",
+        "....O....",
+    ],
+    # Moon boot: silver with a blue cuff, a gold crescent and a glowing sole
+    "gear/moon_boots.png": [
+        ".OOOOOO...",
+        ".OnnnnO...",
+        ".OLLYlO...",
+        ".OLYLlO...",
+        ".OLYLlO...",
+        ".OLLYlOOO.",
+        ".OLLLLLLlO",
+        ".OLLLLLLlO",
+        ".OCCCCCCCO",
+        "..OOOOOOO.",
+    ],
+    # Horseshoe magnet with silver poles
+    "gear/magnet.png": [
+        "..OOOOO..",
+        ".ORRRRRO.",
+        "ORRWrrRRO",
+        "ORrOOOrRO",
+        "ORRO.ORRO",
+        "ORRO.ORRO",
+        "OSSO.OSSO",
+        "OWSO.OWSO",
+        "OOOO.OOOO",
+    ],
+    # Omamori: a red lucky charm pouch with a gold knot and emblem
+    "gear/omamori.png": [
+        "..OOOO..",
+        ".OY..YO.",
+        ".OYOOYO.",
+        "..OYYO..",
+        ".OOYYOO.",
+        ".ORRRRO.",
+        "ORWRRRrO",
+        "ORRYYRrO",
+        "ORYMMYrO",
+        "ORRYYRrO",
+        "ORRRRRrO",
+        "OrrrrrrO",
+        ".OOOOOO.",
+    ],
+    # Heart the charm sends up when it grants its extra life
+    "gear/heart.png": [
+        ".OO.OO.",
+        "ORWORRO",
+        "ORRRRrO",
+        ".ORRrO.",
+        "..ORO..",
+        "...O...",
     ],
 }
 
 
-def generate_sprites() -> None:
-    for name, grid in SPRITES.items():
-        w = max(len(r) for r in grid)
-        h = len(grid)
+# Glyphs drawn as white pixels and outlined automatically
+GLYPHS = {
+    # "+1" next to the charm's heart
+    "gear/plus_one.png": [
+        "....W.",
+        ".W.WW.",
+        "WWW.W.",
+        ".W..W.",
+        "...WWW",
+    ],
+}
+
+
+def _outlined(mask) -> list:
+    """Pad a glyph by one pixel and ring its white pixels with the outline."""
+    w, h = max(len(r) for r in mask) + 2, len(mask) + 2
+    on = {(x + 1, y + 1) for y, row in enumerate(mask) for x, ch in enumerate(row) if ch == "W"}
+    near = {(x + dx, y + dy) for x, y in on for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+    return ["".join("W" if (x, y) in on else "O" if (x, y) in near else "." for x in range(w)) for y in range(h)]
+
+
+def _slash_frames() -> list:
+    """Sword slash: a crescent sweeping from above to below the blade, then
+    fading (4 frames, 13x22, drawn facing right)."""
+    w, h = 13, 22
+    cx, cy, radius, squash = -4.0, h / 2, 16.0, 0.7
+    sweeps = [(-70, -15, 255), (-70, 30, 255), (-70, 70, 255), (-70, 70, 140)]
+    frames = []
+    for start, end, alpha in sweeps:
         img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        for y, row in enumerate(grid):
-            for x, ch in enumerate(row):
-                if ch == ".":
+        for y in range(h):
+            for x in range(w):
+                dx, dy = x + 0.5 - cx, (y + 0.5 - cy) / squash
+                r = math.hypot(dx, dy)
+                ang = math.degrees(math.atan2(dy, dx))
+                if not start <= ang <= end:
                     continue
-                img.putpixel((x, y), SPRITE_COLORS[ch] + (255,))
-        img.save(os.path.join(IMG_DIR, name))
-        print(f"sprite '{name}' ({w}x{h}) generated")
+                # thick in the middle of the swing, thin at its ends
+                thick = 1.2 + 3.8 * math.cos(math.radians(ang / 70 * 90))
+                depth = radius - r
+                if not 0 <= depth <= thick:
+                    continue
+                lead = end - ang < 14 and alpha == 255
+                if depth < 1.1 or lead:
+                    col = (255, 255, 255)
+                elif depth < thick * 0.6:
+                    col = (170, 232, 255)
+                else:
+                    col = (90, 170, 240)
+                a = alpha if depth < thick * 0.6 else alpha * 3 // 4
+                img.putpixel((x, y), col + (a,))
+        frames.append(img)
+    return frames
+
+
+def _grid_image(grid, colors) -> Image.Image:
+    w = max(len(r) for r in grid)
+    img = Image.new("RGBA", (w, len(grid)), (0, 0, 0, 0))
+    for y, row in enumerate(grid):
+        for x, ch in enumerate(row):
+            if ch != ".":
+                img.putpixel((x, y), colors[ch] + (255,))
+    return img
+
+
+def _save(name: str, img: Image.Image) -> None:
+    os.makedirs(os.path.dirname(os.path.join(IMG_DIR, name)), exist_ok=True)
+    img.save(os.path.join(IMG_DIR, name))
+    print(f"sprite '{name}' ({img.width}x{img.height}) generated")
+
+
+def generate_sprites(only=None) -> None:
+    for name, grid in SPRITES.items():
+        if only is None or name in only:
+            _save(name, _grid_image(grid, SPRITE_COLORS))
+    if only is not None:
+        return
+    for name, grid in ITEM_SPRITES.items():
+        _save(name, _grid_image(grid, ITEM_COLORS))
+    for name, mask in GLYPHS.items():
+        _save(name, _grid_image(_outlined(mask), ITEM_COLORS))
+    for i, img in enumerate(_slash_frames()):
+        _save(f"weapons/slash/{i}.png", img)
 
 
 def make_preview(path: str, scale: int = 8) -> None:
-    """Montage: one idle/run frame per skin plus all weapon sprites."""
+    """Montage of all sprites."""
     cells = []
-    for skin in ["default", "red", *SKIN_PALETTES.keys()]:
-        for action, frame in [("idle", None), ("run", None)]:
-            d = os.path.join(PLAYER_DIR, skin, action)
-            name = sorted(os.listdir(d))[0]
-            cells.append((f"{skin}/{action}", Image.open(os.path.join(d, name)).convert("RGBA")))
-    for name in SPRITES:
+    for name in [*SPRITES, *ITEM_SPRITES, *GLYPHS, *(f"weapons/slash/{i}.png" for i in range(4))]:
         cells.append((name, Image.open(os.path.join(IMG_DIR, name)).convert("RGBA")))
 
     cell_w = max(im.width for _, im in cells) + 2
@@ -202,8 +382,11 @@ def make_preview(path: str, scale: int = 8) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview", default=None, help="optional montage output path")
+    ap.add_argument("--only", choices=["checkpoint"], default=None, help="write only these sprites")
     args = ap.parse_args()
-    generate_skins()
-    generate_sprites()
+    if args.only == "checkpoint":
+        generate_sprites(only=CHECKPOINT)
+    else:
+        generate_sprites()
     if args.preview:
         make_preview(args.preview)

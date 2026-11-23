@@ -1,0 +1,83 @@
+[
+ {
+  "kind": "gap",
+  "gap": 7,
+  "dh": 0,
+  "label": "gap 3",
+  "_window": 13
+ },
+ {
+  "kind": "gap",
+  "gap": 6,
+  "dh": 1,
+  "label": "gap 2",
+  "_window": 8
+ },
+ {
+  "kind": "gap",
+  "gap": 6,
+  "dh": 2,
+  "label": "gap 1",
+  "_window": 3
+ },
+ {
+  "kind": "chimney",
+  "width": 3,
+  "height": 6,
+  "label": "chimney 2",
+  "_window": 13
+ },
+ {
+  "kind": "chimney",
+  "width": 2,
+  "height": 8,
+  "label": "chimney 1",
+  "_window": 8
+ },
+ {
+  "kind": "hook",
+  "drop": 4,
+  "gap": 3,
+  "label": "hook 4",
+  "_window": 13
+ },
+ {
+  "kind": "hook",
+  "drop": 2,
+  "gap": 3,
+  "label": "hook 3",
+  "_window": 7
+ },
+ {
+  "kind": "hook",
+  "drop": 2,
+  "gap": 1,
+  "label": "hook 2",
+  "_window": 4
+ },
+ {
+  "kind": "hook",
+  "drop": 3,
+  "gap": 2,
+  "label": "hook 1",
+  "_window": 2
+ },
+ {
+  "kind": "pillars",
+  "count": 3,
+  "spacing": 5,
+  "width": 1,
+  "dh": 1,
+  "label": "pillars 2",
+  "_window": 13
+ },
+ {
+  "kind": "pillars",
+  "count": 3,
+  "spacing": 6,
+  "width": 1,
+  "dh": 1,
+  "label": "pillars 1",
+  "_window": 6
+ }
+]

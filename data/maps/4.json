@@ -1918,7 +1918,7 @@
                 ]
             },
             "8;-17": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     8,
@@ -1926,7 +1926,7 @@
                 ]
             },
             "7;-17": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     7,
@@ -1934,7 +1934,7 @@
                 ]
             },
             "6;-17": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     6,
@@ -1942,7 +1942,7 @@
                 ]
             },
             "5;-17": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     5,
@@ -1950,7 +1950,7 @@
                 ]
             },
             "4;-17": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     4,
@@ -2502,7 +2502,7 @@
                 ]
             },
             "24;-31": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     24,
@@ -2510,7 +2510,7 @@
                 ]
             },
             "25;-31": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     25,
@@ -2518,7 +2518,7 @@
                 ]
             },
             "26;-31": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     26,
@@ -2982,15 +2982,15 @@
                 ]
             },
             "41;-38": {
-                "type": "grass",
-                "variant": 2,
+                "type": "crumble",
+                "variant": 0,
                 "pos": [
                     41,
                     -38
                 ]
             },
             "40;-38": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     40,
@@ -2998,7 +2998,7 @@
                 ]
             },
             "39;-38": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     39,
@@ -3006,7 +3006,7 @@
                 ]
             },
             "38;-38": {
-                "type": "grass",
+                "type": "crumble",
                 "variant": 0,
                 "pos": [
                     38,
@@ -5151,7 +5151,7 @@
             },
             "6;4": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     6,
                     4
@@ -5183,7 +5183,7 @@
             },
             "23;-13": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     23,
                     -13
@@ -5191,7 +5191,7 @@
             },
             "22;-13": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     22,
                     -13
@@ -5199,7 +5199,7 @@
             },
             "21;-13": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     21,
                     -13
@@ -5207,7 +5207,7 @@
             },
             "20;-13": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     20,
                     -13
@@ -5215,7 +5215,7 @@
             },
             "31;-15": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     31,
                     -15
@@ -5239,7 +5239,7 @@
             },
             "30;-40": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     30,
                     -40
@@ -5247,7 +5247,7 @@
             },
             "26;-41": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     26,
                     -41
@@ -5255,7 +5255,7 @@
             },
             "41;-61": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     41,
                     -61
@@ -5271,7 +5271,7 @@
             },
             "-5;-43": {
                 "type": "spawners",
-                "variant": 1,
+                "variant": 2,
                 "pos": [
                     -5,
                     -43

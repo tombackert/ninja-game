@@ -18,7 +18,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("NINJA_GAME_TESTING", "1")
 
-CAMPAIGN = range(26)  # maps 26 and 27 are experimental
+MAPS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "maps")
+CAMPAIGN = [m for m in range(41) if os.path.exists(os.path.join(MAPS, f"{m}.json"))]  # the campaign: maps 0-40
 
 
 def collect(frames: int) -> Dict[str, Any]:

@@ -3,7 +3,8 @@ import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from scripts.collectables import Collectables
+from scripts import death_log, item_fx
+from scripts.collectables import HEART_IMAGE, Collectables, Heart
 
 COIN_IMAGE_PATH = "collectables/coin.png"
 DATA_FILE = "data/collectables.json"
@@ -19,25 +20,137 @@ class ItemDef:
     increment: int = 1  # amount to add on successful purchase
 
 
-class CollectableManager:
-    SKINS = [
-        "Default",
-        "Red Ninja",
-        "Gold Ninja",
-        "Platinum Ninja",
-        "Diamond Ninja",
-        "Assassin",
-        "Berserker",
-    ]
-    SKIN_PATHS = [
-        "default",
-        "red",
-        "gold",
-        "platinum",
-        "diamond",
+@dataclass(frozen=True)
+class SkinDef:
+    name: str  # item name (store, ownership, equip lists)
+    path: str  # folder under data/images/entities/player
+    title: str  # full name shown in the menus
+    description: str
+    attr: str = ""  # ownership counter in collectables.json ("" = always owned)
+    price: int = 0
+
+
+# Store order = equip index (settings.selected_skin), so new skins go last.
+# The save keys (attr) are those of the skins each one replaced, so players
+# keep what they bought: Red Ninja -> Homura, ..., Berserker -> Oni.
+SKIN_DEFS: List[SkinDef] = [
+    SkinDef("Default", "default", "Ninja (Default)", "The classic ninja with the red headband."),
+    SkinDef(
+        "Homura",
+        "homura",
+        "Homura (Flame Ninja)",
+        "His hair is on fire. Sparks rise and the ends of his headband glow.",
+        "red_ninja",
+        1000,
+    ),
+    SkinDef(
+        "Shogun",
+        "shogun",
+        "Shogun (Golden Samurai)",
+        "Lacquered helmet with a golden crest, lamellar armor and a banner on his back. "
+        "A shine sweeps over the gold.",
+        "gold_ninja",
+        2000,
+    ),
+    SkinDef(
+        "Chrome",
+        "chrome",
+        "Chrome (Cyber Ninja)",
+        "Polished steel with a scanning visor, a blinking antenna and energy ribbons. " "Thrusters fire when he jumps.",
+        "platinum_ninja",
+        3000,
+    ),
+    SkinDef(
+        "Crystal",
+        "crystal",
+        "Crystal (Diamond Ninja)",
+        "Cut from diamond: a crystal crown, a shard on the shoulder and a sparkle that wanders over the body.",
+        "diamond_ninja",
+        5000,
+    ),
+    SkinDef(
+        "Shadow",
+        "shadow",
+        "Shadow (Assassin)",
+        "Under the hood only a red eye glows. The tattered cloak flies behind him when he runs.",
         "assassin",
+        7000,
+    ),
+    SkinDef(
+        "Oni",
+        "oni",
+        "Oni (Demon)",
+        "Red demon mask with horns and fangs, a wild white mane and a tiger-skin loincloth.",
         "berserker",
-    ]
+        10000,
+    ),
+    SkinDef(
+        "Kitsune",
+        "kitsune",
+        "Kitsune (Fox Spirit)",
+        "White fox mask, pointed ears and two fluffy tails that stream behind her when she runs.",
+        "kitsune",
+        12000,
+    ),
+]
+
+# What each weapon and gear item does (store and accessories cards)
+ITEM_DESCRIPTIONS = {
+    "Default": "Your dash. Dash into enemies to defeat them.",
+    "Gun": "Shoots straight ahead. Each shot uses one bullet.",
+    "Ammo": "25 bullets for the gun and the rifle.",
+    "Rifle": "Fast, far-reaching shots. Uses 2 bullets per shot and reloads slowly.",
+    "Ninja Stars": "20 throwing stars. They fly in an arc and pierce every enemy in their path.",
+    "Sword": "Close-range slash that defeats enemies and cuts their bullets out of the air.",
+    "Grapple Hook": "Hooks onto walls and ceilings and pulls you there. Deals no damage.",
+    "None": "No gear equipped.",
+    "Shield": "One charge blocks one hit. Re-arms after 10 seconds while charges are left.",
+    "Moon Boots": "One extra jump in the air.",
+    "Coin Magnet": "Pulls nearby coins to you.",
+    "Lucky Charm": "One extra life at the start of each level.",
+}
+
+# Sprite beside an item's name in the store and accessories lists
+# (path under data/images, tools/gen_pixel_art.py)
+ITEM_ICONS = {
+    "Gun": "weapons/pistol.png",
+    "Ammo": "weapons/ammo.png",
+    "Rifle": "weapons/rifle.png",
+    "Ninja Stars": "star.png",
+    "Sword": "weapons/katana.png",
+    "Grapple Hook": "weapons/hook.png",
+    "Shield": "gear/shield.png",
+    "Moon Boots": "gear/moon_boots.png",
+    "Coin Magnet": "gear/magnet.png",
+    "Lucky Charm": "gear/omamori.png",
+}
+
+# Folder names of the skins replaced by the ones above (old replays name them)
+LEGACY_SKIN_PATHS = {
+    "red": "homura",
+    "gold": "shogun",
+    "platinum": "chrome",
+    "diamond": "crystal",
+    "assassin": "shadow",
+    "berserker": "oni",
+}
+
+
+class CollectableManager:
+    SKINS = [d.name for d in SKIN_DEFS]
+    SKIN_PATHS = [d.path for d in SKIN_DEFS]
+    SKIN_INFO = {d.name: d for d in SKIN_DEFS}
+
+    @classmethod
+    def skin_index(cls, path: str) -> int:
+        """Equip index of a skin folder name (also the replaced skins' names); 0 if unknown."""
+        path = LEGACY_SKIN_PATHS.get(path, path)
+        return cls.SKIN_PATHS.index(path) if path in cls.SKIN_PATHS else 0
+
+    @classmethod
+    def display_name(cls, item: str) -> str:
+        info = cls.SKIN_INFO.get(item)
+        return info.title if info else item
 
     # Active weapons (single equip slot, index = settings.selected_weapon)
     WEAPONS = [
@@ -73,12 +186,7 @@ class CollectableManager:
         "Coin Magnet": ItemDef("Coin Magnet", "coin_magnet", 1500, "gear", True, 1),
         "Lucky Charm": ItemDef("Lucky Charm", "lucky_charm", 3000, "gear", True, 1),
         # Skins
-        "Red Ninja": ItemDef("Red Ninja", "red_ninja", 1000, "skin", True, 1),
-        "Gold Ninja": ItemDef("Gold Ninja", "gold_ninja", 2000, "skin", True, 1),
-        "Platinum Ninja": ItemDef("Platinum Ninja", "platinum_ninja", 3000, "skin", True, 1),
-        "Diamond Ninja": ItemDef("Diamond Ninja", "diamond_ninja", 5000, "skin", True, 1),
-        "Assassin": ItemDef("Assassin", "assassin", 7000, "skin", True, 1),
-        "Berserker": ItemDef("Berserker", "berserker", 10000, "skin", True, 1),
+        **{d.name: ItemDef(d.name, d.attr, d.price, "skin", True, 1) for d in SKIN_DEFS if d.attr},
     }
 
     # Legacy sets kept for backward compatibility (derived from registry)
@@ -90,6 +198,7 @@ class CollectableManager:
 
     def __init__(self, game):
         self.coin_list = []
+        self.hearts: list = []
         self.game = game
         # Unified state fields persisted to JSON
         self.coins = 0
@@ -109,6 +218,7 @@ class CollectableManager:
         self.diamond_ninja = 0
         self.assassin = 0
         self.berserker = 0
+        self.kitsune = 0
         # Load persisted values
         self.load_collectables()
 
@@ -126,6 +236,15 @@ class CollectableManager:
         for tile in ammo_tiles:
             self.ammo_pickups.append(Collectables(self.game, tile["pos"], self.game.assets["ammo"]))
 
+        # Hearts come back with the level only on a new run, not on a respawn
+        # (falls cost no life, so a heart that came back could be farmed):
+        # the game keeps the ones taken this run (Game.hearts_taken)
+        self.hearts = []
+        taken = getattr(self.game, "hearts_taken", set())
+        for tile in tilemap.extract([("heart", 0)], keep=False):
+            if tuple(tile["pos"]) not in taken:
+                self.hearts.append(Heart(tile["pos"], item_fx.image(HEART_IMAGE)))
+
     def update(self, player_rect):
         self._apply_coin_magnet(player_rect)
         for coin in self.coin_list[:]:
@@ -139,6 +258,27 @@ class CollectableManager:
                 self.ammo_pickups.remove(ammo)
                 self.ammo += 5
                 self.game.audio.play("collect")
+
+        for heart in self.hearts[:]:
+            if heart.update(player_rect):
+                self.hearts.remove(heart)
+                self.take_heart(heart)
+
+    def take_heart(self, heart):
+        """A life back, up to the lives the level started with (with the
+        Lucky Charm one more); with full lives, HEART_COINS coins instead."""
+        from scripts.constants import HEART_COINS
+
+        game = self.game
+        player = game.player
+        game.hearts_taken.add(tuple(heart.pos))
+        life = player.lives < getattr(game, "start_lives", player.lives)
+        if life:
+            player.lives += 1
+        else:
+            self.coins += HEART_COINS
+        death_log.record_heart(game, player, life)
+        game.audio.play("collect")
 
     def _apply_coin_magnet(self, player_rect):
         """Pull nearby coins toward the player when Coin Magnet gear is equipped."""
@@ -166,6 +306,8 @@ class CollectableManager:
     def render(self, surf, offset=(0, 0)):
         for coin in self.coin_list:
             coin.render(surf, offset=offset)
+        for heart in getattr(self, "hearts", []):
+            heart.render(surf, offset=offset)
 
     def load_collectables(self):
         if os.path.exists(DATA_FILE):
@@ -191,6 +333,7 @@ class CollectableManager:
                 self.assassin = data.get("assassin", 0)
                 # Accept both spellings for migration
                 self.berserker = data.get("berserker", data.get("berzerker", 0))
+                self.kitsune = data.get("kitsune", 0)
             except (json.JSONDecodeError, IOError):
                 # Ignore load errors; start with defaults
                 pass
@@ -214,6 +357,7 @@ class CollectableManager:
             "diamond_ninja": self.diamond_ninja,
             "assassin": self.assassin,
             "berserker": self.berserker,
+            "kitsune": self.kitsune,
         }
         try:
             os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
@@ -238,6 +382,8 @@ class CollectableManager:
             return "unknown item"
         if not idef.purchaseable:
             return "not purchaseable"
+        if idef.category == "skin" and getattr(self, idef.attr, 0) > 0:
+            return "already owned"
         if self.coins < idef.price:
             return "not enough coins"
         current_val = getattr(self, idef.attr, 0)

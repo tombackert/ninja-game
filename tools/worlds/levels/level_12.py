@@ -1,9 +1,12 @@
 """Level 12 - Deep Caverns (stone).
 
 A drop shaft with a side exit (miss it and climb back up), a crawlway only
-two tiles high over pits that have to be dashed, a zigzag chimney, a large
-labyrinth with low corridors, an enemy gauntlet and a box-climbing hall
-up to the flag.
+two tiles high over pits that have to be dashed (spikes on the lip of one:
+the campaign's first spikes), a zigzag chimney, a large
+labyrinth with low corridors, an enemy gauntlet (spikes under its ceiling
+in two stretches) and a box-climbing hall
+up to the flag. Spikes wait where a miss lands, a vent burns across the
+zigzag chimney and in the labyrinth's ceilings, one crate crumbles.
 """
 
 from tools.worlds.builder import Level, Maze, box, perforate, zigzag
@@ -32,6 +35,7 @@ def build() -> Level:
     lv.carve(37, 19, 40, 21)  # side exit in the right wall (floor row 22)
     lv.coins(35, 14, 35)
     lv.coins(35, 17, 35)
+    lv.spikes(30, 42, 33)  # a miss of the side exit lands next to spikes
     lv.wp(31, 9, 33, 9, ground=True, label="shaft rim")
     lv.wp(38, 19, 40, 21, ground=True, label="side exit")
 
@@ -42,10 +46,14 @@ def build() -> Level:
         lv.carve(px, cy + 1, px + w - 1, 37)  # pit into the lower tunnel
         lv.coin(px + w // 2, cy - 1)
     lv.carve(38, 33, 96, 37)  # lower tunnel (floor row 38) back to the chamber
-    for x in (44, 51, 60, 69, 77, 87, 93):
+    # Spikes on the lip of the fourth pit: the 4-wide pit dashes like a 5-wide
+    # one (the campaign's first spikes)
+    lv.spikes(70, cy, facing="up")
+    for x in (44, 51, 60, 68, 77, 87, 93):
         lv.enemy(x, cy)
     lv.coins(42, 37, 52, 2)
     lv.coins(60, 37, 70, 2)
+    lv.spikes(55, 37, 56)  # the lower tunnel back is not free either
     lv.wp(51, cy - 1, 53, cy, ground=True, label="crawl 1")
     lv.wp(59, cy - 1, 62, cy, ground=True, label="crawl 2")
     lv.wp(67, cy - 1, 70, cy, ground=True, label="crawl 3")
@@ -56,12 +64,14 @@ def build() -> Level:
     zigzag(lv, 97, cy, sections=4, height=6, inner=3, offset=2)
     for i in range(4):
         lv.coin(98 + (2 if i % 2 else 0), cy - 3 - 6 * i)
+    # a vent in the second section's right wall burns across the whole shaft
+    lv.flamejet(102, cy - 9, "left", period=120, on=36, phase=44)
 
     # --- Labyrinth: 7x5 cells, low corridors, climbing shafts ---------------
     mz = Maze(lv, 104, -1, 8, 6, seed=1203, dx=6, dy=6, cw=3, ch=3, border=0, extra_edges=4, start=(0, 0))
     lv.carve(99, -1, 103, 1)  # gallery from the zigzag top into cell (0,0)
     lv.wp(102, -1, 103, 1, ground=True, label="labyrinth gate")
-    mz.route((0, 0), (7, 5))
+    mz.route((0, 0), (7, 5), skip={(2, 0), (3, 1), (4, 1), (4, 2), (5, 2), (7, 4), (7, 5)})
     for c, r in mz.dead_ends():
         if (c, r) not in ((0, 0), (7, 5)):
             x, y = mz.cell_xy(c, r)
@@ -74,6 +84,8 @@ def build() -> Level:
                 lv.enemy(x + 1, y + 2)
                 placed += 1
 
+    mz.vents((0, 0), (7, 5), 3, phases=(0, 67, 60))
+
     # --- Drop out of the last cell into the gauntlet (3 tall, heading west) ---
     ex, ey = mz.cell_xy(7, 5)
     gy = 52  # gauntlet floor row, air rows 49..51
@@ -85,6 +97,10 @@ def build() -> Level:
         lv.carve(px, gy, px + 3, 80)
         lv.coin(px + 1, gy - 2)
         lv.wp(px - 4, gy - 3, px - 1, gy - 1, ground=True, label=f"tunnel pit {px}")
+    # Spikes under the ceiling between two pairs of pits: no jumping over the
+    # enemies there, dash through them or shoot
+    lv.spikes(114, gy - 3, 123, facing="down")
+    lv.spikes(86, gy - 3, 95, facing="down")
     for x in (40, 48, 61, 75, 89, 103, 117, 131, 138):
         lv.enemy(x, gy - 1)
     lv.coins(36, gy - 2, 136, 6)
@@ -93,8 +109,12 @@ def build() -> Level:
     # --- Box-climbing hall (x 4..28) up to the flag ------------------------
     lv.carve(4, 24, 28, gy - 1)
     # single floating crates: 3-tile gaps, up to 2 rows per jump
+    lv.spikes(20, gy - 1, 23)  # under the crates
     for bx, by in [(25, gy - 2), (21, gy - 4), (17, gy - 5), (13, gy - 7), (10, gy - 9)]:
-        box(lv, bx, by, 1, 1)
+        if bx == 17:
+            lv.crumble(bx, by)
+        else:
+            box(lv, bx, by, 1, 1)
         lv.coin(bx, by - 2)
         lv.wp(bx, by - 1, ground=True, label=f"crate {bx}")
     # box tower against the west wall: crawl under it, climb the gap behind it

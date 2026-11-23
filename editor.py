@@ -9,7 +9,8 @@ from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.utils import load_image, load_images
 
-MAP_NAME = "27"  # Default target map: the scratch map (may not exist). Will fallback to first available.
+MAP_NAME = "scratch"  # Default target map: a named scratch map outside the campaign (may not exist; then the
+# first numbered map is loaded as a start, and saving still writes the scratch map).
 CURRENT_MAP = "data/maps/" + str(MAP_NAME) + ".json"
 
 
@@ -40,11 +41,19 @@ class Editor:
             "large_decor": load_images("tiles/large_decor"),
             "decor": load_images("tiles/decor"),
             "coin": load_images("tiles/collectables/coin"),
+            "heart": load_images("tiles/collectables/heart"),
             "flag": load_images("tiles/collectables/flag"),
             "reef": load_images("tiles/reef"),
             "wreck": load_images("tiles/wreck"),
+            # Hazards (scripts/hazards.py); variant = facing for spikes and flame jets
+            "spikes": load_images("tiles/spikes"),
+            "crumble": load_images("tiles/crumble")[:1],
+            "flamejet": load_images("tiles/flamejet"),
             # Water layer brush: the variant is the flow (0 still, 1-4 a current)
             "water": load_images("tiles/water"),
+            # Checkpoint banner, drawn from its tile down: place it one tile over
+            # the air tile above the ground (or offgrid, its foot on the ground)
+            "checkpoint": load_images("tiles/collectables/checkpoint")[:1],
         }
         self.water_icons = []
         for img in self.assets["water"]:
@@ -95,7 +104,8 @@ class Editor:
         self.m_offset = self.multi_tile_size // 2
 
         settings.load_settings()
-        settings.set_editor_level(int(MAP_NAME))
+        if MAP_NAME.isdigit():
+            settings.set_editor_level(int(MAP_NAME))
         settings.save_settings()
 
         self.font = pygame.font.Font(None, 10)

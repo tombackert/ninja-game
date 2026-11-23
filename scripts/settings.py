@@ -26,6 +26,7 @@ class Settings:
         self._ghost_enabled = True
         self._ghost_mode = "best"  # "best" or "last"
         self._camera_style = "classic"  # one of CAMERA_STYLES
+        self._fullscreen = False  # GPU-scaled fullscreen (scripts/displayManager.apply_window_mode)
         self._dirty = False
         self.playable_levels = {
             0: True,
@@ -66,6 +67,7 @@ class Settings:
             "PauseState": {
                 "pause_close": [pygame.K_ESCAPE],
                 "pause_menu": [pygame.K_m],
+                "pause_restart": [pygame.K_r],
                 "menu_up": [pygame.K_UP, pygame.K_w],
                 "menu_down": [pygame.K_DOWN, pygame.K_s],
                 "menu_select": [pygame.K_RETURN, pygame.K_KP_ENTER],
@@ -140,6 +142,18 @@ class Settings:
     def camera_style(self, value: str) -> None:
         if value in CAMERA_STYLES and value != self._camera_style:
             self._camera_style = value
+            self._dirty = True
+            self.flush()
+
+    @property
+    def fullscreen(self) -> bool:
+        return self._fullscreen
+
+    @fullscreen.setter
+    def fullscreen(self, value: bool) -> None:
+        new_val = bool(value)
+        if new_val != self._fullscreen:
+            self._fullscreen = new_val
             self._dirty = True
             self.flush()
 
@@ -229,6 +243,7 @@ class Settings:
                     camera_style = data.get("camera_style", self._camera_style)
                     if camera_style in CAMERA_STYLES:
                         self._camera_style = camera_style
+                    self._fullscreen = bool(data.get("fullscreen", self._fullscreen))
                     playable_levels = data.get("playable_levels", {})
                     # Every saved level, not only the defaults (levels 11+ were dropped on restart)
                     for level, playable in playable_levels.items():
@@ -271,6 +286,7 @@ class Settings:
             "ghost_enabled": self._ghost_enabled,
             "ghost_mode": self._ghost_mode,
             "camera_style": self._camera_style,
+            "fullscreen": self._fullscreen,
             "key_bindings": self.key_bindings,
         }
         try:

@@ -78,6 +78,7 @@ def build_sandbox(root: str, level: int) -> None:
 def run_level(level: int, out_dir: str, attempts: int, video: bool) -> dict:
     env = dict(os.environ)
     env["PYTHONPATH"] = REPO
+    env["NINJA_DEATH_LOG"] = "0"  # the bot's deaths are no player's
     report: dict = {}
     for attempt in range(1, attempts + 1):
         sandbox = tempfile.mkdtemp(prefix=f"ninja_play_{level}_")
@@ -143,6 +144,7 @@ class Bot:
         self.held: set = set()
         self.updates = 0  # player updates since the last level (re)load
         self.loads = 0
+        self.reloaded = False  # a (re)load since the last decision: find our place on the route
         self.report = {
             "level": level,
             "completed": False,
@@ -339,6 +341,9 @@ class Bot:
         )
         down = p.collisions["down"]
         u = self.updates
+        if self.reloaded:
+            self.reloaded = False
+            self.rejoin(s)
         if self.predicted is not None and s != self.predicted:
             self.report["desyncs"] += 1
             self.queue = []
@@ -365,15 +370,15 @@ class Bot:
                 self.seg += 1
             if self.seg < len(self.route):
                 wp = self.route[self.seg]
-                res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, kill_y=self.kill_y, start_down=down)
+                kw = dict(kill_y=self.kill_y, start_down=down)
+                fixed = dict(field=True, water_key=True, wait=True)  # the route planner's fixed search
+                res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, **kw)
                 if not res.ok:
-                    res = plan_segment(
-                        s, wp, self.solids, weight=2.0, max_expand=20000, kill_y=self.kill_y, start_down=down
-                    )
+                    res = plan_segment(s, wp, self.solids, weight=5.0, max_expand=8000, **fixed, **kw)
+                if not res.ok:
+                    res = plan_segment(s, wp, self.solids, weight=2.0, max_expand=20000, **fixed, **kw)
                 if not res.ok:  # a precise move: think as hard as the route builder did
-                    res = plan_segment(
-                        s, wp, self.solids, weight=2.0, max_expand=120000, kill_y=self.kill_y, start_down=down
-                    )
+                    res = plan_segment(s, wp, self.solids, weight=2.0, max_expand=120000, **fixed, **kw)
                     self.report["hard_thinks"] += 1
                 self.report["replans"] += 1
                 self.queue = res.frames if res.ok else []
@@ -417,6 +422,19 @@ class Bot:
         if not self.queue and not self.on_track and self.queue_reaches:
             self.seg += 1
         return frame
+
+    def rejoin(self, s):
+        """After a respawn, which may be at a checkpoint: go on from the route
+        section the nearest point of the planned run lies in."""
+        from tools.worlds import physics as ph
+
+        i = min(
+            range(len(self.pre_states)),
+            key=lambda k: abs(self.pre_states[k][ph.X] - s[ph.X]) + abs(self.pre_states[k][ph.Y] - s[ph.Y]),
+        )
+        if i > 30:  # not the spawn: a checkpoint further on
+            self.seg = self.seg_of[min(i, len(self.seg_of) - 1)]
+            self.report["checkpoint_respawns"] = self.report.get("checkpoint_respawns", 0) + 1
 
     def reflex(self, s, hazard):
         """First quick evasion that no bullet in flight hits, or None."""
@@ -541,6 +559,7 @@ class Bot:
 
 def bot_main(level: int, out: str, video: bool) -> int:
     sys.path.insert(0, REPO)
+    os.environ["NINJA_DEATH_LOG"] = "0"  # app.main() must not log the bot's deaths
     import pygame
 
     import app
@@ -595,6 +614,7 @@ def bot_main(level: int, out: str, video: bool) -> int:
             bot.report["restarts"] += 1
         bot.loads += 1
         bot.updates = 0
+        bot.reloaded = True
 
     game_mod.Game.load_level = load_level
 

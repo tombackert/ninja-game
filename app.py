@@ -23,6 +23,7 @@ from scripts.state_manager import (
     PauseState,
     StateManager,
     StoreState,
+    fresh_game_state,
 )
 
 
@@ -32,11 +33,20 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Server host for multiplayer")
     parser.add_argument("--port", type=int, default=7777, help="Server port for multiplayer")
     parser.add_argument("--name", default="Player", help="Player name for multiplayer")
+    parser.add_argument("--map", default=None, help="Start a named map outside the campaign (data/maps/<name>.json)")
     args = parser.parse_args()
 
     os.environ.setdefault("NINJA_GAME_TESTING", "0")
+    # A human plays: log deaths for the difficulty calibration (NINJA_DEATH_LOG=0 switches it off)
+    from scripts import death_log
+
+    death_log.enable()
     pygame.init()
-    screen = pygame.display.set_mode((1280, 720))  # windowed for development
+    from scripts.displayManager import apply_window_mode
+    from scripts.settings import settings
+
+    screen = apply_window_mode(settings.fullscreen)  # 1280x720 window, or fullscreen (F11, Options)
+    window_fullscreen = settings.fullscreen
     pacer = FramePacer(60)
 
     sm = StateManager()
@@ -46,6 +56,8 @@ def main():
         from scripts.multiplayer_state import MultiplayerGameState
 
         sm.set(MultiplayerGameState(args.host, args.port, args.name))
+    elif args.map:
+        sm.set(GameState(level=args.map))
     else:
         sm.set(MenuState())
 
@@ -81,6 +93,13 @@ def main():
         for e in events:
             if e.type == pygame.QUIT:
                 running = False
+            elif e.type == pygame.KEYDOWN and e.key == pygame.K_F11:
+                settings.fullscreen = not settings.fullscreen
+        # F11 or the Options entry changed the setting: switch the window
+        if settings.fullscreen != window_fullscreen:
+            screen = apply_window_mode(settings.fullscreen)
+            # A failed switch leaves the window: the setting says so too
+            settings.fullscreen = window_fullscreen = bool(screen.get_flags() & pygame.FULLSCREEN)
 
         # Input routing -> actions -> state handling
         current_name = sm.current.name if sm.current else ""
@@ -192,9 +211,12 @@ def main():
             sm.push(PauseState())
         if isinstance(cur, PauseState) and cur.closed:
             return_to_menu = cur.return_to_menu
+            restart = cur.restart_requested
             sm.pop()  # resume underlying state (GameState)
             if return_to_menu:
                 sm.set(MenuState())
+            elif restart and isinstance(sm.current, GameState):
+                sm.set(fresh_game_state(sm.current.game.level))
 
         # --- Update & Render cycle ---
         dt = pacer.tick()  # exactly 60 FPS; dt in seconds

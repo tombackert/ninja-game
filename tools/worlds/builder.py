@@ -11,12 +11,16 @@ JSON in the format `Tilemap.load` reads.
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 from collections import deque
 
+from scripts.enemy_kinds import get_kind
+from scripts.hazards import CRUMBLE, DOWN, FLAME_ON, FLAME_PERIOD, FLAMEJET, LEFT, RIGHT, SPIKES, UP
 from scripts.water import water_leaks, water_to_rows
-from tools.worlds.physics import Terrain
+from tools.worlds import roster
+from tools.worlds.physics import Terrain, lethal_from_tiles
 from tools.worlds.planner import Waypoint
 
 AUTOTILE_MAP = {
@@ -44,6 +48,9 @@ LARGE_DECOR_SIZE = {
     8: (17, 22),
     9: (19, 13),
 }
+
+FACINGS = {"up": UP, "down": DOWN, "left": LEFT, "right": RIGHT}
+CAST = -1  # spawner variant of an enemy whose kind the level's cast picks on save
 
 # Water flows (scripts/water.py)
 STILL, RIGHT, LEFT, UP, DOWN = range(5)
@@ -88,6 +95,8 @@ class Level:
         self.water_tiles: dict[tuple[int, int], int] = {}  # (x, y) -> flow
         self.route: list[Waypoint] = []
         self.spawn_tile: tuple[int, int] | None = None
+        self.obstacles: list[dict] = []  # declared for the shortcut checker (tools/worlds/shortcuts.py)
+        self.fixed: dict[tuple[int, int], dict] = {}  # solid tiles with their own variant (hazards), + fields
 
     # --- terrain ---------------------------------------------------------
     def rect(self, x0, y0, x1, y1, t: str | None = None):
@@ -130,8 +139,34 @@ class Level:
         self._obj(x, y, "spawners", 0)
         self.spawn_tile = (x, y)
 
-    def enemy(self, x, y):
-        self._obj(x, y, "spawners", 1)
+    def enemy(self, x, y, kind: str | None = None):
+        """An enemy standing on air tile (x, y). `kind` (scripts/enemy_kinds.py):
+        gunner, patrol, turret, chaser or jumper; None lets the level's cast
+        pick one for the spot (tools/worlds/roster.py)."""
+        self._obj(x, y, "spawners", CAST if kind is None else get_kind(kind).variant)
+
+    # --- hazards (scripts/hazards.py) -------------------------------------
+    def spikes(self, x0, y, x1=None, facing: str = "up"):
+        """Spikes on tiles x0..x1 of row y (air tiles), points to `facing`:
+        "up" on the ground below, "down" under the ceiling above, "left" /
+        "right" on the wall to the right / left of the tile."""
+        for x in range(min(x0, x1 if x1 is not None else x0), max(x0, x1 if x1 is not None else x0) + 1):
+            self._obj(x, y, SPIKES, FACINGS[facing])
+
+    def crumble(self, x0, y, x1=None):
+        """Crumbling blocks on tiles x0..x1 of row y: solid until a player has
+        stood on one for CRUMBLE_DELAY frames."""
+        for x in range(min(x0, x1 if x1 is not None else x0), max(x0, x1 if x1 is not None else x0) + 1):
+            self.solid[(x, y)] = CRUMBLE
+            self.fixed[(x, y)] = {"variant": 0}
+
+    def flamejet(self, x, y, facing: str = "up", period: int = FLAME_PERIOD, on: int = FLAME_ON, phase: int = 0):
+        """A flame jet nozzle (a solid block) at (x, y) firing `facing` for
+        `on` of every `period` frames, `phase` frames ahead of the beat."""
+        if not 0 < on < period:
+            raise ValueError(f"level {self.map_id}: flame jet at {(x, y)}: on {on} must lie in 1..period-1")
+        self.solid[(x, y)] = FLAMEJET
+        self.fixed[(x, y)] = {"variant": FACINGS[facing], "period": period, "on": on, "phase": phase}
 
     def coin(self, x, y):
         self._obj(x, y, "coin", 0)
@@ -142,8 +177,23 @@ class Level:
             if (x, y) not in self.solid:
                 self.coin(x, y)
 
+    def heart(self, x, y):
+        """A heart pickup (one life back) on air tile (x, y); tools/worlds/hearts.py
+        places them along the route by the danger on it."""
+        self._obj(x, y, "heart", 0)
+
     def flag(self, x, y):
         self._obj(x, y, "flag", 0)
+
+    def checkpoint(self, x, y):
+        """Checkpoint banner (scripts/checkpoints.py) standing on the ground under
+        air tile (x, y): a player who touches it respawns at (x, y). Offgrid, as
+        its banner is two tiles tall. One per level, halfway, where every route
+        passes (a world's finale may take a second); the player has P on top."""
+        for t in ((x, y), (x, y - 1)):
+            if t in self.solid:
+                raise ValueError(f"level {self.map_id}: checkpoint at {(x, y)} overlaps solid tile {t}")
+        self.offgrid.append({"type": "checkpoint", "variant": 0, "pos": [x * 16, (y - 1) * 16]})
 
     def decor(self, x, y, variant):
         self._obj(x, y, "decor", variant)
@@ -155,23 +205,72 @@ class Level:
             {"type": "large_decor", "variant": variant, "pos": [x * 16 + (16 - w) / 2, (y + 1) * 16 - h]}
         )
 
-    def wp(self, x0, y0, x1=None, y1=None, ground=False, label=""):
-        """Next route waypoint: the hitbox center must enter tiles x0..x1, y0..y1."""
-        self.route.append(Waypoint(x0, y0, x0 if x1 is None else x1, y0 if y1 is None else y1, ground, label))
+    def wp(self, x0, y0, x1=None, y1=None, ground=False, label="", guide=False):
+        """Next route waypoint: the hitbox center must enter tiles x0..x1, y0..y1.
+        `guide`: there only so the planner gets through, not a stop of the design."""
+        self.route.append(Waypoint(x0, y0, x0 if x1 is None else x1, y0 if y1 is None else y1, ground, label, guide))
+
+    def obstacle(
+        self, label: str, x0: int, y0: int, x1: int, y1: int, before: str, after: str, margin: int = 6, area=None
+    ):
+        """Declare an obstacle for the shortcut checker: the way from waypoint
+        `before` to waypoint `after` (labels) is meant to lead through tiles
+        x0..x1, y0..y1 and nowhere else. The checker blocks the designed route's
+        trail there and searches for another way within `area` (x0, y0, x1, y1;
+        by default the box widened by `margin` tiles): found (proven), none
+        (refuted), or the budget ran out (not proven)."""
+        self.obstacles.append(
+            {"label": label, "box": (x0, y0, x1, y1), "before": before, "after": after, "margin": margin, "area": area}
+        )
+
+    def _check_hazards(self):
+        """Spikes need a solid tile behind their base, a flame jet air in front
+        of its nozzle, and no enemy may spawn in a jet's flame (it would burn on
+        the first beat): a later carve or rect can break what was placed."""
+        # (UP, DOWN, ... are the water flows here, FACINGS holds the hazard facings)
+        offsets = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
+        steps = {FACINGS[k]: v for k, v in offsets.items()}
+        bad = []
+        for (x, y), (kind, variant) in self.objects.items():
+            if kind == SPIKES:
+                dx, dy = steps[variant]
+                if not self.is_solid(x - dx, y - dy):
+                    bad.append(f"spikes at {(x, y)} hang in the air")
+        for (x, y), fields in self.fixed.items():
+            if self.solid.get((x, y)) != FLAMEJET:
+                continue
+            dx, dy = steps[fields["variant"]]
+            if self.is_solid(x + dx, y + dy):
+                bad.append(f"flame jet at {(x, y)} fires into rock")
+            for i in range(1, 4):
+                c = (x + dx * i, y + dy * i)
+                if self.is_solid(*c):
+                    break
+                if self.objects.get(c, ("",))[0] == "spawners" and self.objects[c][1] != 0:
+                    bad.append(f"enemy at {c} spawns in the flame of the jet at {(x, y)}")
+        if bad:
+            raise ValueError(f"level {self.map_id}: " + "; ".join(bad))
 
     # --- export ----------------------------------------------------------
     def to_json(self) -> dict:
         clash = sorted(set(self.objects) & set(self.solid))
         if clash:  # an object placed first, a solid stamped over it later
             raise ValueError(f"level {self.map_id}: objects inside solid tiles at {clash}")
+        self._check_hazards()
         leaks = water_leaks(self.water_tiles, self.is_solid)
         if leaks:  # water with no rock to hold it, beside or under it
             raise ValueError(f"level {self.map_id}: water would run out into {leaks[:12]}")
         tilemap = {}
         for (x, y), t in self.solid.items():
+            fixed = self.fixed.get((x, y))
+            if fixed is not None and t in (CRUMBLE, FLAMEJET):
+                tilemap[f"{x};{y}"] = {"type": t, "pos": [x, y], **fixed}
+                continue
             nb = {o for o in ((1, 0), (-1, 0), (0, -1), (0, 1)) if self.solid.get((x + o[0], y + o[1])) == t}
             tilemap[f"{x};{y}"] = {"type": t, "variant": autotile_variant(nb), "pos": [x, y]}
         for (x, y), (kind, variant) in self.objects.items():
+            if kind == "spawners" and variant == CAST:
+                variant = get_kind(roster.cast(self.map_id, self.is_solid, x, y)).variant
             tilemap[f"{x};{y}"] = {"type": kind, "variant": variant, "pos": [x, y]}
         meta = {
             "map": self.map_id,
@@ -194,18 +293,20 @@ class Level:
 
     def save(self, maps_dir: str = "data/maps") -> str:
         path = os.path.join(maps_dir, f"{self.map_id}.json")
+        data = self.to_json()  # checks first: a failed check leaves the old map in place
         with open(path, "w") as f:
-            json.dump(self.to_json(), f, separators=(",", ":"))
+            json.dump(data, f, separators=(",", ":"))
         return path
 
     def solids(self) -> Terrain:
-        return Terrain(self.solid, dict(self.water_tiles))
+        spikes = [{"type": k, "variant": v, "pos": [x, y]} for (x, y), (k, v) in self.objects.items() if k == SPIKES]
+        return Terrain(self.solid, dict(self.water_tiles), lethal_from_tiles(spikes))
 
     def stats(self) -> dict:
         xs = [x for x, _ in self.solid]
         ys = [y for _, y in self.solid]
         kinds = [k for k, _v in self.objects.values()]
-        enemies = sum(1 for k, v in self.objects.values() if k == "spawners" and v == 1)
+        enemies = sum(1 for k, v in self.objects.values() if k == "spawners" and v != 0)
         return {
             "size": (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1),
             "tiles": len(self.solid),
@@ -364,14 +465,50 @@ class Maze:
         elif side == "down":
             self.lv.carve(cx, cy + self.ch, cx + self.cw - 1, y1)
 
-    def route(self, a, b, coins=True):
+    def route(self, a, b, coins=True, skip=()):
         """Add waypoints through the maze from cell a to cell b, with a coin
-        trail along the way."""
+        trail along the way. `skip`: cells that get no waypoint (the planner
+        finds its own way through them: cells a player only passes, where
+        letting go of the keys does not come to rest)."""
         for c, r in maze_path(self.edges, a, b):
             cx, cy = self.cell_xy(c, r)
-            self.lv.wp(cx, cy, cx + self.cw - 1, cy + self.ch - 1, label=f"maze {c},{r}")
+            if (c, r) not in skip:
+                self.lv.wp(cx, cy, cx + self.cw - 1, cy + self.ch - 1, label=f"maze {c},{r}")
             if coins and (cx + 1, cy) not in self.lv.objects:
                 self.lv.coin(cx + 1, cy)
+
+    def vent(self, c: int, r: int, period: int = FLAME_PERIOD, on: int = FLAME_ON, phase: int = 0) -> bool:
+        """A flame jet in the ceiling over the middle of cell (c, r), burning
+        down to its floor on a beat. Left out (False) where the ceiling is open
+        (a shaft) or an enemy stands in the flame."""
+        x, y = self.cell_xy(c, r)
+        x += self.cw // 2
+        if not (self.lv.is_solid(x, y - 1) and self.lv.is_solid(x, y - 2)):
+            return False
+        if any(self.lv.objects.get((x, yy), ("",))[0] == "spawners" for yy in range(y, y + self.ch)):
+            return False
+        self.lv.flamejet(x, y - 1, "down", period, on, phase)
+        return True
+
+    def vents(self, a, b, count: int = 3, period: int = FLAME_PERIOD, on: int = FLAME_ON, phases=None) -> list:
+        """Up to `count` vents (see vent) spread over the cells of the way from
+        cell a to cell b, its ends left out; `phases`: one per vent. Returns
+        the cells that got one."""
+        path = maze_path(self.edges, a, b)[1:-1]
+        placed: list = []
+        if not path:
+            return placed
+        step = max(1, len(path) // count)
+        order = path[step // 2 :: step] + [p for i, p in enumerate(path) if (i - step // 2) % step]
+        for c, r in order:
+            if len(placed) == count:
+                break
+            if any(abs(c - pc) + abs(r - pr) < 2 for pc, pr in placed):
+                continue
+            phase = phases[len(placed)] if phases else 40 * len(placed)
+            if self.vent(c, r, period, on, phase):
+                placed.append((c, r))
+        return placed
 
     def dead_ends(self):
         deg: dict = {}
@@ -389,11 +526,9 @@ def zigzag(lv: Level, x_left: int, y_bottom: int, sections: int, height: int, in
     x, y = x_left, y_bottom
     for i in range(sections):
         lv.carve(x, y - height + 1, x + inner - 1, y)
-        if i == 0:
-            lv.wp(x, y - height + 1, x + inner - 1, y - height + 3, label=f"{label} 0")
-        elif i % 2 == 1:  # shifted right: ledge on its right side
+        if i % 2 == 1:  # shifted right: ledge on its right side
             lv.wp(x + inner - offset, y, x + inner - 1, y, ground=True, label=f"{label} ledge {i}")
-        else:
+        elif i > 0:
             lv.wp(x, y, x + offset - 1, y, ground=True, label=f"{label} ledge {i}")
         y -= height
         x += offset if i % 2 == 0 else -offset
@@ -427,10 +562,14 @@ def crate_chain(lv: Level, crates, t=None, label="crate"):
         lv.wp(x, top - 1, x + w - 1, top - 1, ground=True, label=f"{label} {x}")
 
 
-def holed_chimney(lv: Level, x_left: int, inner: int, y_top: int, floor: int, rests=(), t=None, label="chimney"):
+def holed_chimney(
+    lv: Level, x_left: int, inner: int, y_top: int, floor: int, rests=(), t=None, label="chimney", top=True
+):
     """Wall-jump chimney between two 1-thick walls full of holes, standing on
     floor row `floor`. The left wall leaves a 3-row gap at the bottom to crawl
-    in. `rests` are (side, row) 1-tile ledges (side -1 = left wall)."""
+    in. `rests` are (side, row) 1-tile ledges (side -1 = left wall). `top`: a
+    waypoint over the walls' tops (leave it out where the next stop beyond the
+    top is all the planner needs)."""
     xr = x_left + inner + 1
     lv.rect(x_left, y_top, x_left, floor - 4, t)
     lv.rect(xr, y_top, xr, floor - 1, t)
@@ -442,4 +581,16 @@ def holed_chimney(lv: Level, x_left: int, inner: int, y_top: int, floor: int, re
         lv.rect(x, row, x, row, t)
         lv.wp(x, row - 1, ground=True, label=f"{label} rest {row}")
         lv.coin(x_left + 1 + inner // 2, row - 3)
-    lv.wp(x_left, y_top - 1, xr, y_top - 1, label=f"{label} top")
+    if top:
+        lv.wp(x_left, y_top - 1, xr, y_top - 1, label=f"{label} top")
+
+
+def dunes(lv: Level, x0: int, x1: int, base: int, amp: float, period: float, bottom: int, phase=0.0, t=None):
+    """Rolling surface from x0 to x1 around row `base`, solid down to `bottom`.
+    Returns {x: surface row}."""
+    tops = {}
+    for x in range(x0, x1 + 1):
+        top = base - round(amp * (math.sin((x + phase) / period) + 0.5 * math.sin((x + phase) / (period * 0.37))))
+        lv.rect(x, top, x, bottom, t)
+        tops[x] = top
+    return tops

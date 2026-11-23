@@ -53,11 +53,31 @@ class TestModularAI(unittest.TestCase):
         policy.decide(entity, self.mock_game)
         self.assertTrue(entity.flip)
 
+    def _enemy(self, kind, x=100, ground=True):
+        """A stand-in enemy at (x, 100) on a MagicMock game."""
+        from types import SimpleNamespace
+
+        import pygame
+
+        from scripts.enemy_kinds import KINDS
+
+        e = SimpleNamespace(
+            game=self.mock_game,
+            kind=KINDS[kind],
+            pos=[x, 100],
+            velocity=[0, 0],
+            flip=False,
+            cooldown=0,
+            awake=False,
+            collisions={"left": False, "right": False, "down": ground},
+        )
+        e.rect = lambda: pygame.Rect(e.pos[0], e.pos[1], 8, 15)
+        self.mock_game.enemies = [e]
+        return e
+
     def test_shooter_policy(self):
-        policy = ShooterPolicy()
-        entity = MagicMock()
-        entity.game = self.mock_game
-        entity.pos = [100, 100]
+        policy = ShooterPolicy()  # the turret's behavior
+        entity = self._enemy("turret")
 
         # Case 1: Player to the right
         self.mock_game.player.pos = [200, 100]
@@ -73,60 +93,43 @@ class TestModularAI(unittest.TestCase):
         from scripts.ai.behaviors import ChaserPolicy
 
         policy = ChaserPolicy()
-        entity = MagicMock()
-        entity.game = self.mock_game
-        entity.pos = [100, 100]
-        entity.rect.return_value.centerx = 100
-        entity.rect.return_value.centery = 100
-        entity.collisions = {"left": False, "right": False, "down": True}
+        entity = self._enemy("chaser")
+        self.mock_game.tilemap.solid_check.side_effect = lambda pos: pos[1] > 110  # flat floor
 
-        # Mock RNG
-        with unittest.mock.patch("scripts.ai.behaviors.RNGService.get") as mock_rng:
-            mock_rng.return_value.random.return_value = 0.5
+        # Case 1: Player far away -> asleep, no movement
+        self.mock_game.player.pos = [500, 100]
+        decision = policy.decide(entity, self.mock_game)
+        self.assertEqual(decision["movement"], (0, 0))
+        self.assertFalse(entity.awake)
 
-            # Case 1: Player far away -> No movement
-            self.mock_game.player.pos = [500, 100]
-            decision = policy.decide(entity, self.mock_game)
-            self.assertEqual(decision["movement"], (0, 0))
+        # Case 2: Player close (right) -> wakes and runs right
+        self.mock_game.player.pos = [200, 100]
+        decision = policy.decide(entity, self.mock_game)
+        self.assertGreater(decision["movement"][0], 0)
+        self.assertFalse(entity.flip)
 
-            # Case 2: Player close (right) -> Move right
-            self.mock_game.player.pos = [200, 100]
-
-            # Assume ground is solid but wall is clear
-            def solid_check_side_effect(pos):
-                x, y = pos
-                if y > 110:  # Ground check (123)
-                    return True
-                return False  # Wall check (100)
-
-            self.mock_game.tilemap.solid_check.side_effect = solid_check_side_effect
-            decision = policy.decide(entity, self.mock_game)
-            self.assertGreater(decision["movement"][0], 0)
-            self.assertFalse(entity.flip)
-
-            # Case 3: Player above -> Jump
-            self.mock_game.player.pos = [100, 50]
-            mock_rng.return_value.random.return_value = 0.01  # Trigger jump
-            decision = policy.decide(entity, self.mock_game)
-            self.assertTrue(decision["jump"])
+        # Case 3: Edge ahead -> stops instead of falling
+        self.mock_game.tilemap.solid_check.side_effect = lambda pos: False
+        decision = policy.decide(entity, self.mock_game)
+        self.assertEqual(decision["movement"], (0, 0))
 
     def test_jumper_policy(self):
         from scripts.ai.behaviors import JumperPolicy
 
         policy = JumperPolicy()
-        entity = MagicMock()
-        entity.game = self.mock_game
-        entity.pos = [100, 100]
-        entity.rect.return_value.centerx = 100
-        entity.collisions = {"left": False, "right": False, "down": True}
+        entity = self._enemy("jumper")
+        self.mock_game.tilemap.solid_check.side_effect = lambda pos: pos[1] > 110  # flat floor
 
-        # Mock RNG
-        with unittest.mock.patch("scripts.ai.behaviors.RNGService.get") as mock_rng:
-            # Case 1: Blocked -> Jump (50% chance)
-            self.mock_game.tilemap.solid_check.return_value = False  # Cliff
-            mock_rng.return_value.random.return_value = 0.1  # < 0.5 triggers jump
-            decision = policy.decide(entity, self.mock_game)
-            self.assertTrue(decision["jump"])
+        # On the ground, rested -> hops forward
+        decision = policy.decide(entity, self.mock_game)
+        self.assertTrue(decision["jump"])
+        self.assertGreater(decision["movement"][0], 0)
+        self.assertEqual(entity.cooldown, entity.kind.hop_period)
+
+        # Resting -> stays put
+        decision = policy.decide(entity, self.mock_game)
+        self.assertFalse(decision["jump"])
+        self.assertEqual(decision["movement"], (0, 0))
 
 
 if __name__ == "__main__":
