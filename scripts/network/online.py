@@ -24,12 +24,15 @@ import json
 import os
 import secrets
 import socket
+import ssl
 import threading
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import certifi
 
 from scripts.network.messages import PROTOCOL_VERSION, Message
 from scripts.network.stun import StunProbe
@@ -52,6 +55,9 @@ PUNCH_TIMEOUT_S = 10.0
 STUN_REFRESH_S = 30.0  # keeps the router's mapping of the server socket alive
 HTTP_TIMEOUT_S = 6.0
 KIND_ORDER = {"lan": 0, "v6": 1, "v4": 2}  # preferred path when several answer at once
+# Python's OpenSSL does not read the macOS keychain, so the bundled app has no
+# root certificates of its own: use certifi's CA bundle on every platform.
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def rendezvous_url() -> str:
@@ -159,7 +165,7 @@ def call_rendezvous(path: str, body: Dict[str, Any], url: Optional[str] = None) 
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+        with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S, context=SSL_CONTEXT) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:
