@@ -1,0 +1,171 @@
+name: Desktop build
+
+# Builds the desktop app with PyInstaller (packaging/ninja-game.spec) for
+# Windows and both Mac architectures. Every push to main uploads the zips as
+# workflow artifacts; a v* tag also publishes them as a GitHub Release.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:  # TEMPORARY: test the builds on the PR, remove before merging
+
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.zip }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            zip: NinjaGame-windows.zip
+          # macos-13 and macos-14 are retired runner images. macos-15 is Apple
+          # Silicon; macos-15-intel is the last x86_64 image (until Aug 2027).
+          - os: macos-15
+            zip: NinjaGame-mac-arm64.zip
+          - os: macos-15-intel
+            zip: NinjaGame-mac-intel.zip
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pygame-ce>=2.5.2" "pyinstaller==6.22.3" pillow
+
+      - name: Build
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then export NINJA_GAME_VERSION="${GITHUB_REF_NAME#v}"; fi
+          pyinstaller packaging/ninja-game.spec --noconfirm
+
+      - name: Show linked libraries and minimum macOS
+        if: runner.os == 'macOS'
+        run: |
+          app="dist/Ninja Game.app/Contents"
+          otool -L "$app"/Frameworks/libpython3*.dylib
+          for f in "$app/MacOS/Ninja Game" "$app"/Frameworks/libpython3*.dylib; do
+            echo "$f: $(lipo -archs "$f"), minos $(otool -l "$f" | awk '/minos/ {print $2; exit}')"
+          done
+
+      - name: Smoke test (start headless, must still run after 10 s)
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          NINJA_GAME_SMOKE_SECONDS: "10"
+          NINJA_GAME_USER_DIR: ${{ runner.temp }}/ninja-game-user
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            bin="dist/Ninja Game/Ninja Game.exe"
+          else
+            bin="dist/Ninja Game.app/Contents/MacOS/Ninja Game"
+          fi
+          limited() {  # a hung app (e.g. an error dialog) must not hang the job
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+              timeout 120 "$@"
+            else
+              perl -e 'alarm shift; exec { $ARGV[0] } @ARGV or die "exec: $!"' 120 "$@"  # macOS has no timeout(1)
+            fi
+          }
+          smoke() {  # name, args...: the app must write "ok" and exit 0 (desktop_main.py)
+            local name=$1; shift
+            local status=0
+            NINJA_GAME_SMOKE_RESULT="smoke-$name.txt" limited "$bin" "$@" || status=$?
+            echo "--- $name: exit $status"
+            cat "smoke-$name.txt" 2>/dev/null || echo "(no result file: the app died before Python ran)"
+            [[ $status -eq 0 && "$(cat "smoke-$name.txt" 2>/dev/null)" == "ok" ]]
+          }
+          smoke game
+          # The hosted multiplayer server runs from the same binary.
+          smoke server server.py --port 7799 --level 1
+
+      - name: Zip (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent "dist/Ninja Game.app" "${{ matrix.zip }}"
+
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path "dist/Ninja Game" -DestinationPath "${{ matrix.zip }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: ${{ matrix.zip }}
+          if-no-files-found: error
+          compression-level: 0  # already a zip
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download zips
+        uses: actions/download-artifact@v4
+        with:
+          path: zips
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Download
+
+          | System | File |
+          |--------|------|
+          | Windows 10/11 | `NinjaGame-windows.zip` |
+          | Mac with Apple Silicon (M1 or newer) | `NinjaGame-mac-arm64.zip` |
+          | Mac with Intel processor | `NinjaGame-mac-intel.zip` |
+
+          Not sure which Mac you have? Apple menu → About This Mac: "Chip: Apple M…" means Apple Silicon, "Processor: Intel" means Intel.
+
+          ## Install
+
+          The game is not signed with a paid developer certificate, so your system will warn you the first time you open it.
+
+          **Mac**
+          1. Unzip the file and move **Ninja Game** into your Applications folder.
+          2. Double-click it. macOS says it cannot verify the app; click **Done** (not "Move to Trash").
+          3. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to the message about Ninja Game, then confirm.
+          4. From then on it opens normally.
+
+          **Windows**
+          1. Right-click the zip → **Extract All…**, then open the extracted **Ninja Game** folder.
+          2. Double-click **Ninja Game.exe**.
+          3. If Windows SmartScreen says "Windows protected your PC", click **More info** → **Run anyway**.
+
+          Keep the whole folder together; the .exe does not work on its own.
+
+          ## Your game data
+
+          Saves, settings, best times and replays are stored outside the app, so they survive updates:
+          - Mac: `~/Library/Application Support/Ninja Game/data`
+          - Windows: `%APPDATA%\Ninja Game\data`
+
+          Delete that `Ninja Game` folder to start over from scratch.
+          EOF
+          gh release create "$GITHUB_REF_NAME" zips/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Ninja Game $GITHUB_REF_NAME" \
+            --notes-file notes.md
