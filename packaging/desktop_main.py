@@ -18,6 +18,11 @@ Hosting a multiplayer game spawns ``sys.executable server.py ...``; in the
 frozen app ``sys.executable`` is this binary, so a ``server.py`` first
 argument is dispatched to the dedicated server instead of the game.
 
+Started without a console (the windowed Windows build from Explorer),
+``sys.stdout`` and ``sys.stderr`` are None and anything that writes to them
+crashes; they then go to ``logs/game.log`` (``logs/server.log`` for a hosted
+server) in the user folder, rewritten on each start.
+
 CI smoke test: with ``NINJA_GAME_SMOKE_SECONDS`` set, the app writes ``ok``
 to ``NINJA_GAME_SMOKE_RESULT`` and exits 0 if it is still running after that
 many seconds; a crash writes the traceback there and exits 1 (no error dialog
@@ -104,6 +109,23 @@ def _prepare_user_dir() -> Path:
     return user_root
 
 
+def _attach_missing_streams(name: str) -> None:
+    """Give a console-less start a stdout/stderr: a log file in the user folder
+    (os.devnull if that cannot be opened). Streams that exist stay as they are."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    try:
+        log_dir = _user_root() / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        stream = open(log_dir / f"{name}.log", "w", encoding="utf-8", errors="replace", buffering=1)
+    except OSError:
+        stream = open(os.devnull, "w", encoding="utf-8")
+    if sys.stdout is None:
+        sys.stdout = stream
+    if sys.stderr is None:
+        sys.stderr = stream
+
+
 def _run(entry: Callable[[], None]) -> None:
     seconds = os.environ.get("NINJA_GAME_SMOKE_SECONDS")
     if not seconds:
@@ -127,11 +149,13 @@ def _run(entry: Callable[[], None]) -> None:
 
 
 def main() -> None:
+    server = len(sys.argv) > 1 and sys.argv[1] == "server.py"
+    _attach_missing_streams("server" if server else "game")
     if os.environ.get("NINJA_GAME_SMOKE_RESULT"):
         # Resolve against the launch directory before the chdir below.
         os.environ["NINJA_GAME_SMOKE_RESULT"] = str(Path(os.environ["NINJA_GAME_SMOKE_RESULT"]).resolve())
     os.chdir(_prepare_user_dir())
-    if len(sys.argv) > 1 and sys.argv[1] == "server.py":
+    if server:
         # Spawned by start_host_server() as `<this binary> server.py --port ...`.
         sys.argv = sys.argv[1:]
         from server import main as server_main

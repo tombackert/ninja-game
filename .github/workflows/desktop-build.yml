@@ -96,6 +96,32 @@ jobs:
           # The hosted multiplayer server runs from the same binary.
           smoke server server.py --port 7799 --level 1
 
+      - name: Smoke test started like a double-click (Windows, no console)
+        # From Explorer the windowed exe gets no stdout/stderr (sys.stdout is
+        # None). The bash smoke test above passes its own handles on, so it
+        # cannot see that; Start-Process goes through ShellExecute like
+        # Explorer and passes none.
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          NINJA_GAME_SMOKE_SECONDS: "10"
+          NINJA_GAME_USER_DIR: ${{ runner.temp }}/ninja-game-user
+        run: |
+          $result = Join-Path $PWD "smoke-no-console.txt"
+          $env:NINJA_GAME_SMOKE_RESULT = $result
+          $p = Start-Process -FilePath "dist\Ninja Game\Ninja Game.exe" -PassThru
+          $null = $p.Handle  # keeps ExitCode readable after the exit
+          if (-not $p.WaitForExit(120000)) {
+            Stop-Process -Id $p.Id -Force
+            Write-Output "timed out (an error dialog?)"
+            exit 1
+          }
+          Write-Output "--- no console: exit $($p.ExitCode)"
+          if (Test-Path $result) { Get-Content $result } else { Write-Output "(no result file: the app died before Python ran)" }
+          if ($p.ExitCode -ne 0 -or -not (Test-Path $result) -or (Get-Content $result -Raw).Trim() -ne "ok") { exit 1 }
+
       - name: Zip (macOS)
         if: runner.os == 'macOS'
         run: ditto -c -k --keepParent "dist/Ninja Game.app" "${{ matrix.zip }}"
