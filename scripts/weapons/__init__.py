@@ -4,7 +4,7 @@ Provides abstraction for weapon behaviors so Player and enemies call
 polymorphic objects instead of hard-coded branching on selected_weapon.
 """
 
-from .base import FireResult, NoneWeapon, Weapon
+from .base import FireResult, NoneWeapon, Weapon, equipped_weapon, inventory
 from .grapple import GrappleWeapon
 from .gun import GunWeapon
 from .registry import get_weapon, list_weapons, register_weapon
@@ -42,4 +42,6 @@ __all__ = [
     "SwordWeapon",
     "GrappleWeapon",
     "WEAPON_KEYS",
+    "equipped_weapon",
+    "inventory",
 ]

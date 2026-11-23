@@ -4,7 +4,6 @@ import math
 
 import pygame
 
-from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
     SWORD_COOLDOWN_FRAMES,
     SWORD_HITBOX_HEIGHT,
@@ -12,10 +11,9 @@ from scripts.constants import (
     SWORD_SLASH_VFX_FRAMES,
 )
 from scripts.effects_util import spawn_hit_sparks
-from scripts.settings import settings
 from scripts.spark import Spark
 
-from .base import FireResult, Weapon
+from .base import FireResult, Weapon, equipped_weapon, inventory
 
 
 class SwordWeapon(Weapon):
@@ -27,11 +25,7 @@ class SwordWeapon(Weapon):
     name = "sword"
 
     def can_fire(self, player) -> bool:
-        try:
-            sword_index = cm.WEAPONS.index("Sword")
-        except ValueError:  # pragma: no cover
-            sword_index = 4
-        return player.game.cm.sword > 0 and player.shoot_cooldown == 0 and settings.selected_weapon == sword_index
+        return inventory(player).sword > 0 and player.shoot_cooldown == 0 and equipped_weapon(player) == "Sword"
 
     def slash_rect(self, player) -> pygame.Rect:
         prect = player.rect()
@@ -74,6 +68,12 @@ class SwordWeapon(Weapon):
                 except ValueError:  # pragma: no cover - defensive
                     pass
                 kills += 1
+
+        # Multiplayer: the blade hits other players too, as bullets do
+        if getattr(player, "loadout", None) is not None:
+            for other in getattr(game, "players", []):
+                if other is not player and other.rect().colliderect(hit_rect):
+                    other.take_hit("sword", source_x=player.rect().centerx)
 
         # Parry: destroy enemy projectiles inside the slash arc
         destroy = getattr(game.projectiles, "destroy_in_rect", None)

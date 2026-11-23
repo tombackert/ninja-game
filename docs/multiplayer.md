@@ -58,7 +58,11 @@ own-ninja snaps as red marks), and what the server reports about your link.
 
 ## Rules (multiplayer specific)
 
-- Every player spawns with a gun and 15 ammo; ammo pickups give +5.
+- Every player brings the weapon equipped in single player, if they own it
+  (unlock weapons in the store first; without one you cannot attack). Each
+  player starts with 15 ammo; ammo pickups give +5. Gun and rifle (2 per
+  shot) shoot it, ninja stars are thrown from it; sword and grapple hook
+  need none. The sword hits other players in reach too.
 - Player projectiles hit **other players** (never the shooter): 1 life per hit.
 - Dash kills and projectile kills on enemies credit a coin to that player.
 - Falling off the map costs a life and respawns you; at 0 lives you respawn

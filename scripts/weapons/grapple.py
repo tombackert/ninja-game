@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
     GRAPPLE_COOLDOWN_FRAMES,
     GRAPPLE_RANGE,
     GRAPPLE_RAY_STEP,
     GRAPPLE_WHIFF_COOLDOWN_FRAMES,
 )
-from scripts.settings import settings
 
-from .base import FireResult, Weapon
+from .base import FireResult, Weapon, equipped_weapon, inventory
 
 
 class GrappleWeapon(Weapon):
@@ -21,15 +19,11 @@ class GrappleWeapon(Weapon):
     name = "grapple"
 
     def can_fire(self, player) -> bool:
-        try:
-            grapple_index = cm.WEAPONS.index("Grapple Hook")
-        except ValueError:  # pragma: no cover
-            grapple_index = 5
         return (
-            player.game.cm.grapple_hook > 0
+            inventory(player).grapple_hook > 0
             and player.shoot_cooldown == 0
             and player.grapple_point is None
-            and settings.selected_weapon == grapple_index
+            and equipped_weapon(player) == "Grapple Hook"
         )
 
     def find_anchor(self, player):

@@ -8,6 +8,9 @@ work correctly without a display.
 Multiplayer rules implemented here (server-authoritative):
 - Per-player coins/ammo (``player.mp_coins`` / ``player.mp_ammo``), captured
   into snapshots by SnapshotService.
+- Per-player weapon: the one the player equipped in single player, if they
+  own it (``player.loadout``, scripts/weapons/loadout.py); without one they
+  cannot shoot. Projectile weapons spend the player's ammo.
 - Per-player death & respawn: fatal falls and projectile hits cost a life
   and respawn the player at their spawn point; at 0 lives the player
   respawns with full lives (arena style).
@@ -34,7 +37,7 @@ import pygame
 
 from scripts.checkpoints import find_checkpoints
 from scripts.checkpoints import touch as touch_checkpoint
-from scripts.constants import AIR_TIME_FATAL, BREATH_FRAMES, DASH_MIN_ACTIVE_ABS, PROJECTILE_SPEED
+from scripts.constants import AIR_TIME_FATAL, BREATH_FRAMES, DASH_MIN_ACTIVE_ABS
 from scripts.enemy_kinds import SPAWNER_IDS, kind_for_variant
 from scripts.entities import Enemy, Player
 from scripts.hazards import HazardSystem
@@ -42,6 +45,7 @@ from scripts.entity_id import EntityIDGenerator
 from scripts.projectile_system import ProjectileSystem
 from scripts.safe_start import start_zones
 from scripts.tilemap import Tilemap
+from scripts.weapons.loadout import Loadout
 
 
 class StubAnimation:
@@ -176,8 +180,9 @@ class HeadlessGame:
         # Projectile system (server-authoritative)
         self.projectiles = ProjectileSystem(self)
 
-    def add_player(self, player_id: int) -> Player:
-        """Create a new player at the next available spawn point."""
+    def add_player(self, player_id: int, weapon: str = "Default") -> Player:
+        """Create a new player at the next available spawn point, holding
+        `weapon` (a CollectableManager.WEAPONS name; "Default" = none)."""
         if self._spawn_points:
             pos = list(self._spawn_points[self._spawn_index % len(self._spawn_points)])
             self._spawn_index += 1
@@ -196,6 +201,7 @@ class HeadlessGame:
         player.air_time = 0
         player.mp_coins = 0
         player.mp_ammo = self.MP_START_AMMO
+        player.loadout = Loadout(player, weapon)
         self.players.append(player)
 
         # Keep self.player pointing at a valid entity (enemy AI + snapshot
@@ -216,20 +222,13 @@ class HeadlessGame:
         return None
 
     def player_shoot(self, player: Player) -> bool:
-        """Multiplayer shoot: per-player ammo, no settings dependency."""
-        if player.shoot_cooldown > 0 or getattr(player, "mp_ammo", 0) <= 0:
+        """Multiplayer shoot: the player's own weapon (player.loadout) and
+        ammo. True if the weapon was used."""
+        loadout = getattr(player, "loadout", None)
+        if loadout is None or loadout.weapon == "Default":
             return False
-        direction = -PROJECTILE_SPEED if player.flip else PROJECTILE_SPEED
-        self.projectiles.spawn(
-            player.rect().centerx + (7 * (-1 if player.flip else 1)),
-            player.rect().centery,
-            direction,
-            "player",
-            owner_id=player.id,
-        )
-        player.mp_ammo -= 1
-        player.shoot_cooldown = 10
-        return True
+        result = player.shoot()
+        return result is not None
 
     def _apply_action(self, player: Player, action: str) -> None:
         if action == "jump":

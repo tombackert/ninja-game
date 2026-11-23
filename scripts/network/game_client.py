@@ -71,10 +71,13 @@ class GameClient:
         server_port: int = 7777,
         player_name: str = "Player",
         transport: UDPTransport | None = None,
+        weapon: str = "Default",
     ):
         self.transport = transport if transport is not None else UDPTransport(port=0)
         self._server_addr: Address = resolve_address(server_host, server_port)
         self._player_name = player_name
+        # The weapon this player brings (equipped and owned in single player)
+        self._weapon = weapon
 
         # Connection state
         self._state = ConnectionState.DISCONNECTED
@@ -343,7 +346,7 @@ class GameClient:
         """Send a connect_request message and track the attempt."""
         msg = Message(
             type="connect_request",
-            payload={"player_name": self._player_name, "version": PROTOCOL_VERSION},
+            payload={"player_name": self._player_name, "version": PROTOCOL_VERSION, "weapon": self._weapon},
         )
         self.transport.send(msg, self._server_addr)
         self._connect_attempt_count += 1

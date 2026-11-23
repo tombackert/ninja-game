@@ -96,6 +96,8 @@ class ClientState:
         server_view: Compact link summary for this client, echoed in heartbeat acks
         snapshot_ack: Newest snapshot tick the client has reconstructed (its
             delta base; None until the first one)
+        weapon: The weapon the player brought (equipped and owned in single
+            player; "Default" = none)
     """
 
     player_id: int
@@ -121,6 +123,7 @@ class ClientState:
     report: Dict[str, Any] = field(default_factory=dict)
     server_view: Dict[str, Any] = field(default_factory=dict)
     snapshot_ack: Optional[int] = None
+    weapon: str = "Default"
 
     @property
     def ack_tick(self) -> int:

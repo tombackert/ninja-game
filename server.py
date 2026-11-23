@@ -59,7 +59,7 @@ def main() -> None:
     server = GameServer(port=args.port, max_clients=args.max_clients, game=game)
 
     # Wire callbacks
-    server.on_player_join(lambda pid, name: _on_join(game, pid, name))
+    server.on_player_join(lambda pid, name: _on_join(game, server, pid, name))
     server.on_player_leave(lambda pid, reason: _on_leave(game, pid, reason))
 
     print(
@@ -204,9 +204,11 @@ def _report(server: GameServer, game: HeadlessGame, tick_rate: int, log: Session
         print(f"[perf] tick_rate={tick_rate} p95={p95:.1f}ms max={stats.get('tick_ms_max', 0.0):.1f}ms", flush=True)
 
 
-def _on_join(game: HeadlessGame, player_id: int, name: str) -> None:
-    player = game.add_player(player_id)
-    print(f"Player '{name}' (ID {player_id}) joined at {player.pos}", flush=True)
+def _on_join(game: HeadlessGame, server: GameServer, player_id: int, name: str) -> None:
+    client = server.clients.get_client_by_id(player_id)
+    weapon = client.weapon if client is not None else "Default"
+    player = game.add_player(player_id, weapon=weapon)
+    print(f"Player '{name}' (ID {player_id}) joined at {player.pos} with {weapon}", flush=True)
 
 
 def _on_leave(game: HeadlessGame, player_id: int, reason: str) -> None:

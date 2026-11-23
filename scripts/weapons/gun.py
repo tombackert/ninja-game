@@ -1,26 +1,16 @@
 from __future__ import annotations
 
-from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import PROJECTILE_SPEED
-from scripts.settings import settings
 
-from .base import FireResult, Weapon
+from .base import FireResult, Weapon, equipped_weapon, inventory, spawn_kwargs
 
 
 class GunWeapon(Weapon):
     name = "gun"
 
     def can_fire(self, player) -> bool:
-        try:
-            gun_index = cm.WEAPONS.index("Gun")
-        except ValueError:  # pragma: no cover
-            gun_index = 1
-        return (
-            player.game.cm.gun
-            and player.game.cm.ammo > 0
-            and player.shoot_cooldown == 0
-            and settings.selected_weapon == gun_index
-        )
+        inv = inventory(player)
+        return inv.gun and inv.ammo > 0 and player.shoot_cooldown == 0 and equipped_weapon(player) == "Gun"
 
     def fire(self, player):
         if not self.can_fire(player):
@@ -35,7 +25,8 @@ class GunWeapon(Weapon):
             player.rect().centery,
             direction,
             "player",
+            **spawn_kwargs(player),
         )
-        player.game.cm.ammo -= 1
+        inventory(player).ammo -= 1
         player.shoot_cooldown = 10
         return FireResult(spawned=True, ammo_used=1)

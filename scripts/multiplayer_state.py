@@ -13,6 +13,10 @@ sends inputs, receives snapshots, and renders the full game world:
   snapshots.
 - Collectables: removed by stable ID as the server reports pickups; own
   coins/ammo are mirrored into the HUD (never persisted).
+- Weapons: every player brings the weapon equipped in single player, if they
+  own it (scripts/weapons/loadout.py); snapshots tell which one each holds.
+  The grapple hook is predicted (it moves the own ninja), the other weapons
+  only give local feedback — the server fires them.
 """
 
 from __future__ import annotations
@@ -32,6 +36,8 @@ from scripts.network.netstats import NetStats, SessionLog
 from scripts.perf_hud import HITCH_MS
 from scripts.snapshot import EntitySnapshot, SimulationSnapshot
 from scripts.state_manager import State
+from scripts.weapons import WEAPON_KEYS, equipped_weapon, get_weapon
+from scripts.weapons.loadout import Loadout, brought_weapon
 
 # Tuning constants
 INTERP_DELAY = 4  # Minimum ticks the remote-entity clock trails the newest snapshot (~67ms)
@@ -74,9 +80,34 @@ def _autopilot_input(pattern: str, frame: int) -> Tuple[Tuple[bool, bool], List[
 class MPPlayer(Player):
     """Player entity for multiplayer rendering.
 
-    Always renders the gun overlay (all players carry guns in multiplayer)
-    without depending on the local user's persisted weapon selection.
+    Holds the weapon the server reports for this player (``loadout``), not
+    the local user's persisted weapon selection.
     """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.loadout = Loadout(self, "Default")
+        self._seen_cooldown = 0  # shoot cooldown in the last snapshot (remote fire animation)
+
+    def set_weapon(self, weapon: str) -> None:
+        self.loadout.weapon = weapon if weapon else "Default"
+
+    def note_cooldown(self, cooldown: int) -> None:
+        """Remote player: a shoot cooldown that rose since the last snapshot
+        means they fired; play the weapon's animation."""
+        from scripts import item_fx
+
+        name = self.loadout.weapon
+        if cooldown > self._seen_cooldown and name in item_fx.FIRE_FRAMES:
+            self.fire_fx_kind = name
+            self.fire_fx = item_fx.FIRE_FRAMES[name]
+        self._seen_cooldown = cooldown
+
+    def advance_fx(self) -> None:
+        """Remote player (not simulated here): run the looks' timers one frame."""
+        self.fx_tick += 1
+        if self.fire_fx > 0:
+            self.fire_fx -= 1
 
     def render(self, surf, offset=(0, 0)):
         if self.blink_hidden():
@@ -86,11 +117,9 @@ class MPPlayer(Player):
             from scripts.entities import PhysicsEntity
 
             PhysicsEntity.render(self, surf, offset=offset)
-        from scripts import item_fx
-
-        rect = self.rect().move(-int(offset[0]), -int(offset[1]))
-        since = self._fx_since(self.fire_fx, item_fx.FIRE_FRAMES["Gun"]) if self.fire_fx_kind == "Gun" else None
-        item_fx.weapon(surf, "Gun", rect, self.flip, self.fx_tick, since)
+        ox, oy = int(offset[0]), int(offset[1])
+        rect = self.rect().move(-ox, -oy)
+        self._render_held_weapon(surf, rect, self.fx_tick, ox, oy)
 
 
 class _SilentAudio:
@@ -210,6 +239,7 @@ class MultiplayerGameState(State):
         self._game.enemies = []
         # The server kills enemies: a stomp here only bounces (Player.stomp)
         self._game.predicting = True
+        self._drop_ghost()
 
         # Create network client
         self._client = GameClient(
@@ -217,6 +247,7 @@ class MultiplayerGameState(State):
             server_port=self._port,
             player_name=self._player_name,
             transport=self._transport,
+            weapon=brought_weapon(self._game.cm),
         )
 
         self._client.on_connected(self._on_connected)
@@ -304,11 +335,20 @@ class MultiplayerGameState(State):
     # Level setup (deferred until the server tells us its level)
     # ------------------------------------------------------------------
 
+    def _drop_ghost(self) -> None:
+        """No single-player ghost (best/last run replay) and no recording in
+        multiplayer: Game.load_level sets them up for the level."""
+        replay = getattr(self._game, "replay", None)
+        if replay is not None:
+            replay.ghost = None
+            replay.recording = None
+
     def _setup_level(self) -> None:
         g = self._game
         level = self._client.level
         g.level = level
         g.load_level(level)
+        self._drop_ghost()
         g.cm.hearts = []  # hearts are single-player only: the server knows none
         g.transition = 0
         g.players = []
@@ -600,9 +640,7 @@ class MultiplayerGameState(State):
             elif action == "dash":
                 player.dash()
             elif action == "shoot":
-                # Server spawns the projectile; play feedback locally
-                if getattr(player, "mp_ammo", 1) > 0 and player.shoot_cooldown == 0:
-                    g.audio.play("shoot")
+                self._predict_shoot(player)
 
         movement = (int(move[1]) - int(move[0]), 0)
         # Hazards: crumbling blocks follow every player in view, as on the
@@ -613,6 +651,23 @@ class MultiplayerGameState(State):
             hazards.update(g.players, g)
             hazards.clock = int(getattr(g, "tick", hazards.clock))
         player.update(g.tilemap, movement)
+
+    def _predict_shoot(self, player: Any) -> None:
+        """The grapple hook pulls the own ninja: predicted like a jump. The
+        server fires every other weapon; here it only sounds and animates."""
+        from scripts import item_fx
+
+        name = equipped_weapon(player)
+        if name == "Grapple Hook":
+            player.shoot()
+            return
+        weapon = get_weapon(WEAPON_KEYS.get(name, "none"))
+        if weapon is None or not weapon.can_fire(player):
+            return
+        self._game.audio.play("dash" if name == "Sword" else "shoot")
+        if name in item_fx.FIRE_FRAMES:
+            player.fire_fx_kind = name
+            player.fire_fx = item_fx.FIRE_FRAMES[name]
 
     def _find_local_player(self) -> Any:
         if self._my_player_id is None:
@@ -675,10 +730,16 @@ class MultiplayerGameState(State):
                 player.skin = 0
                 player.mp_coins = 0
                 player.mp_ammo = 0
+            if isinstance(player, MPPlayer):
+                player.set_weapon(p_snap.weapon)
             if p_snap.id == self._my_player_id:
                 self._reconcile_local_player(player, p_snap)
             else:
                 self._buffer_remote_player(p_snap, server_tick)
+                player.grapple_point = list(p_snap.grapple_point) if p_snap.grapple_point else None
+                player.grapple_frames = p_snap.grapple_frames
+                if isinstance(player, MPPlayer):
+                    player.note_cooldown(p_snap.shoot_cooldown)
             player.mp_coins = p_snap.coins
             player.mp_ammo = p_snap.ammo
             new_players.append(player)
@@ -691,6 +752,7 @@ class MultiplayerGameState(State):
             # Mirror own score into the HUD (display only, never saved)
             g.cm.coins = local.mp_coins
             g.cm.ammo = local.mp_ammo
+            g.cm.ninja_stars = local.mp_ammo  # stars draw from the ammo too (HUD "Stars")
 
         # --- Enemies ---
         self._apply_enemy_snapshots(snapshot.enemies, server_tick)
@@ -723,6 +785,9 @@ class MultiplayerGameState(State):
             g.audio = _SilentAudio()
             g.particles = []
             g.sparks = []
+            # Replayed throws must not restart the hand's animation
+            looks = (player.fire_fx, player.fire_fx_kind, player.grapple_whiff)
+            grapple = equipped_weapon(player) == "Grapple Hook"
             try:
                 for tick in sorted(unacked.keys()):
                     move, actions = unacked[tick]
@@ -731,6 +796,8 @@ class MultiplayerGameState(State):
                             player.jump()
                         elif act == "dash":
                             player.dash()
+                        elif act == "shoot" and grapple:
+                            player.shoot()
                     movement = (int(move[1]) - int(move[0]), 0)
                     player.update(g.tilemap, movement)
                     self._stats["replayed_ticks"] += 1
@@ -738,6 +805,7 @@ class MultiplayerGameState(State):
                 g.audio = real_audio
                 g.particles = real_particles
                 g.sparks = real_sparks
+                player.fire_fx, player.fire_fx_kind, player.grapple_whiff = looks
 
         # Diagnostics: how far prediction was off
         err = max(abs(player.pos[0] - predicted[0]), abs(player.pos[1] - predicted[1]))
@@ -773,6 +841,8 @@ class MultiplayerGameState(State):
         player.breath = p_snap.breath
         player.swim_cooldown = p_snap.swim_cooldown
         player.invulnerable = p_snap.invulnerable
+        player.grapple_point = list(p_snap.grapple_point) if p_snap.grapple_point else None
+        player.grapple_frames = p_snap.grapple_frames
         player.lives = p_snap.lives
         if player.action != p_snap.action:
             player.set_action(p_snap.action)
@@ -839,6 +909,8 @@ class MultiplayerGameState(State):
         for player in g.players:
             if self._my_player_id is not None and player.id == self._my_player_id:
                 continue
+            if isinstance(player, MPPlayer):
+                player.advance_fx()
             buffer = self._remote_player_buffers.get(player.id)
             if buffer:
                 self._interpolate_onto(player, buffer)

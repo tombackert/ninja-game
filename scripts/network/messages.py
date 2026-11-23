@@ -5,7 +5,9 @@ import json
 # Bumped whenever the wire protocol changes; the server rejects a client
 # with another version instead of letting it run with a broken state.
 # 2: deltas against the snapshot the client acks in its inputs (``snap``)
-PROTOCOL_VERSION = 2
+# 3: players bring their single-player weapon (``weapon`` in connect; weapon
+#    and grapple state in player snapshots)
+PROTOCOL_VERSION = 3
 
 
 @dataclass
@@ -28,6 +30,7 @@ class ConnectionRequest:
     """Client requests to join the game."""
 
     player_name: str = "Player"
+    weapon: str = "Default"  # the weapon equipped in single player, if owned
 
 
 @dataclass

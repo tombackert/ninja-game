@@ -214,6 +214,8 @@ class GameServer:
         # Accept connection
         try:
             client = self.clients.add_client(addr, player_name)
+            weapon = payload.get("weapon", "Default")
+            client.weapon = weapon if isinstance(weapon, str) else "Default"
             self._clients_needing_full.add(addr)
             self._send_connection_accept(client, addr)
             self.netstats.event("client_joined", tick=self.tick, player=client.player_id, name=player_name)

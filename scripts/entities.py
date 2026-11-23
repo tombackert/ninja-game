@@ -385,6 +385,9 @@ class Player(PhysicsEntity):
         self._lives = lives
         self.respawn_pos = respawn_pos
         self.shoot_cooldown = 10
+        # Multiplayer: this player's own weapon and ammo (scripts/weapons/loadout.py);
+        # None in single player, where the store's selection and the save count
+        self.loadout = None
         # Store item state (new game elements)
         self.air_jumps = 0  # extra air jumps left (moon boots)
         self.slash_timer = 0  # frames the sword slash VFX stays visible
@@ -425,14 +428,9 @@ class Player(PhysicsEntity):
         self._lives = value
 
     def shoot(self):
-        from scripts.collectableManager import CollectableManager as cm
-        from scripts.weapons import WEAPON_KEYS, get_weapon  # local import to avoid circulars
+        from scripts.weapons import WEAPON_KEYS, equipped_weapon, get_weapon  # local import to avoid circulars
 
-        # Map selected index to weapon name list
-        try:
-            name = cm.WEAPONS[settings.selected_weapon]
-        except Exception:  # pragma: no cover - defensive
-            name = "Default"
+        name = equipped_weapon(self)
         weapon = get_weapon(WEAPON_KEYS.get(name, "none"))
         result = weapon.fire(self)
         if result is not None and name in item_fx.FIRE_FRAMES:
@@ -852,14 +850,11 @@ class Player(PhysicsEntity):
         item_fx.magnet(surf, spot, tick, pulling)
 
     def _render_held_weapon(self, surf, rect, tick, ox, oy):
-        from scripts.collectableManager import CollectableManager as cm
+        from scripts.weapons import equipped_weapon, inventory
 
-        try:
-            name = cm.WEAPONS[settings.selected_weapon]
-        except (IndexError, TypeError):  # pragma: no cover - defensive
-            return
+        name = equipped_weapon(self)
         owned_attr = self._HELD_WEAPON_ATTRS.get(name)
-        if owned_attr is None or getattr(self.game.cm, owned_attr, 0) <= 0:
+        if owned_attr is None or getattr(inventory(self), owned_attr, 0) <= 0:
             return
         since = None
         if self.fire_fx_kind == name:

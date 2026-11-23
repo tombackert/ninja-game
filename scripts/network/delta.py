@@ -243,6 +243,9 @@ def copy_entity(e: EntitySnapshot) -> EntitySnapshot:
         breath=e.breath,
         swim_cooldown=e.swim_cooldown,
         invulnerable=e.invulnerable,
+        weapon=e.weapon,
+        grapple_point=list(e.grapple_point) if e.grapple_point is not None else None,
+        grapple_frames=e.grapple_frames,
     )
 
 
@@ -261,7 +264,7 @@ def copy_projectile(p: ProjectileSnapshot) -> ProjectileSnapshot:
 
 
 def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
-    d = {}
+    d: Dict[str, Any] = {}
     if a.pos != b.pos:
         d["pos"] = list(b.pos)  # Always send full vector if changed
     if a.velocity != b.velocity:
@@ -298,6 +301,12 @@ def diff_entity(a: EntitySnapshot, b: EntitySnapshot) -> Dict[str, Any]:
         d["swim_cooldown"] = b.swim_cooldown
     if a.invulnerable != b.invulnerable:
         d["invulnerable"] = b.invulnerable
+    if a.weapon != b.weapon:
+        d["weapon"] = b.weapon
+    if a.grapple_point != b.grapple_point:
+        d["grapple_point"] = list(b.grapple_point) if b.grapple_point is not None else None
+    if a.grapple_frames != b.grapple_frames:
+        d["grapple_frames"] = b.grapple_frames
     return d
 
 

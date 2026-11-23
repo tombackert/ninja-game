@@ -11,6 +11,18 @@ def _int_attr(obj: Any, name: str, default: int = 0) -> int:
     return value if isinstance(value, int) else default
 
 
+def _weapon_of(player: Any) -> str:
+    """The multiplayer weapon a player holds ("" in single player or without one)."""
+    loadout = getattr(player, "loadout", None)
+    weapon = getattr(loadout, "weapon", "")
+    return weapon if isinstance(weapon, str) and weapon != "Default" else ""
+
+
+def _grapple_of(player: Any) -> List[float] | None:
+    point = getattr(player, "grapple_point", None)
+    return [float(point[0]), float(point[1])] if isinstance(point, (list, tuple)) else None
+
+
 @dataclass
 class EntitySnapshot:
     type: str
@@ -33,6 +45,9 @@ class EntitySnapshot:
     breath: int = BREATH_FRAMES  # Player specific (water world)
     swim_cooldown: int = 0  # Player specific (water world)
     invulnerable: int = 0  # Player specific: frames left blinking after a hit
+    weapon: str = ""  # Player specific (multiplayer): the weapon they hold ("" = none)
+    grapple_point: List[float] | None = None  # Player specific: active grapple anchor
+    grapple_frames: int = 0  # Player specific: frames spent in the current pull
 
 
 @dataclass
@@ -99,6 +114,9 @@ class SnapshotService:
                 breath=_int_attr(p, "breath", BREATH_FRAMES),
                 swim_cooldown=_int_attr(p, "swim_cooldown"),
                 invulnerable=_int_attr(p, "invulnerable"),
+                weapon=_weapon_of(p),
+                grapple_point=_grapple_of(p),
+                grapple_frames=_int_attr(p, "grapple_frames"),
             )
             players.append(player_snap)
 
@@ -183,6 +201,8 @@ class SnapshotService:
                 p.breath = p_snap.breath
                 p.swim_cooldown = p_snap.swim_cooldown
                 p.invulnerable = p_snap.invulnerable
+                p.grapple_point = list(p_snap.grapple_point) if p_snap.grapple_point else None
+                p.grapple_frames = p_snap.grapple_frames
 
         # Restore Enemies
         for i, e_snap in enumerate(snapshot.enemies):
