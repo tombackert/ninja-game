@@ -1298,17 +1298,22 @@ class AccessoriesState(_ItemMenuState):
         names, attr = self._slots(category)
         return names[getattr(self.settings, attr)]
 
+    def _open_category(self) -> str:
+        """The category page that is open (rows exist only there, not in the hub)."""
+        assert self.category is not None
+        return self.category
+
     def initial_index(self, category: str) -> int:
         return getattr(self.settings, self._slots(category)[1])
 
     def row_info(self, name: str):
-        if name == self.equipped(self.category):
+        if name == self.equipped(self._open_category()):
             return self.loc.translate("accessories.status_equipped"), self._ui.GAME_UI_COLOR
         return "", None
 
     def status(self, name: str):
         UI = self._ui
-        if name == self.equipped(self.category):
+        if name == self.equipped(self._open_category()):
             return self.loc.translate("accessories.status_equipped"), UI.GAME_UI_COLOR
         if self.owned(name):
             return self.loc.translate("accessories.status_owned"), UI.SELECTOR_COLOR
@@ -1318,7 +1323,7 @@ class AccessoriesState(_ItemMenuState):
         return self.cm.display_name(self.equipped(category))
 
     def activate(self, name: str) -> None:
-        names, attr = self._slots(self.category)
+        names, attr = self._slots(self._open_category())
         title = self.cm.display_name(name)
         if self.owned(name):
             setattr(self.settings, attr, names.index(name))

@@ -48,11 +48,11 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import pygame
 
-from . import death_log
-from .constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES, PROJECTILE_SPEED
-from .effects_util import spawn_hit_sparks, spawn_projectile_sparks
-from .entity_id import EntityIDGenerator
-from .safe_start import in_safe_zone
+from scripts import death_log
+from scripts.constants import DASH_MIN_ACTIVE_ABS, PROJECTILE_LIFETIME_FRAMES, PROJECTILE_SPEED
+from scripts.effects_util import spawn_hit_sparks, spawn_projectile_sparks
+from scripts.entity_id import EntityIDGenerator
+from scripts.safe_start import in_safe_zone
 
 
 class ProjectileSystem:

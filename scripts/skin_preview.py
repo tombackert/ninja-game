@@ -77,6 +77,7 @@ class SkinPreview:
         self.ticks += dt * TICKS_PER_SECOND
 
     def _timeline(self) -> list:
+        assert self.path is not None  # frame() returns early without a skin
         key = (self.path, self.showcase)
         timeline = SkinPreview._timelines.get(key)
         if timeline is None:

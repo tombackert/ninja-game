@@ -160,7 +160,7 @@ class DeathLog:
         self.session = datetime.now().isoformat(timespec="seconds")
         self._attempts: dict = {}  # level -> attempt number in this session
         self._map_sha: dict = {}  # (path, mtime) -> sha
-        self.game = None
+        self.game: Any = None  # the bound Game (bind)
         self._attempt_start = 0  # tick of the last (re)load
         self._pending: tuple | None = None  # (cause, tick, pos) of the death in progress
         self._ended = False  # the bound game's level was cleared or left

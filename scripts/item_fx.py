@@ -411,16 +411,16 @@ def shield(surf, center, tick: int, ready: bool, rearm: float = 0.0, broke: int 
             ang = -math.pi / 2 + i * math.tau / 72
             _px(surf, (cx + math.cos(ang) * r, cy + math.sin(ang) * r), (200, 240, 255), 170)
     if broke is not None and 0 <= broke < SHIELD_BREAK_FRAMES:
-        k = broke / SHIELD_BREAK_FRAMES
+        fade = broke / SHIELD_BREAK_FRAMES
         rr = int(r + broke * 1.1)
         ring = pygame.Surface((rr * 2 + 2, rr * 2 + 2), pygame.SRCALPHA)
-        pygame.draw.circle(ring, (200, 240, 255, int(210 * (1 - k))), (rr + 1, rr + 1), rr, 1)
+        pygame.draw.circle(ring, (200, 240, 255, int(210 * (1 - fade))), (rr + 1, rr + 1), rr, 1)
         surf.blit(ring, (cx - rr - 1, cy - rr - 1))
         for i in range(8):
             ang = i * math.tau / 8 + 0.4
             dist = r - 2 + broke * 1.6
             x, y = cx + math.cos(ang) * dist, cy + math.sin(ang) * dist + broke * 0.15
-            a = int(255 * (1 - k))
+            a = int(255 * (1 - fade))
             _px(surf, (x, y), (170, 225, 255), a)
             _px(surf, (x + math.cos(ang), y + math.sin(ang)), (255, 255, 255), a)
 
