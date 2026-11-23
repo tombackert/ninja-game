@@ -20,16 +20,22 @@ _MIN_LEVEL = _LEVELS.get(_DEFAULT_LEVEL_NAME, 20)
 @dataclass
 class Logger:
     name: str
-    stream: TextIO = sys.stdout
+    # None: sys.stdout as it is when a line is written. A windowed app started
+    # without a console (the Windows build from Explorer) has sys.stdout None;
+    # then lines are dropped, as print() does.
+    stream: TextIO | None = None
 
     def _log(self, level: str, *parts):
         numeric = _LEVELS[level]
         if numeric < _MIN_LEVEL:
             return
+        stream = self.stream if self.stream is not None else sys.stdout
+        if stream is None:
+            return
         ts = time.strftime("%H:%M:%S")
         msg = " ".join(str(p) for p in parts)
-        self.stream.write(f"[{ts}] {level:<5} {self.name}: {msg}\n")
-        self.stream.flush()
+        stream.write(f"[{ts}] {level:<5} {self.name}: {msg}\n")
+        stream.flush()
 
     def debug(self, *parts):
         self._log("DEBUG", *parts)
