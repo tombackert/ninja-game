@@ -157,17 +157,13 @@ def main(argv=None) -> int:
     for level in _ids(args.levels):
         path = map_path(level)
         with open(path) as f:
-            text = f.read()
-        data = json.loads(text)
+            data = json.load(f)
         counts = cast_map(level, data)
         line = ", ".join(f"{k} {counts[k]}" for k in KINDS if counts[k])
         print(f"level {level}: {sum(counts.values())} enemies: {line}")
         if args.apply:
             with open(path, "w") as f:
-                if text.startswith("{\n"):  # the hand-drawn maps are indented
-                    json.dump(data, f, indent=4)
-                else:
-                    json.dump(data, f, separators=(",", ":"))
+                json.dump(data, f, separators=(",", ":"))
     return 0
 
 

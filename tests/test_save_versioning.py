@@ -13,8 +13,11 @@ def test_save_contains_version(tmp_path):
     g.load_level(g.level)
     path = tmp_path / "v2_save.json"
     tm.save(str(path))
-    data = json.loads(path.read_text())
+    text = path.read_text()
+    data = json.loads(text)
     assert data["meta_data"].get("version") == 2
+    # maps are stored compact so the editor never bloats them again
+    assert text == json.dumps(data, separators=(",", ":"))
 
 
 def test_load_legacy_injects_version(tmp_path):

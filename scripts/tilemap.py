@@ -165,7 +165,8 @@ class Tilemap:
 
         try:
             with open(path, "w") as f:
-                json.dump(game_state, f, indent=4)
+                # compact: indentation alone made big maps several MB
+                json.dump(game_state, f, separators=(",", ":"))
             log.info("Game saved", path)
             return True
         except Exception as e:
