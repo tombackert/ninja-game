@@ -36,6 +36,22 @@ FAILED = (230, 30, 30)
 TRAIL = (255, 90, 0)
 TEXT = (0, 0, 0)
 TRAIL_EVERY = 3  # frames per point of the drawn path
+# The keys of route mode, as the editor lists them: (keys, what they do)
+KEYS = [
+    ("Drag", "new waypoint"),
+    ("Click", "select a waypoint"),
+    ("Right click", "delete a waypoint"),
+    ("Q / E", "select previous / next"),
+    (", / .", "move it earlier / later"),
+    ("F", "ground on / off"),
+    ("U", "guide on / off"),
+    ("Del", "delete the selected one"),
+    ("N", "draft from checkpoints"),
+    ("Shift N", "draft, replace route"),
+    ("L", "route from best replay"),
+    ("Shift L", "replay, replace route"),
+    ("P", "save and plan the route"),
+]
 HELP = "drag new | click select | RMB del | Q/E sel | ,/. order | F ground | U guide | N draft | L replay | P plan"
 
 
@@ -57,6 +73,7 @@ class RouteLayer:
         self._thread: threading.Thread | None = None
         self._outcome = None  # (MapLevel, Planned) or an Exception, from the planning thread
         self._spawn: tuple | None = None  # the player spawner's tile, found once per switch-on
+        self._overlay: pygame.Surface | None = None
 
     def toggle_active(self) -> None:
         """Route mode on or off (the editor's R)."""
@@ -265,49 +282,65 @@ class RouteLayer:
                 return True
         return False
 
-    def render(self, surf, scroll: tuple, font, tile: tuple | None = None, ts: int = 16) -> None:
+    def render(
+        self, surf, scroll: tuple, font, tile: tuple | None = None, ts: int = 16, zoom: float = 1.0, hud: bool = True
+    ) -> None:
+        """Draw the route onto `surf`, world px `scroll` at its top left, `zoom`
+        screen px per world px; `hud`: the two status lines at the bottom too."""
         self.poll()
-        overlay = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        if self._overlay is None or self._overlay.get_size() != surf.get_size():
+            self._overlay = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+        overlay = self._overlay
+        overlay.fill((0, 0, 0, 0))
         sx, sy = scroll
         route = self.route
+        z = zoom
+        thin = 1 if z < 2 else 2
+
+        def pt(x: float, y: float) -> tuple:
+            return round((x - sx) * z), round((y - sy) * z)
 
         def box(w) -> pygame.Rect:
-            return pygame.Rect(w.x0 * ts - sx, w.y0 * ts - sy, (w.x1 - w.x0 + 1) * ts, (w.y1 - w.y0 + 1) * ts)
+            x, y = pt(w.x0 * ts, w.y0 * ts)
+            return pygame.Rect(x, y, round((w.x1 - w.x0 + 1) * ts * z), round((w.y1 - w.y0 + 1) * ts * z))
 
         if self.trail:
-            pts = [(x + 4 - sx, y + 7 - sy) for x, y in self.trail[::TRAIL_EVERY]]
+            pts = [pt(x + 4, y + 7) for x, y in self.trail[::TRAIL_EVERY]]
             if len(pts) > 1:
-                pygame.draw.lines(overlay, TRAIL + (220,), False, pts, 1)
+                pygame.draw.lines(overlay, TRAIL + (230,), False, pts, thin + (1 if z >= 3 else 0))
         if self._spawn is None:
             spawners = [
                 t["pos"] for t in self.tilemap.tilemap.values() if t["type"] == "spawners" and t["variant"] == 0
             ]
             self._spawn = tuple(spawners[0]) if spawners else ()
         spawn = self._spawn or None
-        prev = (spawn[0] * ts + 8 - sx, spawn[1] * ts + 8 - sy) if spawn else None
+        prev = pt(spawn[0] * ts + 8, spawn[1] * ts + 8) if spawn else None
+        label_ok = ts * z >= 10  # numbers only where a box is big enough to read them
         for i, w in enumerate(route):
             r = box(w)
             color = FAILED if i == self.failed_at else GUIDE if w.guide else GROUND if w.ground else STOP
             if prev:
-                pygame.draw.line(overlay, color + (120,), prev, r.center, 1)
+                pygame.draw.line(overlay, color + (140,), prev, r.center, thin)
             prev = r.center
             overlay.fill(color + (70,), r)
-            pygame.draw.rect(
-                overlay, (SELECTED if i == self.selected else color) + (255,), r, 2 if i == self.selected else 1
-            )
+            sel = i == self.selected
+            pygame.draw.rect(overlay, (SELECTED if sel else color) + (255,), r, thin + 1 if sel else thin)
             if w.ground:  # the floor the player stands on in it
-                pygame.draw.line(overlay, color + (255,), (r.left, r.bottom - 1), (r.right - 1, r.bottom - 1), 2)
-            overlay.blit(font.render(str(i), True, TEXT), (r.x + 2, r.y + 1))
+                pygame.draw.line(overlay, color + (255,), (r.left, r.bottom - 1), (r.right - 1, r.bottom - 1), thin + 1)
+            if label_ok or sel:
+                img = font.render(str(i), True, (255, 255, 255))
+                tag = pygame.Rect(r.x, r.y - img.get_height() - 2, img.get_width() + 6, img.get_height() + 2)
+                overlay.fill((SELECTED if sel else color) + (230,), tag)
+                overlay.blit(img, (tag.x + 3, tag.y + 1))
         if self.drag_start is not None and tile is not None:
             a, b = self.drag_start, tile
-            r = pygame.Rect(
-                min(a[0], b[0]) * ts - sx,
-                min(a[1], b[1]) * ts - sy,
-                (abs(a[0] - b[0]) + 1) * ts,
-                (abs(a[1] - b[1]) + 1) * ts,
-            )
-            pygame.draw.rect(overlay, SELECTED + (255,), r, 1)
+            x, y = pt(min(a[0], b[0]) * ts, min(a[1], b[1]) * ts)
+            r = pygame.Rect(x, y, round((abs(a[0] - b[0]) + 1) * ts * z), round((abs(a[1] - b[1]) + 1) * ts * z))
+            overlay.fill(SELECTED + (50,), r)
+            pygame.draw.rect(overlay, SELECTED + (255,), r, thin + 1)
         surf.blit(overlay, (0, 0))
+        if not hud:
+            return
 
         sel = ""
         if self.selected is not None and self.selected < len(route):

@@ -134,19 +134,22 @@ python -m tools.rl.watch 11 9 --span 3     # watch it in a game window (--video 
 ninja-editor        # or: python editor.py
 ```
 
+`python editor.py 3` opens `data/maps/3.json`. The window can be resized and maximized. Tiles, hazards, pickups, the player and each enemy kind (drawn as the character it spawns) are picked with a click in the palette on the left; the panel on the right lists every key of the current mode (H hides it); the bottom bar shows the tile under the mouse, the last action and the zoom.
+
 | Action | Input |
 |--------|-------|
-| Place / erase tile | Left / right mouse button |
-| Choose tile type / variant | Mouse wheel / Shift + mouse wheel |
-| Scroll | W A S D or arrow keys |
-| Toggle grid snapping | G |
+| Paint / erase (a stroke is one undo step) | Left / right drag |
+| Pick a tile | Click in the palette (Shift + wheel: next variant) |
+| Zoom at the mouse / in / out | Mouse wheel / + / - |
+| Whole map / default zoom | 0 / 1, or a click on the zoom in the bottom right |
+| Move the view | W A S D, arrow keys, Space + drag or middle drag |
+| Snap to grid (off: free placement) / square brush and its size | G / M and [ ] |
 | Auto-tile edges | T |
-| Multi-tile brush (Space + wheel sets the size) | M |
-| Water: pick the `water` group, Shift + wheel picks still water or a current (→ ← ↑ ↓) | Mouse wheel |
-| Save / save and quit | O / Esc |
-| Route mode on / off | R |
+| Undo / redo | Cmd (Ctrl) + Z / + Shift + Z |
+| Save / save and quit | O or Cmd + S / Esc |
+| Tiles / route mode | R, or the tabs at the top |
 
-`python editor.py 3` opens `data/maps/3.json`. In route mode the map's waypoints are shown and edited instead of tiles:
+In route mode the map's waypoints are shown over the map and listed on the left (a click selects one and brings it into view):
 
 | Action | Input |
 |--------|-------|
