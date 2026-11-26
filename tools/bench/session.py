@@ -272,7 +272,8 @@ class Session:
                 self.pause(level)
                 kind_now, extra = "resume", ["pause_close"]  # Esc again: this frame is a game tick
             actions = []
-            if not g.dead:
+            # A hit-stop frame (Game.hitstop) runs no tick: the run waits with it
+            if not g.dead and not g.hitstop:
                 run.feed(tick, g.player, g.movement, g.audio)
                 actions = recorded.get(tick, [])
                 tick += 1

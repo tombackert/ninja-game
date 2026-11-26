@@ -41,7 +41,7 @@ def contact_sheet(level: int, n: int, out_dir: str, cols: int = 3, view=(640, 36
     tick = deaths = 0
     was_dead = False
     for _ in range(total + 600):
-        if not g.dead:
+        if not g.dead and not g.hitstop:  # a hit-stop frame runs no tick (Game.hitstop)
             run.feed(tick, g.player, g.movement, g.audio)
             tick += 1
         deaths += bool(g.dead) and not was_dead

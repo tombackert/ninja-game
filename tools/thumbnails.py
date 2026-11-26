@@ -111,6 +111,8 @@ def render_level(studio, level: int, sheet: bool = False) -> str:
         if run and not g.dead:
             run.feed(tick, g.player, g.movement, g.audio)
         gs.update(1 / tr.FPS)
+        while g.hitstop:  # let a hit-stop run out: one tick per recorded input
+            gs.update(1 / tr.FPS)
         if pick is not None and tick != pick:
             continue
         if pick is None and (tick < 30 or tick % STEP or not framed(g)):

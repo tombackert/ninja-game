@@ -466,6 +466,8 @@ class Studio:
                     sync[tick] = snap["players"][0]
                 plan.feed(tick, g.player, g.movement, g.audio)
                 gs.update(1 / FPS)
+                while g.hitstop:  # let a hit-stop run out: one tick per recorded input
+                    gs.update(1 / FPS)
             self.listening = listening
             self._sync_cache[key] = sync
         run.sync = self._sync_cache[key]
@@ -513,7 +515,7 @@ class Studio:
         for i in range(shot.start + frames):
             live = i >= shot.start
             f = i - shot.start
-            if not g.dead:
+            if not g.dead and not g.hitstop:  # a hit-stop frame runs no tick (Game.hitstop)
                 if shot.sync_until is None or f < shot.sync_until:
                     run.resync(tick, g.player)
                 run.feed(tick, g.player, g.movement, g.audio)

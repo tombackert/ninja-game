@@ -1,17 +1,17 @@
 """Dust puffs where the ninja's feet push off or come down (looks only).
 
 The puffs ride in game.particles like the leaves and the dash trail, but they
-draw from their own random generator, never the game's seeded RNG: recorded
-runs, route plans and the netcode replay the same with or without them.
+draw from Python's `random` (as the screen shake does), never the game's
+seeded RNG: recorded runs, route plans and the netcode replay the same with
+or without them, and tools that seed `random` (tools/bench) get the same
+picture every run.
 """
 
 from __future__ import annotations
 
-import random
+import random as _rand
 
 import pygame
-
-_rand = random.Random()
 
 DUST_COLOR = (232, 226, 212)
 DUST_SHADE = (196, 188, 172)
