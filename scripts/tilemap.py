@@ -114,6 +114,19 @@ class Tilemap:
         return tiles
 
     def save(self, path):
+        game_state = self.to_json()
+        try:
+            with open(path, "w") as f:
+                # compact: indentation alone made big maps several MB
+                json.dump(game_state, f, separators=(",", ":"))
+            log.info("Game saved", path)
+            return True
+        except Exception as e:
+            log.error("Error saving tilemap", e)
+            return False
+
+    def to_json(self) -> dict:
+        """The map as `save` writes it (meta, entities, map data with water and route)."""
         game_state = {}
 
         meta_data = self.meta_data.copy()
@@ -167,16 +180,7 @@ class Tilemap:
         game_state["meta_data"] = meta_data
         game_state["entities_data"] = entity_data
         game_state["map_data"] = tilemap_data
-
-        try:
-            with open(path, "w") as f:
-                # compact: indentation alone made big maps several MB
-                json.dump(game_state, f, separators=(",", ":"))
-            log.info("Game saved", path)
-            return True
-        except Exception as e:
-            log.error("Error saving tilemap", e)
-            return False
+        return game_state
 
     def _migrate(self, data: dict) -> dict:
         """Migrate legacy save data in-place returning upgraded dict.

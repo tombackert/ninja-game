@@ -34,12 +34,13 @@ import io
 import json
 import os
 import sys
+from dataclasses import dataclass
 
 from tools.worlds import physics as ph
 from tools.worlds.hearts import HEART_LEVELS
 from tools.worlds.mapfile import MAPS_DIR, MapLevel, map_path
 from tools.worlds.planner import simulate
-from tools.worlds.route import plan_route, save_plan
+from tools.worlds.route import RouteResult, plan_route, save_plan
 
 LEVELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "levels")
 LEVELS = sorted(int(f[6:-3]) for f in os.listdir(LEVELS_DIR) if f.startswith("level_") and f.endswith(".py"))
@@ -61,6 +62,34 @@ def routed_maps(maps_dir: str = MAPS_DIR) -> list[int]:
             if json.load(f)["map_data"].get("route"):
                 out.append(int(stem))
     return sorted(out)
+
+
+@dataclass
+class Planned:
+    """A map's route planned from its file: the plan, the path of the player's
+    hitbox (top left, px, from the spawn) and what the hazard check found."""
+
+    res: RouteResult
+    trail: list
+    problems: list
+
+
+def plan_map(ml: MapLevel, verbose: bool = True, cache=None) -> Planned:
+    """Plan `ml`'s route with the physics replica and check it against the flame
+    jets' beat and the crumbling blocks (tools/worlds/hazard_check.py). Saves
+    nothing: build.py and the editor's route mode save the plan themselves."""
+    solids = ml.solids()
+    spawn_px = ml.spawn_px
+    res = plan_route(solids, spawn_px, ml.route, ml.kill_y(), verbose=verbose, cache=cache)
+    trail = [spawn_px] + [
+        (s[ph.X], s[ph.Y]) for _i, s, _d, _dead in simulate(ph.spawn_state(*spawn_px), res.frames, solids)
+    ]
+    problems: list = []
+    if res.ok:
+        from tools.worlds.hazard_check import check_route
+
+        problems = check_route(ml.tilemap, spawn_px, res.frames, solids)
+    return Planned(res, trail, problems)
 
 
 def _hearts(ml: MapLevel, frames: list, segments: list) -> None:
@@ -108,12 +137,9 @@ def process_level(map_id: int, args) -> int:
     res = None
     failed = 0
     if not args.no_plan:
-        solids = ml.solids()
         spawn_px = ml.spawn_px
-        res = plan_route(solids, spawn_px, ml.route, ml.kill_y())
-        trail = [spawn_px] + [
-            (s[ph.X], s[ph.Y]) for _i, s, _d, _dead in simulate(ph.spawn_state(*spawn_px), res.frames, solids)
-        ]
+        planned = plan_map(ml)
+        res, trail = planned.res, planned.trail
         jumps = sum(1 for f in res.frames if f[1])
         dashes = sum(1 for f in res.frames if f[2])
         status = "OK" if res.ok else f"FAILED at waypoint {res.failed_at}"
@@ -122,14 +148,10 @@ def process_level(map_id: int, args) -> int:
             f"{dashes} dashes, planned in {res.seconds:.1f} s"
         )
         print(f"  planner: {res.summary()}")
-        if res.ok:
-            from tools.worlds.hazard_check import check_route
-
-            problems = check_route(ml.tilemap, spawn_px, res.frames, solids)
-            for line in problems:
-                print(f"  hazard {line}")
-            if problems:
-                failed = 1
+        for line in planned.problems:
+            print(f"  hazard {line}")
+        if planned.problems:
+            failed = 1
         if res.ok:
             save_plan(map_id, spawn_px, res.frames, ml.route, res.segments)
             if hearts:

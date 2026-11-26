@@ -8,6 +8,7 @@ from scripts.entities import Enemy, Player
 from scripts.settings import settings
 from scripts.tilemap import Tilemap
 from scripts.utils import load_image, load_images
+from tools.worlds.editor_route import RouteLayer
 
 MAP_NAME = "scratch"  # Default target map: a named scratch map outside the campaign (may not exist; then the
 # first numbered map is loaded as a start, and saving still writes the scratch map).
@@ -15,7 +16,10 @@ CURRENT_MAP = "data/maps/" + str(MAP_NAME) + ".json"
 
 
 class Editor:
-    def __init__(self):
+    def __init__(self, map_name: str = MAP_NAME):
+        """`map_name`: the map edited and saved, data/maps/<map_name>.json (python editor.py 3)."""
+        self.map_name = str(map_name)
+        self.map_path = "data/maps/" + self.map_name + ".json"
         pygame.init()
         dm = DisplayManager()
         self.BASE_W = dm.BASE_W
@@ -70,8 +74,8 @@ class Editor:
         # Attempt to load requested map; if not present, fallback to first available.
         import os
 
-        if os.path.exists(CURRENT_MAP):
-            self.tilemap.load(CURRENT_MAP, load_entities=False)
+        if os.path.exists(self.map_path):
+            self.tilemap.load(self.map_path, load_entities=False)
         else:
             map_dir = "data/maps"
             try:
@@ -104,11 +108,14 @@ class Editor:
         self.m_offset = self.multi_tile_size // 2
 
         settings.load_settings()
-        if MAP_NAME.isdigit():
-            settings.set_editor_level(int(MAP_NAME))
+        if self.map_name.isdigit():
+            settings.set_editor_level(int(self.map_name))
         settings.save_settings()
 
         self.font = pygame.font.Font(None, 10)
+
+        # Route mode (R): the waypoints of map_data.route, edited and planned in place
+        self.route_layer = RouteLayer(self.tilemap, self.map_name, lambda: self.tilemap.save(self.map_path))
 
     def brush_tiles(self, tile_pos):
         """Tiles under the brush: the one under the mouse, or the multi-tile square."""
@@ -143,6 +150,7 @@ class Editor:
 
             self.tilemap.render(self.display, offset=render_scroll)
             self.render_water(render_scroll)
+            route_mode = self.route_layer.active
 
             current_tile_img = self.assets[self.tile_list[self.tile_group]][self.tile_variant].copy()
             current_tile_img.set_alpha(180)
@@ -157,7 +165,9 @@ class Editor:
                 int((mpos[1] + render_scroll[1]) // self.tilemap.tile_size),
             )
 
-            if self.ongrid:
+            if route_mode:
+                pass  # no tile brush while the route is edited
+            elif self.ongrid:
                 if not self.multi_tile:
                     render_pos = (
                         tile_pos[0] * self.tilemap.tile_size - render_scroll[0],
@@ -179,7 +189,7 @@ class Editor:
                 self.display.blit(current_tile_img, mpos)
 
             # Object placement
-            if self.clicking:
+            if self.clicking and not route_mode:
                 if self.ongrid:
                     if self.tile_list[self.tile_group] == "water":
                         for pos in self.brush_tiles(tile_pos):
@@ -288,7 +298,9 @@ class Editor:
                             print("-----------------")
 
             # Tile removal
-            if self.right_clicking and self.tile_list[self.tile_group] == "water":
+            if route_mode:
+                pass
+            elif self.right_clicking and self.tile_list[self.tile_group] == "water":
                 for pos in self.brush_tiles(tile_pos):
                     self.tilemap.water.pop(pos, None)
             elif self.right_clicking:
@@ -345,15 +357,21 @@ class Editor:
             for i, enemy in enumerate(self.tilemap.enemies):
                 enemy.id = i
 
-            self.display.blit(current_tile_img, (5, 5))
-            tile_name = f"{self.tile_list[self.tile_group]}/{self.tile_variant}"
-            name_surface = self.font.render(tile_name, True, (0, 0, 0))
-            self.display.blit(name_surface, (30, 5))
+            if route_mode:
+                self.route_layer.render(self.display, render_scroll, self.font, tile_pos, self.tilemap.tile_size)
+            else:
+                self.display.blit(current_tile_img, (5, 5))
+                tile_name = f"{self.tile_list[self.tile_group]}/{self.tile_variant}"
+                name_surface = self.font.render(tile_name, True, (0, 0, 0))
+                self.display.blit(name_surface, (30, 5))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+
+                if self.route_layer.active and self.route_layer.handle_event(event, tile_pos):
+                    continue
 
                 # Object placement
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -417,7 +435,10 @@ class Editor:
                     if event.key == pygame.K_LSHIFT:
                         self.shift = True
                     if event.key == pygame.K_o:
-                        self.tilemap.save(CURRENT_MAP)
+                        self.tilemap.save(self.map_path)
+                    if event.key == pygame.K_r:
+                        self.route_layer.toggle_active()
+                        self.clicking = self.right_clicking = False
                     if event.key == pygame.K_t:
                         self.tilemap.autotile()
                     if event.key == pygame.K_m:
@@ -426,7 +447,7 @@ class Editor:
                         self.space = True
 
                     if event.key == pygame.K_ESCAPE:
-                        self.tilemap.save(CURRENT_MAP)
+                        self.tilemap.save(self.map_path)
                         pygame.quit()
                         sys.exit()
 
@@ -481,7 +502,7 @@ class Editor:
 
 
 def main():
-    Editor().run()
+    Editor(sys.argv[1] if len(sys.argv) > 1 else MAP_NAME).run()
 
 
 if __name__ == "__main__":

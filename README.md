@@ -144,6 +144,20 @@ ninja-editor        # or: python editor.py
 | Multi-tile brush (Space + wheel sets the size) | M |
 | Water: pick the `water` group, Shift + wheel picks still water or a current (→ ← ↑ ↓) | Mouse wheel |
 | Save / save and quit | O / Esc |
+| Route mode on / off | R |
+
+`python editor.py 3` opens `data/maps/3.json`. In route mode the map's waypoints are shown and edited instead of tiles:
+
+| Action | Input |
+|--------|-------|
+| New waypoint (after the selected one) / select / delete | Drag / click / right click |
+| Select previous / next | Q / E |
+| Move the selected waypoint back / on in the route | , / . |
+| Toggle ground / guide | F / U |
+| Delete the selected waypoint | Del |
+| Draft route: spawn, checkpoints, flag (Shift replaces the route) | N |
+| Route from the replay `data/replays/<id>.json` (Shift replaces the route) | L |
+| Save and plan: shows the trail, an UNREACHED waypoint in red; an OK plan is saved | P |
 
 ## Installation details
 
@@ -255,6 +269,7 @@ The route is part of the map: `map_data.route` in `data/maps/<id>.json` holds th
 
 ```bash
 python -m tools.worlds.draft draft 3          # first route for a map without one: spawn, checkpoints, flag
+python -m tools.worlds.draft replay 3         # or from the best run: a stop every 6 tiles where the player stood
 python -m tools.worlds.build 3                # plan it; a waypoint it reports UNREACHED needs a stop before it
 python -m tools.worlds.draft insert 3 4 14 -11 --ground --label block   # put waypoint 4 in (list, delete: see --help)
 python -m tools.worlds.build 3 --hearts       # hearts along the route into an editor map: only when asked

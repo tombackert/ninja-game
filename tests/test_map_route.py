@@ -176,3 +176,117 @@ def test_hearts_go_into_an_editor_map_only_when_asked(editor_map, monkeypatch):
     assert build.process_level(MAP_ID, _args(hearts=True)) == 0
     assert MapLevel.load(MAP_ID).hearts()
     assert ", " not in editor_map.read_text()
+
+
+# --- route from a replay ----------------------------------------------------------
+
+
+def _snap(x_tile, y_px, dead=0):
+    return {"players": [{"pos": [x_tile * 16, y_px]}], "dead_count": dead}
+
+
+STAND19 = 20 * 16 - 15  # feet on row 20: standing on air tile row 19
+STAND18 = 19 * 16 - 15
+
+
+def _replay(with_death: bool) -> dict:
+    path = [(3, STAND19, 0), (9, STAND19, 0)]
+    if with_death:  # off the first ledge into the void, back at the spawn
+        path += [(12, STAND19 + 40, 0), (12, STAND19 + 90, 1), (3, STAND19, 1), (9, STAND19, 1)]
+    path += [(12, STAND19 - 30, 0), (16, STAND19, 0), (22, STAND19, 0), (26, STAND18 - 20, 0)]
+    path += [(31, STAND18, 0), (37, STAND18, 0)]
+    dead_from = 3 if with_death else len(path)
+    snaps = {}
+    for i, (x, y, d) in enumerate(path):
+        snaps[str(i * 10)] = _snap(x, y, 1 if with_death and i >= dead_from else d)
+    return {"snapshots": snaps}
+
+
+def test_a_replay_gives_stops_where_the_run_stood(editor_map):
+    ml = MapLevel.load(MAP_ID)
+    r = draft.replay_route(ml, _replay(False))
+    assert [(w.x0, w.y0, w.x1, w.y1, w.ground) for w in r[:-1]] == [
+        (8, 19, 10, 19, True),
+        (15, 19, 17, 19, True),
+        (21, 19, 23, 19, True),
+        (30, 18, 32, 18, True),
+    ]
+    assert r[-1] == Waypoint(38, 18, 38, 18, False, "flag")  # (37, 18) is at the flag: no stop of its own
+    assert draft.replay_route(ml, _replay(True)) == r  # the stops before the death are taken again
+    res = route.plan_route(ml.solids(), ml.spawn_px, r, ml.kill_y(), verbose=False)
+    assert res.ok
+
+
+# --- the editor's route mode --------------------------------------------------------
+
+
+@pytest.fixture
+def layer(editor_map):
+    import pygame
+
+    from tools.worlds.editor_route import RouteLayer
+
+    pygame.init()
+    tm = Tilemap(None)
+    tm.load(str(editor_map), load_entities=False)
+    saved = []
+    lay = RouteLayer(tm, str(MAP_ID), lambda: saved.append(tm.save(str(editor_map))))
+    lay.toggle_active()
+    lay.saved = saved
+    return lay
+
+
+def _event(kind, **kw):
+    import pygame
+
+    return pygame.event.Event(kind, **kw)
+
+
+def test_route_mode_draws_selects_orders_and_deletes_waypoints(layer):
+    import pygame
+
+    down, up, key = pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.KEYDOWN
+    assert layer.handle_event(_event(down, button=1), (15, 19))  # drag a box over the second ledge
+    assert layer.handle_event(_event(up, button=1), (17, 19))
+    layer.handle_event(_event(down, button=1), (38, 18))
+    layer.handle_event(_event(up, button=1), (38, 18))
+    assert [(w.x0, w.y0, w.x1, w.y1, w.ground) for w in layer.route] == [(15, 19, 17, 19, True), (38, 18, 38, 18, True)]
+    assert layer.selected == 1
+    layer.handle_event(_event(key, key=pygame.K_f, mod=0), None)  # the flag box is no ground waypoint
+    assert not layer.route[1].ground
+    layer.handle_event(_event(down, button=1), (31, 18))  # a stop on the third ledge, after the first box
+    layer.handle_event(_event(up, button=1), (31, 18))
+    assert layer.selected == 2
+    layer.handle_event(_event(key, key=pygame.K_COMMA, mod=0), None)  # one place earlier: before the flag
+    assert [w.x0 for w in layer.route] == [15, 31, 38] and layer.selected == 1
+    layer.handle_event(_event(down, button=1), (16, 19))  # a click on a box selects it
+    assert layer.selected == 0
+    layer.handle_event(_event(key, key=pygame.K_u, mod=0), None)
+    assert layer.route[0].guide
+    layer.handle_event(_event(down, button=3), (31, 18))  # right click deletes
+    assert [w.x0 for w in layer.route] == [15, 38]
+    assert not layer.handle_event(_event(key, key=pygame.K_a, mod=0), None)  # scrolling stays the editor's
+
+
+def test_route_mode_drafts_plans_and_saves_the_plan(layer):
+    import pygame
+
+    surf = pygame.Surface((640, 360), pygame.SRCALPHA)
+    font = pygame.font.Font(None, 10)
+    layer.draft()
+    assert [w.label for w in layer.route] == ["checkpoint", "flag"]
+    layer.draft()  # a route is there: not replaced without Shift
+    assert "Shift+N" in layer.status
+    layer.render(surf, (0, 200), font, (5, 19))
+    layer.plan(wait=True)
+    assert layer.saved == [True]
+    assert layer.status.startswith("OK"), layer.status
+    assert layer.trail and layer.failed_at is None
+    plan = route.load_plan(MAP_ID)
+    assert plan["waypoints"] == layer.route
+    assert route_from_json(MapLevel.load(MAP_ID).data["map_data"]["route"]) == layer.route  # saved with the map
+    layer.render(surf, (0, 200), font, (5, 19))  # with the planned path
+    layer.add((5, 22), (5, 22))  # inside the rock of the first ledge: nobody gets there
+    layer.move(-1)
+    layer.plan(wait=True)
+    assert layer.status.startswith("UNREACHED") and layer.failed_at is not None
