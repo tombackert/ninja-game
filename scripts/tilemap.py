@@ -52,6 +52,9 @@ class Tilemap:
         # Water layer (see scripts/water.py): (tx, ty) -> flow
         self.water = {}
         self._water_renderer = None
+        # Intended route for the planner (map_data.route, tools/worlds/mapfile.py): rows
+        # kept as loaded so a save in the editor writes them back unchanged
+        self.route = []
         # A fall ends here (px, see kill_line): None until a map is loaded
         self.kill_y = None
         self.enemies = []
@@ -157,6 +160,8 @@ class Tilemap:
         }
         if self.water:
             tilemap_data["water"] = water_to_rows(self.water)
+        if self.route:
+            tilemap_data["route"] = self.route
         # Persist version inside meta_data for forward detection
         meta_data["version"] = self.version
         game_state["meta_data"] = meta_data
@@ -210,6 +215,7 @@ class Tilemap:
             self.tile_size = map_data["tile_size"]
             self.offgrid_tiles = map_data["offgrid"]
             self.water = water_from_rows(map_data.get("water", []))
+            self.route = map_data.get("route", [])
             self._water_renderer = None
             self._extracted = []
             self.loaded_path = path

@@ -251,6 +251,15 @@ python tools/gen_world_tiles.py                  # redraw the sand and mars tile
 python tools/gen_water_world.py                  # redraw the water world: tiles, water, decor, swim cycle, skies
 ```
 
+The route is part of the map: `map_data.route` in `data/maps/<id>.json` holds the waypoints (`x0, y0, x1, y1` in tiles, `ground`, `label`, `guide`; `tools/worlds/mapfile.py`). A built level writes it from its `lv.wp(...)` calls; the planner reads only the map file, so the editor's levels 0-10 are planned the same way, without their map being rewritten:
+
+```bash
+python -m tools.worlds.draft draft 3          # first route for a map without one: spawn, checkpoints, flag
+python -m tools.worlds.build 3                # plan it; a waypoint it reports UNREACHED needs a stop before it
+python -m tools.worlds.draft insert 3 4 14 -11 --ground --label block   # put waypoint 4 in (list, delete: see --help)
+python -m tools.worlds.build 3 --hearts       # hearts along the route into an editor map: only when asked
+```
+
 ### Rendering the trailer
 
 The trailer and the level matrix above are rendered from real runs (best runs, the route bot's runs for the desert and Mars worlds, the route plans for the water world), re-simulated headless by the game itself:

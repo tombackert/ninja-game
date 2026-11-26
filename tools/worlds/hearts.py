@@ -20,7 +20,8 @@ PACE times the route's time (the testers: 1.4-2.3x).
     python -m tools.worlds.hearts fit          # rates from the death log
     python -m tools.worlds.hearts show 11 15   # where the hearts would go
 
-`python -m tools.worlds.build` places them for the levels in HEART_LEVELS.
+`python -m tools.worlds.build` places them for the built levels in HEART_LEVELS;
+an editor map gets them only with `build <id> --hearts` (they are written into its map).
 """
 
 from __future__ import annotations
@@ -54,7 +55,8 @@ HAZARD_CAUSES = ("spikes", "flame")
 
 
 def danger_sites(lv) -> tuple[list, list]:
-    """Middles (px) of the enemies and of the hazard tiles of a builder Level."""
+    """Middles (px) of the enemies and of the hazard tiles of a level (a builder
+    Level or a tools.worlds.mapfile.MapLevel: both have objects, solid, fixed)."""
     enemies = [(x * 16 + 8, y * 16 + 8) for (x, y), (k, v) in lv.objects.items() if k == "spawners" and v != 0]
     hazards = [(x * 16 + 8, y * 16 + 8) for (x, y), (k, _v) in lv.objects.items() if k == SPIKES]
     hazards += [(x * 16 + 8, y * 16 + 8) for (x, y), t in lv.solid.items() if t in (CRUMBLE, FLAMEJET)]
@@ -141,8 +143,8 @@ def route_states(lv, frames: list) -> list:
 
 
 def place(lv, frames: list, segments: list, budget: float = BUDGET) -> list[tuple]:
-    """Put the hearts into `lv` (builder Level) along its planned route and
-    return their tiles. `segments`: (start frame, frames) per waypoint."""
+    """Put the hearts into `lv` (builder Level or mapfile.MapLevel) along its
+    planned route and return their tiles. `segments`: (start frame, frames) per waypoint."""
     enemies, hazards = danger_sites(lv)
     hits = expected_hits(route_states(lv, frames), enemies, hazards)
     spots = heart_spots(lv, hits, segments, budget)
@@ -152,12 +154,15 @@ def place(lv, frames: list, segments: list, budget: float = BUDGET) -> list[tupl
 
 
 def _planned(level: int):
-    """(builder Level, route frames, segments) of a level from its saved plan."""
-    from tools.worlds.build import build_level
+    """(MapLevel without its hearts, route frames, segments) of a level from its
+    map file and saved plan: where hearts would go, as if none were placed yet."""
+    from tools.worlds.mapfile import MapLevel
     from tools.worlds.route import load_plan
 
     plan = load_plan(level)
-    return build_level(level), plan["frame_list"], plan["segments"]
+    ml = MapLevel.load(level)
+    ml.remove_hearts()
+    return ml, plan["frame_list"], plan["segments"]
 
 
 # --- the rates, from the death log ------------------------------------------

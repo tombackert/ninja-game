@@ -1,4 +1,8 @@
-"""Route explorer data: every built level as an image plus its planned route.
+"""Route explorer data: every map with a route as an image plus its planned route.
+
+The levels are the maps whose file holds a route (map_data.route,
+tools/worlds/mapfile.py) and that have a plan (tools/worlds/plans/<id>.json):
+built levels and editor maps alike.
 
 Renders each level with the game's own tiles, water and sprites, and writes
 what the page needs to draw the route on top: the path of the player's
@@ -8,7 +12,6 @@ piece of the route fails when its keys are pressed a little off.
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import random
@@ -22,8 +25,9 @@ import pygame  # noqa: E402
 
 from tools.worlds import physics as ph  # noqa: E402
 from tools.worlds.assess import piece_fail_rate  # noqa: E402
-from tools.worlds.build import LEVELS  # noqa: E402
-from tools.worlds.route import LEAD_IN, load_plan  # noqa: E402
+from scripts.level_info import level_name  # noqa: E402
+from tools.worlds.build import routed_maps  # noqa: E402
+from tools.worlds.route import LEAD_IN, PLANS_DIR, load_plan  # noqa: E402
 
 TS = 16
 MARGIN = 2  # tiles around the level
@@ -31,11 +35,9 @@ PATH_EVERY = 3  # frames per path point
 CHUNK, SIGMA, SAMPLES = 24, 2.0, 30  # the defaults of tools.worlds.assess
 
 
-def level_name(map_id: int) -> str:
-    """'Undertow Caves' from the level's docstring: 'Level 24 - Undertow Caves (reef, deep water).'"""
-    doc = importlib.import_module(f"tools.worlds.levels.level_{map_id}").__doc__ or ""
-    first = doc.strip().splitlines()[0]
-    return first.split(" - ", 1)[-1].split("(")[0].rstrip(" .")
+def planned_levels() -> list:
+    """The maps with a route and a saved plan."""
+    return [m for m in routed_maps() if os.path.exists(os.path.join(PLANS_DIR, f"{m}.json"))]
 
 
 def render_level(game: Any, map_id: int) -> Tuple[pygame.Surface, Tuple[int, int]]:
@@ -116,7 +118,7 @@ def collect(out_dir: str) -> Dict[str, Any]:
     os.makedirs(route_dir, exist_ok=True)
     game = Game(fullscreen=False)
     index = []
-    for map_id in LEVELS:
+    for map_id in planned_levels():
         surface, offset = render_level(game, map_id)
         pygame.image.save(surface, os.path.join(route_dir, f"{map_id}.png"))
         data = route_data(map_id, offset, surface.get_size())

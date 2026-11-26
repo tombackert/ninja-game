@@ -5,7 +5,8 @@ the intended route (waypoints for tools/worlds/route.py). The element
 helpers stamp the parametric building blocks the worlds are made of:
 wall-jump chimneys, zigzag shafts, box stairs, pillar runs, dash gaps,
 low-ceiling corridors and labyrinths. `save()` autotiles and writes the map
-JSON in the format `Tilemap.load` reads.
+JSON in the format `Tilemap.load` reads, the route included (map_data.route,
+tools/worlds/mapfile.py).
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from scripts.enemy_kinds import get_kind
 from scripts.hazards import CRUMBLE, DOWN, FLAME_ON, FLAME_PERIOD, FLAMEJET, LEFT, RIGHT, SPIKES, UP
 from scripts.water import water_leaks, water_to_rows
 from tools.worlds import roster
+from tools.worlds.mapfile import route_to_json
 from tools.worlds.physics import Terrain, lethal_from_tiles
 from tools.worlds.planner import Waypoint
 
@@ -285,6 +287,8 @@ class Level:
         map_data = {"tilemap": tilemap, "tile_size": 16, "offgrid": self.offgrid}
         if self.water_tiles:
             map_data["water"] = water_to_rows(self.water_tiles)
+        if self.route:  # the intended route, for the planner (tools/worlds/mapfile.py)
+            map_data["route"] = route_to_json(self.route)
         return {
             "meta_data": meta,
             "entities_data": {"players": [], "enemies": []},
