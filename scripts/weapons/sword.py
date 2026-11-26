@@ -5,6 +5,7 @@ import math
 import pygame
 
 from scripts.constants import (
+    HITSTOP_KILL_FRAMES,
     SWORD_COOLDOWN_FRAMES,
     SWORD_HITBOX_HEIGHT,
     SWORD_REACH,
@@ -49,6 +50,7 @@ class SwordWeapon(Weapon):
         for enemy in game.enemies.copy():
             if enemy.rect().colliderect(hit_rect):
                 game.screenshake = max(16, game.screenshake)
+                game.hitstop = max(HITSTOP_KILL_FRAMES, getattr(game, "hitstop", 0))
                 if player.services:
                     player.services.play("hit")
                 else:

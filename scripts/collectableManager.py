@@ -251,7 +251,7 @@ class CollectableManager:
             if coin.update(player_rect):
                 self.coin_list.remove(coin)
                 self.coins += 1
-                self.game.audio.play("collect")
+                self.game.audio.play("coin")
 
         for ammo in self.ammo_pickups[:]:
             if ammo.update(player_rect):
@@ -278,7 +278,7 @@ class CollectableManager:
         else:
             self.coins += HEART_COINS
         death_log.record_heart(game, player, life)
-        game.audio.play("collect")
+        game.audio.play("heart")
 
     def _apply_coin_magnet(self, player_rect):
         """Pull nearby coins toward the player when Coin Magnet gear is equipped."""

@@ -19,6 +19,7 @@ from typing import Callable, List, Sequence, Tuple
 
 import pygame
 
+from scripts.audio_service import ui_sound
 from scripts.ui import UI
 
 ActivateCallback = Callable[[str, int], None]
@@ -200,6 +201,7 @@ class PointerRouter:
                 if isinstance(target, tuple):
                     state.pointer_select(*target)
             elif e.type == pygame.MOUSEBUTTONDOWN and e.button == MOUSE_BACK:
+                ui_sound("menu_back")
                 state.pointer_back()
             elif e.type == pygame.MOUSEBUTTONDOWN and e.button in (1, 3):
                 target = self._target(widgets, back, e.pos)
@@ -213,8 +215,10 @@ class PointerRouter:
                     continue
                 if target == BACK:
                     if e.button == 1:
+                        ui_sound("menu_back")
                         state.pointer_back()
                 elif isinstance(target, tuple):
+                    ui_sound("menu_select")
                     state.pointer_activate(target[0], e.button)
             elif e.type == pygame.MOUSEWHEEL and e.y and widgets:
                 pos = pygame.mouse.get_pos()

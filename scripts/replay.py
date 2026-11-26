@@ -153,6 +153,9 @@ class GhostPlayer(Player):
             if inp == "stop_right":
                 self.input_right = False
 
+    # No landing thumps, splashes or dust from the ghost (Player.feedback)
+    FEEDBACK = False
+
     # The ghost moves through the live world but is not part of it: it never
     # kills an enemy by landing on it and nothing hurts it (no lost life, hit
     # sound or screenshake). Bounces and knockbacks of the recorded run come

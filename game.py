@@ -150,6 +150,10 @@ class Game:
         # Global variables
         self.level = settings.selected_level
         self.screenshake = 0
+        # Hit-stop: frames the picture holds after a kill or a hit. Only
+        # GameState reads it (it skips its steps); step() never does, so
+        # replays, training and the netcode simulate the same with it.
+        self.hitstop = 0
         self.timer = Timer(self.level)
 
         # Collectable Manager
@@ -304,6 +308,7 @@ class Game:
 
         self.scroll = [0, 0]
         self.dead = 0
+        self.hitstop = 0
         if self.players:
             # Set using canonical name; alias still supports legacy code.
             self.player.lives = lives

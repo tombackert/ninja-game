@@ -23,7 +23,7 @@ from typing import Protocol, Tuple
 
 # ---- Protocols ----
 class AudioPort(Protocol):
-    def play(self, name: str, loops: int = 0) -> None: ...  # noqa: D401
+    def play(self, name: str, loops: int = 0, volume: float = 1.0) -> None: ...  # noqa: D401
 
 
 class ProjectilePort(Protocol):

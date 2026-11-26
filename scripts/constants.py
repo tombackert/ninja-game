@@ -93,6 +93,22 @@ TRANSITION_START = -30  # starting negative transition value
 AIR_TIME_FATAL = 420  # frames in air before considered 'dead'
 FALL_KILL_DEPTH = 4  # a fall kills once the player is this many tiles below the level's lowest solid tile
 
+# Game feel (looks and sound only: none of these change a simulated tick)
+# Hit-stop: a kill or a hit holds the picture this many frames; the run's
+# timer leaves them out (GameState.update)
+# (felt more than seen: longer holds, or a white flash, read as stutter in playtests)
+HITSTOP_KILL_FRAMES = 4  # a dash, stomp or sword kill
+HITSTOP_HIT_FRAMES = 6  # the player takes a hit
+# Squash & stretch: the ninja's sprite goes wide and flat on landing, tall
+# and thin on take-off, and springs back over SQUASH_FRAMES
+SQUASH_FRAMES = 9
+LAND_FX_MIN_SPEED = 0.8  # slower touchdowns (standing still, a ledge at the apex) make none
+LAND_SQUASH_MIN = 0.12  # a soft landing
+LAND_SQUASH_MAX = 0.3  # a landing at MAX_FALL_SPEED
+JUMP_STRETCH = 0.22
+# Breath warning beeps when the meter drops to 2 of 6 bubbles, then 1
+BREATH_WARN_FRAMES = (BREATH_FRAMES // 3, BREATH_FRAMES // 6)
+
 # Camera
 CAMERA_EASE_FRAMES = 30  # each frame covers 1/N of the remaining distance ("classic")
 CALM_CAMERA_EASE_FRAMES = 15  # same for the "calm" style

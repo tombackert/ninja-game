@@ -78,7 +78,7 @@ def celebrate(game, cp) -> None:
     center = (cp.rect.x + 10, cp.rect.y + 7)
     for k in range(12):
         game.sparks.append(Spark(center, k * math.pi / 6, 1.5 + (k % 3) * 0.5))
-    game.audio.play("collect")
+    game.audio.play("checkpoint")
 
 
 __all__ = ["CHECKPOINT", "FURLED", "HOISTED", "Checkpoint", "find_checkpoints", "touch", "celebrate"]

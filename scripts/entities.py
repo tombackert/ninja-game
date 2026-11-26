@@ -2,13 +2,14 @@ import math
 
 import pygame
 
-from scripts import item_fx
+from scripts import dust, item_fx
 from scripts.collectableManager import CollectableManager as cm
 from scripts.constants import (
     AIR_JUMP_VELOCITY,
     AIR_TIME_FATAL,
     BREATH_BUBBLE_FRAMES,
     BREATH_FRAMES,
+    BREATH_WARN_FRAMES,
     DASH_DECEL_TRIGGER_FRAME,
     DASH_DURATION_FRAMES,
     DASH_MIN_ACTIVE_ABS,
@@ -18,9 +19,16 @@ from scripts.constants import (
     GRAPPLE_MAX_FRAMES,
     GRAPPLE_PULL_SPEED,
     GRAVITY_ACCEL,
+    HITSTOP_HIT_FRAMES,
+    HITSTOP_KILL_FRAMES,
     HORIZONTAL_FRICTION,
+    JUMP_STRETCH,
     JUMP_VELOCITY,
+    LAND_FX_MIN_SPEED,
+    LAND_SQUASH_MAX,
+    LAND_SQUASH_MIN,
     MAX_FALL_SPEED,
+    SQUASH_FRAMES,
     SHIELD_REARM_FRAMES,
     HIT_INVULNERABLE_FRAMES,
     HIT_KNOCKBACK_X,
@@ -193,9 +201,26 @@ class PhysicsEntity:
             self.pos[1] - offset[1] + self.anim_offset[1] - (img.get_height() - bh),
         )
 
+    def squash_scale(self) -> tuple[float, float]:
+        """(width, height) factors the sprite is drawn with (Player: squash & stretch)."""
+        return (1.0, 1.0)
+
+    def blit_sprite(self, surf, img, offset=(0, 0)):
+        """Draw `img` flipped to the facing and squashed or stretched about
+        the middle of its bottom edge, so the feet stay on the ground."""
+        x, y = self.sprite_pos(img, offset)
+        img = pygame.transform.flip(img, self.flip, False)
+        sx, sy = self.squash_scale()
+        if sx != 1.0 or sy != 1.0:
+            w, h = img.get_size()
+            nw, nh = max(1, round(w * sx)), max(1, round(h * sy))
+            img = pygame.transform.scale(img, (nw, nh))
+            x += (w - nw) / 2
+            y += h - nh
+        surf.blit(img, (x, y))
+
     def render(self, surf, offset=(0, 0)):
-        img = self.animation.img()
-        surf.blit(pygame.transform.flip(img, self.flip, False), self.sprite_pos(img, offset))
+        self.blit_sprite(surf, self.animation.img(), offset)
 
 
 # Frames an enemy shows its shoot animation after firing (4 images of 6,
@@ -309,15 +334,17 @@ class Enemy(PhysicsEntity):
                 self.die(self.game.player)
                 return True
 
-    def die(self, killer=None) -> None:
+    def die(self, killer=None, sound: str = "hit") -> None:
         """Effects and the coin of a kill (a dash or a stomp); the caller
-        takes the enemy out of game.enemies."""
+        takes the enemy out of game.enemies. The picture holds a moment
+        (hit-stop, GameState.update) so the kill lands."""
         rng = RNGService.get()
         self.game.screenshake = max(16, self.game.screenshake)
+        self.game.hitstop = max(HITSTOP_KILL_FRAMES, getattr(self.game, "hitstop", 0))
         if self.services:
-            self.services.play("hit")
+            self.services.play(sound)
         else:
-            self.game.audio.play("hit")
+            self.game.audio.play(sound)
         # Multiplayer servers credit the killing player; single player
         # falls back to the global coin counter.
         award = getattr(self.game, "award_coin", None)
@@ -408,6 +435,46 @@ class Player(PhysicsEntity):
         self.breath = BREATH_FRAMES  # frames left before drowning, full while the head is dry
         self.invulnerable = 0  # frames left blinking after a hit, nothing hits meanwhile (take_hit)
         self.swim_cooldown = 0  # frames until the next swim stroke
+        # Game feel (looks and sound only)
+        self.jump_kind = "jump"  # the last jump's sound: jump, wall_jump, double_jump or swim
+        self.squash = 0  # frames left of a squash or stretch (squash_scale)
+        self.squash_amount = 0.0  # > 0 wide and flat (landing), < 0 tall and thin (take-off)
+
+    # Sounds and dust are for the ninja on screen: not for the replay ghost
+    # (GhostPlayer), nor while a multiplayer client predicts (it re-runs ticks)
+    FEEDBACK = True
+
+    def feedback(self) -> bool:
+        return self.FEEDBACK and getattr(self.game, "predicting", False) is not True
+
+    def _sfx(self, name: str, volume: float = 1.0) -> None:
+        if not self.feedback():
+            return
+        audio = self.services.audio if self.services else getattr(self.game, "audio", None)
+        if audio is None:
+            return
+        if volume == 1.0:
+            audio.play(name)
+        else:
+            audio.play(name, volume=volume)
+
+    def _squash(self, amount: float) -> None:
+        self.squash = SQUASH_FRAMES
+        self.squash_amount = amount
+
+    def squash_scale(self) -> tuple[float, float]:
+        if not self.squash:
+            return (1.0, 1.0)
+        k = self.squash_amount * (self.squash / SQUASH_FRAMES) ** 1.5
+        return (1.0 + k, 1.0 - k)
+
+    def _land(self, fall_speed: float) -> None:
+        """Squash, dust and a thump, all the stronger the faster the fall."""
+        strength = min(1.0, max(0.0, (fall_speed - 0.5) / (MAX_FALL_SPEED - 0.5)))
+        self._squash(LAND_SQUASH_MIN + (LAND_SQUASH_MAX - LAND_SQUASH_MIN) * strength)
+        self._sfx("land", 0.35 + 0.65 * strength)
+        if self.feedback():
+            dust.landing(self.game, self.rect().midbottom, strength)
 
     # --- New canonical attribute ---
     @property
@@ -505,10 +572,11 @@ class Player(PhysicsEntity):
             if predicting:
                 enemy.stomped = True
             else:
-                enemy.die(self)
+                enemy.die(self, sound="stomp")
                 enemies.remove(enemy)
         self.velocity[1] = STOMP_BOUNCE_VELOCITY
         self.air_time = 5  # in the air, as after a jump
+        self._squash(-JUMP_STRETCH)
         return True
 
     def take_hit(self, cause: str, source_x: float | None = None) -> bool:
@@ -535,6 +603,7 @@ class Player(PhysicsEntity):
         if audio is not None:
             audio.play("hit")
         self.game.screenshake = max(16, getattr(self.game, "screenshake", 0))
+        self.game.hitstop = max(HITSTOP_HIT_FRAMES, getattr(self.game, "hitstop", 0))
         return True
 
     def head_in_water(self, tilemap) -> bool:
@@ -562,6 +631,8 @@ class Player(PhysicsEntity):
             self.grapple_frames += 1
 
         prev_bottom = self.rect().bottom
+        fall_speed = self.velocity[1]
+        airborne = self.air_time > 4  # as the jump animation reads it
         super().update(tilemap, movement=movement)
         if self.water is None and self.velocity[1] > 1 and self.water_flow(tilemap) is not None:
             self._splash()
@@ -589,6 +660,8 @@ class Player(PhysicsEntity):
                 setattr(self, timer, getattr(self, timer) - 1)
         if self.swim_cooldown > 0:
             self.swim_cooldown -= 1
+        if self.squash > 0:
+            self.squash -= 1
 
         # Shield gear: arm a charge after the re-arm delay
         game_cm = getattr(self.game, "cm", None)
@@ -613,6 +686,8 @@ class Player(PhysicsEntity):
             self.breath -= 1
             if self.breath > 0 and self.breath % BREATH_BUBBLE_FRAMES == 0:
                 self._bubbles(1, (self.rect().centerx, self.rect().top + 2))
+            if self.breath in BREATH_WARN_FRAMES:
+                self._sfx("breath_low")
         else:
             self.breath = BREATH_FRAMES
 
@@ -642,6 +717,8 @@ class Player(PhysicsEntity):
             self.game.dead += 1
 
         if self.collisions["down"]:
+            if airborne and self.water is None and fall_speed >= LAND_FX_MIN_SPEED:
+                self._land(fall_speed)
             self.air_time = 0
             self.jumps = 1
             self.air_jumps = 1  # moon boots double jump recharges on landing
@@ -724,6 +801,7 @@ class Player(PhysicsEntity):
 
     def _splash(self):
         """Spray where the player plunges into water."""
+        self._sfx("splash")
         rng = RNGService.get()
         for _ in range(8):
             angle = math.pi + rng.random() * math.pi  # upward half
@@ -811,9 +889,7 @@ class Player(PhysicsEntity):
         if abs(self.dashing) <= DASH_MIN_ACTIVE_ABS:
             super().render(surf, offset=offset)
             if gear == "Moon Boots":
-                img = self.animation.img()
-                boots = item_fx.boots_overlay(img)
-                surf.blit(pygame.transform.flip(boots, self.flip, False), self.sprite_pos(img, offset))
+                self.blit_sprite(surf, item_fx.boots_overlay(self.animation.img()), offset)
 
         self._render_held_weapon(surf, rect, tick, ox, oy)
 
@@ -877,6 +953,8 @@ class Player(PhysicsEntity):
             self.grapple_point = None
             self.velocity[1] = AIR_JUMP_VELOCITY
             self.air_time = 5
+            self.jump_kind = "double_jump"
+            self._squash(-JUMP_STRETCH)
             return True
 
         tilemap = getattr(self.game, "tilemap", None)
@@ -888,6 +966,7 @@ class Player(PhysicsEntity):
             self.velocity[1] = SWIM_STROKE_VELOCITY
             self.swim_cooldown = SWIM_STROKE_COOLDOWN
             self._bubbles(2, self.rect().midbottom)
+            self.jump_kind = "swim"
             return True
 
         if self.wall_slide:
@@ -896,18 +975,25 @@ class Player(PhysicsEntity):
                 self.velocity[1] = WALL_JUMP_VERTICAL_VEL
                 self.air_time = 5
                 self.jumps = max(0, self.jumps - 1)
+                self._wall_kick(self.rect().midleft, 1)
                 return True
             elif not self.flip and self.last_movement[0] > 0:
                 self.velocity[0] = -WALL_JUMP_HORIZONTAL_VEL
                 self.velocity[1] = WALL_JUMP_VERTICAL_VEL
                 self.air_time = 5
                 self.jumps = max(0, self.jumps - 1)
+                self._wall_kick(self.rect().midright, -1)
                 return True
 
         elif self.jumps:
+            on_ground = self.air_time <= 4  # not a jump left over after walking off a ledge
             self.velocity[1] = JUMP_VELOCITY
             self.jumps -= 1
             self.air_time = 5
+            self.jump_kind = "jump"
+            self._squash(-JUMP_STRETCH)
+            if on_ground and self.feedback():
+                dust.takeoff(self.game, self.rect().midbottom)
             return True
 
         # Moon boots gear: one extra (weaker) air jump
@@ -920,6 +1006,8 @@ class Player(PhysicsEntity):
             self.velocity[1] = AIR_JUMP_VELOCITY
             self.air_jumps -= 1
             self.air_time = 5
+            self.jump_kind = "double_jump"
+            self._squash(-JUMP_STRETCH)
             self.moon_fx = item_fx.MOON_JUMP_FRAMES
             self.moon_fx_pos = self.rect().midbottom
             # The burst is drawn by item_fx.moon_jump. The draws of the dark
@@ -928,6 +1016,12 @@ class Player(PhysicsEntity):
             for _ in range(10):
                 rng.random(), rng.random(), rng.randint(0, 7)
             return True
+
+    def _wall_kick(self, wall_point, away: int) -> None:
+        self.jump_kind = "wall_jump"
+        self._squash(-JUMP_STRETCH * 0.8)
+        if self.feedback():
+            dust.wall_kick(self.game, wall_point, away)
 
     def dash(self):
         if not self.dashing:

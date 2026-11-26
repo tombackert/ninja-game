@@ -218,6 +218,7 @@ class HazardSystem:
                 if tile is not None and tile["type"] == CRUMBLE and key not in self.crumbling:
                     self.crumbling[key] = CRUMBLE_DELAY
                     tile["variant"] = 1  # cracked
+        broke = False
         for key in list(self.crumbling):
             self.crumbling[key] -= 1
             if self.crumbling[key] <= 0:
@@ -226,10 +227,18 @@ class HazardSystem:
                 if tile is not None:
                     tile["variant"] = 0
                     self.fallen[key] = [tile, CRUMBLE_RETURN]
+                    broke = True
                     if game is not None and hasattr(game, "sparks"):
+                        from scripts import dust
                         from scripts.effects_util import spawn_hit_sparks
 
                         spawn_hit_sparks(game, ((tile["pos"][0] + 0.5) * ts, (tile["pos"][1] + 0.5) * ts), count=6)
+                        frames = getattr(game, "assets", {}).get(CRUMBLE)
+                        rect = pygame.Rect(tile["pos"][0] * ts, tile["pos"][1] * ts, ts, ts)
+                        dust.rubble(game, rect, frames[0] if frames else None)
+        audio = getattr(game, "audio", None)
+        if broke and audio is not None:
+            audio.play("crumble")  # once, however many blocks give way together
         players = list(players)
         for key in list(self.fallen):
             entry = self.fallen[key]

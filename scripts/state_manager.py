@@ -29,10 +29,20 @@ from typing import List, Sequence
 
 import pygame
 
+from scripts.audio_service import ui_sound
 from scripts.logger import get_logger
 from scripts.ui_widgets import BackButton, PointerRouter, ScrollableListWidget
 
 _state_log = get_logger("state")
+
+# Menu actions and the sound each makes (StateManager.handle_actions)
+MENU_SOUNDS = {
+    "menu_up": "menu_move",
+    "menu_down": "menu_move",
+    "menu_select": "menu_select",
+    "menu_back": "menu_back",
+    "menu_quit": "menu_back",
+}
 
 
 class State:
@@ -164,6 +174,11 @@ class StateManager:
 
     def handle_actions(self, actions: Sequence[str]) -> None:
         if self.current:
+            # Menu keys click, choose or go back (one sound a frame)
+            if getattr(self.current, "accepts_input", True):
+                sound = next((MENU_SOUNDS[a] for a in actions if a in MENU_SOUNDS), None)
+                if sound:
+                    ui_sound(sound)
             # Prefer new action API when implemented by state.
             if hasattr(self.current, "handle_actions"):
                 if actions:
@@ -323,6 +338,15 @@ class GameState(State):
         self.level_complete_capture = None  # Store clean snapshot for level end
         self._accum = 0.0  # placeholder for future fixed timestep accumulator
         self._initialized_audio = False
+        # Hit-stop (Game.hitstop): input that comes in while the picture
+        # holds waits for the next step, and the held time is left out of
+        # the run's timer
+        self._held_actions: list[str] = []
+        self._held_events: list[pygame.event.Event] = []
+        self._hold_ticks: int | None = None
+        # One death sound per death, one fanfare per cleared level
+        self._death_heard = False
+        self._clear_heard = False
         self.request_pause = False
         self.game_over = False  # the last life is gone: GameOverState took over
         # Performance HUD (timings + counts) toggle (F1) - start disabled to match legacy debug overlay test expectation
@@ -347,13 +371,15 @@ class GameState(State):
 
         if os.environ.get("NINJA_GAME_TESTING") != "1" and not self._initialized_audio:
             try:  # Best-effort; audio is ancillary.
-                # Issue 53: Per-level music tracks
-                track = "data/music/music_0.wav"
+                # Each world has its own music (AudioService.music_for)
+                from scripts.audio_service import DEFAULT_MUSIC, music_for
+
+                track = DEFAULT_MUSIC
                 if hasattr(self._game, "tilemap") and hasattr(self._game.tilemap, "meta_data"):
-                    track = self._game.tilemap.meta_data.get("music", track)
+                    track = music_for(self._game.tilemap.meta_data)
 
                 self._game.audio.play_music(track, loops=-1)
-                self._game.audio.play("ambience", loops=-1)
+                self._game.audio.play_loop("ambience")
                 self._initialized_audio = True
             except Exception:  # pragma: no cover - audio optional in CI
                 pass
@@ -379,6 +405,9 @@ class GameState(State):
         except Exception:  # pragma: no cover
             pass
 
+    def _holding(self) -> bool:
+        return getattr(self._game, "hitstop", 0) > 0
+
     def handle_actions(self, actions: Sequence[str]) -> None:
         # Reset per-frame toggles
         self.request_pause = False
@@ -389,6 +418,15 @@ class GameState(State):
                 self.perf_enabled = not self.perf_enabled
                 self.debug_overlay = self.perf_enabled  # keep alias in sync
 
+        # During a hit-stop no tick runs, so the replay records nothing: the
+        # actions wait for the next frame that steps
+        if self._holding():
+            self._held_actions.extend(a for a in actions if a not in ("pause_toggle", "debug_toggle"))
+            return
+        if self._held_actions:
+            actions = self._held_actions + list(actions)
+            self._held_actions = []
+
         # Pass actions to replay system
         replay = getattr(self._game, "replay", None)
         player = getattr(self._game, "player", None)
@@ -398,6 +436,12 @@ class GameState(State):
     # Raw event handling (for continuous movement / jump / dash until migrated to action axes)
     def handle(self, events: Sequence[pygame.event.Event]) -> None:  # pragma: no cover - thin delegation
         # Delegate to legacy KeyboardManager in batch-processing mode to update movement flags
+        if self._holding():
+            self._held_events.extend(events)
+            return
+        if self._held_events:
+            events = self._held_events + list(events)
+            self._held_events = []
         km = getattr(self._game, "km", None)
         if km and hasattr(km, "process_events"):
             try:
@@ -420,6 +464,11 @@ class GameState(State):
 
         # If a PauseState render is freezing this frame, skip simulation changes.
         if getattr(g, "_paused_freeze", False):
+            return
+
+        # Hit-stop: hold the picture (no camera move, no tick) and take the
+        # held frames out of the run's time
+        if self._hold_frame(g):
             return
 
         replay_mgr = getattr(g, "replay", None)
@@ -529,6 +578,29 @@ class GameState(State):
 
         # --- World simulation (shared with TrainingEnv and prediction) ---
         g.step()
+        self._event_sounds(g)
+
+    def _hold_frame(self, g) -> bool:
+        """True while a hit-stop holds this frame (Game.hitstop counts down)."""
+        now = pygame.time.get_ticks()
+        if self._hold_ticks is not None:
+            g.timer.adjust_for_pause(now - self._hold_ticks)
+            self._hold_ticks = None
+        if getattr(g, "hitstop", 0) <= 0:
+            return False
+        g.hitstop -= 1
+        self._hold_ticks = now
+        return True
+
+    def _event_sounds(self, g) -> None:
+        """A death sound when the ninja dies, a fanfare when the flag is reached."""
+        if g.dead and not self._death_heard:
+            g.audio.play("death")
+        self._death_heard = bool(g.dead)
+        if g.endpoint and not self._clear_heard:
+            g.audio.play("level_clear")
+            g.audio.trigger_ducking(intensity=0.35)
+        self._clear_heard = bool(g.endpoint)
 
     def render(self, surface: pygame.Surface) -> None:
         # Delegate full frame composition to unified Renderer (Issue 14).
